@@ -94,7 +94,9 @@ window.APC.ie = (function () {
       y: 40
     });
 
-    // When the window is closed, reset all module-level DOM refs and nav state.
+    // When the window is closed, reset DOM refs and nav stack.
+    // hasDialedUp is intentionally NOT reset here — dial-up fires once per
+    // browser session regardless of how many times the window is opened/closed.
     // desktop.js already removes the element and taskbar button.
     const closeBtn = ieWindowState.el.querySelector('[data-action="close"]');
     if (closeBtn) {
@@ -341,13 +343,15 @@ window.APC.ie = (function () {
     // Resolve to page key; unknown URLs fall back silently to homepage.
     const pageKey = PAGE_ROUTES[normalized] || 'home';
 
-    // Dial-up trigger rules:
-    // - First IE launch (hasDialedUp === false): always dial. Event: 'dialup_trigger'.
-    // - Manual URL entry (fromUserInput): always dial. Event: 'dialup_url_entry'.
-    // - In-session link navigation after first dial: skip dial, render directly.
-    if (!hasDialedUp || fromUserInput) {
-      const eventName = fromUserInput ? 'dialup_url_entry' : 'dialup_trigger';
-      if (window.umami) { window.umami.track(eventName); }
+    // Track manual URL bar entries as an analytics event — no dial-up re-trigger.
+    if (fromUserInput && window.umami) {
+      window.umami.track('dialup_url_entry');
+    }
+
+    // Dial-up fires once per browser session — first IE launch only.
+    // All subsequent navigations (links, address bar, back/forward) go direct.
+    if (!hasDialedUp) {
+      if (window.umami) { window.umami.track('dialup_trigger'); }
       if (statusEl) { statusEl.textContent = 'Connecting to ' + normalized + '...'; }
       showDialup(function () {
         hasDialedUp = true;
