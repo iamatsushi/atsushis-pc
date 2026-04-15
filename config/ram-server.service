@@ -1,0 +1,12 @@
+[Unit]
+Description=RAM Endpoint
+After=network.target
+
+[Service]
+User=atsushi
+ExecStart=/usr/bin/python3 /home/atsushi/ram-server.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

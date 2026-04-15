@@ -1,0 +1,14 @@
+:80 {
+    root * /home/atsushi/site
+    file_server
+
+    respond /_/* 403
+    respond /api/admins/* 403
+
+    reverse_proxy /api/* 127.0.0.1:8090
+    reverse_proxy /altcha/* 127.0.0.1:3000
+
+    handle /ram {
+        reverse_proxy 127.0.0.1:8091
+    }
+}

@@ -1,0 +1,13 @@
+[Unit]
+Description=Pocketbase
+After=network.target
+
+[Service]
+User=atsushi
+WorkingDirectory=/home/atsushi/pocketbase
+ExecStart=/home/atsushi/pocketbase/pocketbase serve --http=127.0.0.1:8090
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
