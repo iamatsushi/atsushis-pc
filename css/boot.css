@@ -97,3 +97,83 @@
   from { opacity: 1; }
   to   { opacity: 0; }
 }
+
+/* ============================================================
+   Win98 boot screen
+   ============================================================ */
+
+#boot-screen {
+  position: fixed;
+  inset: 0;
+  background: #000080;
+  z-index: 9998;
+}
+
+.boot-screen--hidden {
+  display: none;
+}
+
+#boot-screen.boot-screen--fade {
+  animation: boot-fade-out 600ms ease-in forwards;
+}
+
+/* "Windows 98" — centered, upper half of screen */
+#boot-logo-text {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'MS Sans Serif', Tahoma, sans-serif;
+  font-size: 36px;
+  color: #FFFFFF;
+  white-space: nowrap;
+  margin: 0;
+  padding: 0;
+}
+
+/* Progress bar track — Win98 silver channel */
+#boot-progress-track {
+  position: absolute;
+  top: 75%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 200px;
+  height: 10px;
+  background: #C0C0C0;
+  border: 1px solid #808080;
+  /* Collapse inline whitespace so blocks abut with no gaps */
+  font-size: 0;
+  line-height: 0;
+}
+
+/* Individual #000080 blocks that fill the track left-to-right */
+.boot-progress__block {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  background: #000080;
+  vertical-align: top;
+}
+
+@keyframes boot-fade-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+/* ============================================================
+   Desktop — teal stub (styles will move to win98.css later)
+   ============================================================ */
+
+#desktop {
+  position: fixed;
+  inset: 0;
+  background: #008080;
+}
+
+/* ============================================================
+   Shared show/hide utility used by gate and boot screens
+   ============================================================ */
+
+.gate-screen--hidden {
+  display: none;
+}

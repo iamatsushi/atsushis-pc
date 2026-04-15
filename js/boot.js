@@ -14,6 +14,10 @@ window.APC.boot = (function () {
   const MATRIX_EMOJI_FREQUENCY = 0.065; // 6.5% — midpoint of spec range 5–8%
   const FADE_DURATION_MS = 600;
 
+  const BOOT_BLOCK_COUNT = 20;
+  const BOOT_BLOCK_INTERVAL_MS = 100;  // 20 × 100ms = 2s fill; total boot ~3s
+  const BOOT_FADE_DURATION_MS = 600;
+
   // Exact character set from CLAUDE.md spec — half-width katakana + ASCII + symbols.
   // Spread operator used for correct Unicode code-point splitting.
   const MATRIX_CHARS = [
@@ -42,10 +46,10 @@ window.APC.boot = (function () {
   // --- Public API ------------------------------------------------------
 
   function init() {
-    // Skip gate screen entirely if boot already ran this session.
+    // Skip both gate and boot screens if already completed this session.
     if (sessionStorage.getItem('boot_complete')) {
       hideGate();
-      complete();
+      goToDesktop();
       return;
     }
 
@@ -189,12 +193,75 @@ window.APC.boot = (function () {
 
   function hideGate() {
     const gate = document.getElementById('gate-screen');
-    if (gate) { gate.style.display = 'none'; }
+    if (gate) { gate.classList.add('gate-screen--hidden'); }
   }
 
   function complete() {
-    // Stub: hands off to desktop init when that module is built.
-    // Will also set sessionStorage 'boot_complete' flag at that point.
+    showBootScreen();
+  }
+
+  // --- Win98 boot sequence ---------------------------------------------
+
+  function showBootScreen() {
+    const bootScreen = document.getElementById('boot-screen');
+    bootScreen.classList.remove('boot-screen--hidden');
+    // Brief settle delay before progress bar begins — mirrors real Win98 timing.
+    setTimeout(animateProgressBar, 200);
+  }
+
+  function animateProgressBar() {
+    const track = document.getElementById('boot-progress-track');
+    let blocksFilled = 0;
+
+    function addBlock() {
+      if (blocksFilled >= BOOT_BLOCK_COUNT) {
+        // Bar is full — hold briefly so it's visible, then complete boot.
+        setTimeout(completeBootScreen, 500);
+        return;
+      }
+
+      const block = document.createElement('span');
+      block.className = 'boot-progress__block';
+      track.appendChild(block);
+
+      blocksFilled++;
+
+      // Update ARIA progress value as a percentage for screen readers.
+      const pct = Math.round((blocksFilled / BOOT_BLOCK_COUNT) * 100);
+      track.setAttribute('aria-valuenow', pct);
+
+      setTimeout(addBlock, BOOT_BLOCK_INTERVAL_MS);
+    }
+
+    addBlock();
+  }
+
+  function completeBootScreen() {
+    // Mark boot as complete before the fade so a mid-fade refresh skips
+    // both the gate screen and boot sequence entirely.
+    sessionStorage.setItem('boot_complete', '1');
+
+    // Fire Umami boot_complete event.
+    if (window.umami) {
+      window.umami.track('boot_complete');
+    }
+
+    const bootScreen = document.getElementById('boot-screen');
+    bootScreen.classList.add('boot-screen--fade');
+
+    setTimeout(() => {
+      bootScreen.classList.add('boot-screen--hidden');
+      bootScreen.classList.remove('boot-screen--fade');
+      goToDesktop();
+    }, BOOT_FADE_DURATION_MS);
+  }
+
+  // --- Desktop handoff -------------------------------------------------
+
+  function goToDesktop() {
+    const desktop = document.getElementById('desktop');
+    desktop.classList.remove('desktop--hidden');
+
     if (window.APC.desktop && typeof window.APC.desktop.init === 'function') {
       window.APC.desktop.init();
     }

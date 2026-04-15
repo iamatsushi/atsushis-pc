@@ -24,7 +24,17 @@
     </div>
   </div>
 
-  <!-- Desktop shell — rendered after boot sequence completes (future milestone) -->
+  <!-- Win98 boot screen: navy background, logo text, progress bar -->
+  <div id="boot-screen" class="boot-screen--hidden"
+       role="status" aria-label="Loading Windows 98" aria-live="polite">
+    <p id="boot-logo-text" aria-hidden="true">Windows 98</p>
+    <div id="boot-progress-track"
+         role="progressbar"
+         aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"
+         aria-label="Windows 98 loading progress"></div>
+  </div>
+
+  <!-- Desktop shell — shown after boot sequence completes -->
   <div id="desktop" class="desktop--hidden"></div>
 
   <script src="js/boot.js"></script>
