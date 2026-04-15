@@ -1,0 +1,90 @@
+/* ============================================================
+   ie-thoughts.css — My Thoughts blog page content styles
+   Terminal green #00FF41 on #0A0A2E dark background.
+   Courier New 12px per CLAUDE.md spec. Text only — no GIFs.
+   #00FF41 is used EXCLUSIVELY here and in Matrix rain.
+   Never bleed this color into Win98 chrome.
+   ============================================================ */
+
+.ie-thoughts {
+  --thoughts-bg:      #0A0A2E;
+  --thoughts-text:    #00FF41;
+  --thoughts-dim:     #007A20;
+  --thoughts-divider: #003A10;
+}
+
+.ie-thoughts {
+  background: var(--thoughts-bg);
+  color: var(--thoughts-text);
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 12px;
+  padding: 14px;
+  min-height: 100%;
+  box-sizing: border-box;
+  line-height: 1.6;
+}
+
+/* ---------------------------------------------------------------
+   Page header
+--------------------------------------------------------------- */
+
+.ie-thoughts__header {
+  margin-bottom: 16px;
+}
+
+.ie-thoughts__title {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 18px;
+  font-weight: bold;
+  color: var(--thoughts-text);
+  letter-spacing: 2px;
+  margin: 0 0 4px;
+  padding: 0;
+}
+
+.ie-thoughts__subtitle {
+  font-size: 11px;
+  color: var(--thoughts-dim);
+  margin: 0;
+}
+
+/* ---------------------------------------------------------------
+   Shared divider — header separator and between posts
+--------------------------------------------------------------- */
+
+.ie-thoughts__divider {
+  border: none;
+  border-top: 1px solid var(--thoughts-divider);
+  margin: 12px 0;
+}
+
+/* ---------------------------------------------------------------
+   Individual post
+--------------------------------------------------------------- */
+
+.ie-thoughts__post {
+  margin-bottom: 4px;
+}
+
+/* > prefix applied in JS via textContent */
+.ie-thoughts__meta {
+  font-size: 11px;
+  color: var(--thoughts-dim);
+  margin: 0 0 4px;
+}
+
+.ie-thoughts__post-title {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 13px;
+  font-weight: bold;
+  color: var(--thoughts-text);
+  margin: 0 0 6px;
+  padding: 0;
+}
+
+.ie-thoughts__body {
+  font-size: 12px;
+  color: var(--thoughts-text);
+  line-height: 1.7;
+  margin: 0 0 10px;
+}

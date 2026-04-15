@@ -1,0 +1,235 @@
+/* ============================================================
+   ie-guestbook.css — Guestbook page content styles
+   Warm cream background, forum-style entry display.
+   Verdana 12px per CLAUDE.md spec.
+   ============================================================ */
+
+.ie-guestbook {
+  --guestbook-bg:           #FFFEF0;
+  --guestbook-header:       #660000;
+  --guestbook-text:         #000000;
+  --guestbook-meta:         #996633;
+  --guestbook-border:       #C8A080;
+  --guestbook-input-bg:     #FFFFFF;
+  --guestbook-entry-bg:     #FFFFF8;
+  --guestbook-entry-border: #E0D0B0;
+  --guestbook-success:      #006600;
+  --guestbook-error-col:    #CC0000;
+}
+
+.ie-guestbook {
+  background: var(--guestbook-bg);
+  color: var(--guestbook-text);
+  font-family: Verdana, sans-serif;
+  font-size: 12px;
+  padding: 14px;
+  min-height: 100%;
+  box-sizing: border-box;
+}
+
+/* ---------------------------------------------------------------
+   Header
+--------------------------------------------------------------- */
+
+.ie-guestbook__header {
+  margin-bottom: 14px;
+}
+
+.ie-guestbook__title {
+  font-family: Verdana, sans-serif;
+  font-size: 18px;
+  font-weight: bold;
+  color: var(--guestbook-header);
+  margin: 0 0 4px;
+  padding: 0;
+}
+
+.ie-guestbook__subtitle {
+  font-size: 12px;
+  color: #666666;
+  margin: 0;
+}
+
+/* ---------------------------------------------------------------
+   Section titles
+--------------------------------------------------------------- */
+
+.ie-guestbook__section-title {
+  font-family: Verdana, sans-serif;
+  font-size: 13px;
+  font-weight: bold;
+  color: var(--guestbook-header);
+  margin: 0 0 10px;
+  padding: 0;
+}
+
+/* ---------------------------------------------------------------
+   Divider
+--------------------------------------------------------------- */
+
+.ie-guestbook__divider {
+  border: none;
+  border-top: 1px solid var(--guestbook-border);
+  margin: 16px 0;
+}
+
+/* ---------------------------------------------------------------
+   Form
+--------------------------------------------------------------- */
+
+.ie-guestbook__form {
+  max-width: 420px;
+}
+
+.ie-guestbook__field {
+  margin-bottom: 10px;
+}
+
+.ie-guestbook__field--altcha {
+  margin-top: 4px;
+  margin-bottom: 10px;
+}
+
+.ie-guestbook__label {
+  display: block;
+  font-family: Verdana, sans-serif;
+  font-size: 11px;
+  font-weight: bold;
+  margin-bottom: 3px;
+}
+
+/* Sunken inset border — matches Win98 input aesthetic */
+.ie-guestbook__input,
+.ie-guestbook__textarea {
+  display: block;
+  width: 100%;
+  padding: 3px 4px;
+  font-family: Verdana, sans-serif;
+  font-size: 12px;
+  background: var(--guestbook-input-bg);
+  border: 1px solid;
+  border-color: #808080 #FFFFFF #FFFFFF #808080;
+  box-sizing: border-box;
+  color: var(--guestbook-text);
+}
+
+.ie-guestbook__input:focus,
+.ie-guestbook__textarea:focus {
+  outline: 1px dotted #000000;
+  outline-offset: 1px;
+}
+
+.ie-guestbook__textarea {
+  resize: vertical;
+}
+
+/* Submit button — Win98 raised style */
+.ie-guestbook__submit {
+  background: #C0C0C0;
+  border: 2px solid;
+  border-color: #FFFFFF #808080 #808080 #FFFFFF;
+  font-family: Verdana, sans-serif;
+  font-size: 12px;
+  padding: 4px 16px;
+  cursor: pointer;
+  margin-top: 4px;
+}
+
+.ie-guestbook__submit:active {
+  border-color: #808080 #FFFFFF #FFFFFF #808080;
+  padding-top: 5px;
+  padding-left: 17px;
+}
+
+.ie-guestbook__submit:focus {
+  outline: 1px dotted #000000;
+  outline-offset: -4px;
+}
+
+.ie-guestbook__submit:disabled {
+  color: #808080;
+  cursor: default;
+}
+
+/* Required note */
+.ie-guestbook__required-note {
+  font-size: 10px;
+  color: #808080;
+  margin: 6px 0 0;
+}
+
+/* ---------------------------------------------------------------
+   Form messages — error / success
+--------------------------------------------------------------- */
+
+/* Hidden utility — toggled by JS; never use inline display style */
+.ie-guestbook__message--hidden {
+  display: none;
+}
+
+.ie-guestbook__error {
+  font-size: 12px;
+  color: var(--guestbook-error-col);
+  margin: 0 0 8px;
+}
+
+.ie-guestbook__success {
+  font-size: 12px;
+  color: var(--guestbook-success);
+  font-weight: bold;
+  padding: 8px 10px;
+  border: 1px solid var(--guestbook-success);
+  background: #F0FFF0;
+  margin: 0;
+}
+
+/* ---------------------------------------------------------------
+   Entries list
+--------------------------------------------------------------- */
+
+.ie-guestbook__loading {
+  font-size: 12px;
+  color: #808080;
+  font-style: italic;
+  margin: 0;
+}
+
+.ie-guestbook__empty {
+  font-size: 12px;
+  color: #808080;
+  font-style: italic;
+  margin: 0;
+}
+
+.ie-guestbook__entry {
+  border: 1px solid var(--guestbook-entry-border);
+  background: var(--guestbook-entry-bg);
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.ie-guestbook__entry-meta {
+  font-size: 11px;
+  margin: 0 0 4px;
+}
+
+.ie-guestbook__entry-name {
+  font-weight: bold;
+  color: var(--guestbook-header);
+}
+
+.ie-guestbook__entry-link {
+  color: #0000CC;
+  font-size: 10px;
+}
+
+.ie-guestbook__entry-date {
+  color: var(--guestbook-meta);
+  font-size: 10px;
+}
+
+.ie-guestbook__entry-msg {
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 0;
+}

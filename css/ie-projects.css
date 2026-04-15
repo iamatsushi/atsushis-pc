@@ -1,0 +1,121 @@
+/* ============================================================
+   ie-projects.css — Work/Projects page content styles
+   Light #F0F0F5 background, #000080 navy headers.
+   Tahoma 12px per CLAUDE.md spec. Float-based card layout.
+   ============================================================ */
+
+.ie-projects {
+  --projects-bg:       #F0F0F5;
+  --projects-header:   #000080;
+  --projects-text:     #000000;
+  --projects-meta:     #555555;
+  --projects-card-bg:  #FFFFFF;
+  --projects-border:   #C0C0C0;
+  --projects-tag-bg:   #E0E0E8;
+}
+
+.ie-projects {
+  background: var(--projects-bg);
+  color: var(--projects-text);
+  font-family: Tahoma, sans-serif;
+  font-size: 12px;
+  padding: 14px;
+  min-height: 100%;
+  box-sizing: border-box;
+}
+
+/* ---------------------------------------------------------------
+   Page header
+--------------------------------------------------------------- */
+
+.ie-projects__header {
+  margin-bottom: 14px;
+}
+
+.ie-projects__title {
+  font-family: Tahoma, sans-serif;
+  font-size: 18px;
+  font-weight: bold;
+  color: var(--projects-header);
+  margin: 0 0 4px;
+  padding: 0;
+}
+
+.ie-projects__subtitle {
+  font-size: 12px;
+  color: var(--projects-meta);
+  margin: 0 0 8px;
+}
+
+.ie-projects__divider {
+  border: none;
+  border-top: 2px solid var(--projects-header);
+  margin: 0;
+}
+
+/* ---------------------------------------------------------------
+   Float-based card grid
+--------------------------------------------------------------- */
+
+.ie-projects__grid {
+  margin-top: 14px;
+}
+
+/* Cards 1 and 2 float side by side; card 3 wraps below */
+.ie-projects__card {
+  float: left;
+  width: 46%;
+  margin-right: 2%;
+  margin-bottom: 14px;
+  background: var(--projects-card-bg);
+  border: 1px solid var(--projects-border);
+  padding: 12px;
+  box-sizing: border-box;
+  vertical-align: top;
+}
+
+.ie-projects__clear {
+  clear: both;
+}
+
+/* ---------------------------------------------------------------
+   Card content
+--------------------------------------------------------------- */
+
+.ie-projects__card-title {
+  font-family: Tahoma, sans-serif;
+  font-size: 13px;
+  font-weight: bold;
+  color: var(--projects-header);
+  margin: 0 0 3px;
+  padding: 0;
+}
+
+.ie-projects__card-meta {
+  font-size: 11px;
+  color: var(--projects-meta);
+  font-style: italic;
+  margin: 0 0 6px;
+}
+
+.ie-projects__card-desc {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--projects-text);
+  margin: 0 0 8px;
+}
+
+/* Tag badges */
+.ie-projects__card-tags {
+  margin: 0;
+  line-height: 1.8;
+}
+
+.ie-projects__tag {
+  display: inline-block;
+  background: var(--projects-tag-bg);
+  border: 1px solid var(--projects-border);
+  font-size: 10px;
+  padding: 1px 5px;
+  margin: 0 3px 2px 0;
+}

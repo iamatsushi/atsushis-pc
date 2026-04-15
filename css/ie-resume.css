@@ -1,0 +1,131 @@
+/* ============================================================
+   ie-resume.css — Resume page content styles
+   Same visual personality as Work/Projects:
+   #F0F0F5 background, #000080 navy headers, Tahoma 12px.
+   Gated — requires sessionStorage 'guestbook_submitted' flag.
+   ============================================================ */
+
+.ie-resume {
+  --resume-bg:      #F0F0F5;
+  --resume-header:  #000080;
+  --resume-text:    #000000;
+  --resume-meta:    #555555;
+  --resume-divider: #000080;
+}
+
+.ie-resume {
+  background: var(--resume-bg);
+  color: var(--resume-text);
+  font-family: Tahoma, sans-serif;
+  font-size: 12px;
+  padding: 16px 20px;
+  min-height: 100%;
+  box-sizing: border-box;
+}
+
+/* ---------------------------------------------------------------
+   Locked state — shown when guestbook flag is absent
+--------------------------------------------------------------- */
+
+.ie-resume--locked {
+  padding: 32px 20px;
+  text-align: center;
+}
+
+.ie-resume__lock-msg {
+  font-size: 12px;
+  margin: 0 0 12px;
+}
+
+.ie-resume__lock-link {
+  color: #0000CC;
+  font-size: 12px;
+}
+
+/* ---------------------------------------------------------------
+   Resume header: name, title, contact
+--------------------------------------------------------------- */
+
+.ie-resume__header {
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.ie-resume__name {
+  font-family: Tahoma, sans-serif;
+  font-size: 20px;
+  font-weight: bold;
+  color: var(--resume-header);
+  letter-spacing: 1px;
+  margin: 0 0 3px;
+  padding: 0;
+}
+
+.ie-resume__role {
+  font-size: 13px;
+  margin: 0 0 3px;
+}
+
+.ie-resume__contact {
+  font-size: 11px;
+  color: var(--resume-meta);
+  margin: 0;
+}
+
+/* ---------------------------------------------------------------
+   Section divider
+--------------------------------------------------------------- */
+
+.ie-resume__divider {
+  border: none;
+  border-top: 2px solid var(--resume-divider);
+  margin: 10px 0;
+}
+
+/* ---------------------------------------------------------------
+   Resume sections
+--------------------------------------------------------------- */
+
+.ie-resume__section {
+  margin-bottom: 14px;
+}
+
+.ie-resume__section-title {
+  font-family: Tahoma, sans-serif;
+  font-size: 12px;
+  font-weight: bold;
+  color: var(--resume-header);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border-bottom: 1px solid var(--resume-divider);
+  padding-bottom: 3px;
+  margin: 0 0 8px;
+}
+
+/* ---------------------------------------------------------------
+   Section items
+--------------------------------------------------------------- */
+
+.ie-resume__item {
+  margin-bottom: 10px;
+}
+
+.ie-resume__item-heading {
+  font-family: Tahoma, sans-serif;
+  font-size: 12px;
+  font-weight: bold;
+  margin: 0 0 2px;
+}
+
+.ie-resume__item-sub {
+  font-size: 11px;
+  color: var(--resume-meta);
+  font-style: italic;
+  margin: 0 0 4px;
+}
+
+.ie-resume__item-body {
+  font-size: 12px;
+  line-height: 1.5;
+  margin: 0;
+}

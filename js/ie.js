@@ -29,6 +29,10 @@ window.APC.ie = (function () {
     { msg: 'Connected at 28,800 bps'            }
   ];
 
+  // Guestbook Pocketbase endpoint and client-side cache TTL.
+  const GUESTBOOK_API_URL = '/api/collections/guestbook/records';
+  const GUESTBOOK_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
   // Client-side routing map: normalized URL → page key.
   // Unknown URLs fall back to 'home' (no 404s per spec).
   const PAGE_ROUTES = {
@@ -369,11 +373,15 @@ window.APC.ie = (function () {
     pageEl.innerHTML = '';
     if (statusEl) { statusEl.textContent = 'Done'; }
 
-    if (pageKey === 'home') {
-      renderHome();
-    } else {
-      renderStub(pageKey);
-    }
+    const renderers = {
+      home:      renderHome,
+      about:     renderAbout,
+      thoughts:  renderThoughts,
+      projects:  renderProjects,
+      guestbook: renderGuestbook,
+      resume:    renderResume
+    };
+    (renderers[pageKey] || renderHome)();
   }
 
   function renderHome() {
@@ -498,20 +506,757 @@ window.APC.ie = (function () {
     pageEl.appendChild(page);
   }
 
-  function renderStub(pageKey) {
-    const labels = {
-      about:     'About Me',
-      thoughts:  'My Thoughts',
-      projects:  'Work / Projects',
-      guestbook: 'Guestbook',
-      resume:    'Resume'
-    };
+  // --- About Me --------------------------------------------------------
+
+  function renderAbout() {
     const page = document.createElement('div');
-    page.className = 'ie-home';
-    const stub = document.createElement('p');
-    stub.className = 'ie-stub';
-    stub.textContent = (labels[pageKey] || pageKey) + ' — coming soon.';
-    page.appendChild(stub);
+    page.className = 'ie-about';
+
+    // Top header
+    const topHeader = document.createElement('div');
+    topHeader.className = 'ie-about__top-header';
+
+    const h1 = document.createElement('h1');
+    h1.className = 'ie-about__top-title';
+    h1.textContent = '~*~ ATSUSHI\'S PAGE ~*~';
+
+    const underConst = document.createElement('p');
+    underConst.className = 'ie-about__under-construction';
+    underConst.textContent = '🚧 UNDER CONSTRUCTION 🚧';
+
+    topHeader.appendChild(h1);
+    topHeader.appendChild(underConst);
+    page.appendChild(topHeader);
+
+    // Left sidebar
+    const sidebar = document.createElement('div');
+    sidebar.className = 'ie-about__sidebar';
+
+    const sideTitle = document.createElement('p');
+    sideTitle.className = 'ie-about__section-title';
+    sideTitle.textContent = '[ ABOUT ME ]';
+    sidebar.appendChild(sideTitle);
+
+    const bio = document.createElement('p');
+    bio.className = 'ie-about__bio';
+    bio.textContent = 'Hi!! I\'m Atsushi, a PM based in Portland, OR. ' +
+      'I like building products, playing video games, and making things ' +
+      'with my hands. Placeholder — real bio in Phase 9.';
+    sidebar.appendChild(bio);
+
+    // GIF placeholders in sidebar (2 of 4 max per page) — replaced in Phase 9
+    ['Animated banner placeholder', 'Animated badge placeholder'].forEach(function (alt) {
+      const box = document.createElement('div');
+      box.className = 'ie-about__gif-placeholder';
+      box.setAttribute('role', 'img');
+      box.setAttribute('aria-label', alt);
+      box.textContent = '[ GIF ]';
+      sidebar.appendChild(box);
+    });
+
+    const counter = document.createElement('p');
+    counter.className = 'ie-about__counter';
+    counter.textContent = 'You are visitor #001,337';
+    sidebar.appendChild(counter);
+
+    page.appendChild(sidebar);
+
+    // Right main content (overflow: hidden BFC fills remaining width)
+    const main = document.createElement('div');
+    main.className = 'ie-about__main';
+
+    const mainTitle = document.createElement('p');
+    mainTitle.className = 'ie-about__section-title';
+    mainTitle.textContent = '[ WELCOME TO MY PAGE!! ]';
+    main.appendChild(mainTitle);
+
+    const welcome = document.createElement('p');
+    welcome.className = 'ie-about__welcome';
+    welcome.textContent = 'Welcome!! This page is my little corner of the internet. ' +
+      'Feel free to look around and sign my guestbook. ' +
+      'Placeholder — real content in Phase 9.';
+    main.appendChild(welcome);
+
+    // GIF placeholders in main (2 of 4 max) — replaced in Phase 9
+    ['Decorative GIF placeholder 3', 'Decorative GIF placeholder 4'].forEach(function (alt) {
+      const box = document.createElement('div');
+      box.className = 'ie-about__gif-placeholder';
+      box.setAttribute('role', 'img');
+      box.setAttribute('aria-label', alt);
+      box.textContent = '[ GIF ]';
+      main.appendChild(box);
+    });
+
+    const hr = document.createElement('hr');
+    hr.className = 'ie-about__divider';
+    hr.setAttribute('aria-hidden', 'true');
+    main.appendChild(hr);
+
+    const interestsTitle = document.createElement('p');
+    interestsTitle.className = 'ie-about__section-title';
+    interestsTitle.textContent = '[ INTERESTS ]';
+    main.appendChild(interestsTitle);
+
+    const interests = document.createElement('p');
+    interests.className = 'ie-about__interests';
+    interests.textContent =
+      'Product Management ★ Video Games ★ Cooking ★ Cycling ★ Raspberry Pi';
+    main.appendChild(interests);
+
+    page.appendChild(main);
+
+    const clear = document.createElement('div');
+    clear.className = 'ie-about__clear';
+    page.appendChild(clear);
+
+    pageEl.appendChild(page);
+  }
+
+  // --- My Thoughts -----------------------------------------------------
+
+  function renderThoughts() {
+    const page = document.createElement('div');
+    page.className = 'ie-thoughts';
+
+    const header = document.createElement('div');
+    header.className = 'ie-thoughts__header';
+
+    const h1 = document.createElement('h1');
+    h1.className = 'ie-thoughts__title';
+    h1.textContent = 'MY THOUGHTS';
+
+    const sub = document.createElement('p');
+    sub.className = 'ie-thoughts__subtitle';
+    sub.textContent = '// a log of things on my mind';
+
+    const divider = document.createElement('hr');
+    divider.className = 'ie-thoughts__divider';
+    divider.setAttribute('aria-hidden', 'true');
+
+    header.appendChild(h1);
+    header.appendChild(sub);
+    header.appendChild(divider);
+    page.appendChild(header);
+
+    // Reverse-chronological posts — placeholder content, replaced in Phase 9
+    const posts = [
+      {
+        date: '2026-04-14',
+        title: 'Why I built this on a Raspberry Pi',
+        body: 'Placeholder — real post coming in Phase 9. ' +
+          'Something about the joy of over-engineering a personal site ' +
+          'and running it on $35 of hardware on my desk.'
+      },
+      {
+        date: '2026-03-28',
+        title: 'On product thinking in small teams',
+        body: 'Placeholder — real post coming in Phase 9. ' +
+          'Notes on how PM work changes when there is no design team, ' +
+          'no data team, and no one to hand things off to.'
+      },
+      {
+        date: '2026-03-10',
+        title: 'Notes from a weekend of tinkering',
+        body: 'Placeholder — real post coming in Phase 9. ' +
+          'Weekend project log. Set up Caddy, got Cloudflare Tunnel ' +
+          'working, broke everything twice, fixed it once.'
+      }
+    ];
+
+    posts.forEach(function (post) {
+      const article = document.createElement('article');
+      article.className = 'ie-thoughts__post';
+
+      const meta = document.createElement('p');
+      meta.className = 'ie-thoughts__meta';
+      meta.textContent = '> ' + post.date;
+
+      const title = document.createElement('h2');
+      title.className = 'ie-thoughts__post-title';
+      title.textContent = post.title;
+
+      const body = document.createElement('p');
+      body.className = 'ie-thoughts__body';
+      body.textContent = post.body;
+
+      const hr = document.createElement('hr');
+      hr.className = 'ie-thoughts__divider';
+      hr.setAttribute('aria-hidden', 'true');
+
+      article.appendChild(meta);
+      article.appendChild(title);
+      article.appendChild(body);
+      article.appendChild(hr);
+      page.appendChild(article);
+    });
+
+    pageEl.appendChild(page);
+  }
+
+  // --- Work / Projects -------------------------------------------------
+
+  function renderProjects() {
+    const page = document.createElement('div');
+    page.className = 'ie-projects';
+
+    const header = document.createElement('div');
+    header.className = 'ie-projects__header';
+
+    const h1 = document.createElement('h1');
+    h1.className = 'ie-projects__title';
+    h1.textContent = 'Work & Projects';
+
+    const sub = document.createElement('p');
+    sub.className = 'ie-projects__subtitle';
+    sub.textContent = 'A selection of things I\'ve built and shipped.';
+
+    const divider = document.createElement('hr');
+    divider.className = 'ie-projects__divider';
+    divider.setAttribute('aria-hidden', 'true');
+
+    header.appendChild(h1);
+    header.appendChild(sub);
+    header.appendChild(divider);
+    page.appendChild(header);
+
+    // Project cards — placeholder content, replaced in Phase 9
+    const projects = [
+      {
+        title: 'Project Alpha',
+        meta: 'Product Manager · 2024–2025',
+        desc: 'Placeholder — real project details in Phase 9. Brief description ' +
+          'of what was built, the problem it solved, and the impact delivered.',
+        tags: ['Product Strategy', 'B2B SaaS', 'Cross-functional']
+      },
+      {
+        title: 'Project Beta',
+        meta: 'Product Lead · 2023–2024',
+        desc: 'Placeholder — real project details in Phase 9. Another project ' +
+          'description with outcome metrics and team size context.',
+        tags: ['Mobile', 'Growth', 'A/B Testing']
+      },
+      {
+        title: 'Atsushi\'s PC',
+        meta: 'Side Project · 2026',
+        desc: 'A browser-based Windows 98 desktop simulation serving as a portfolio. ' +
+          'Built with vanilla HTML/CSS/JS, hosted on a Raspberry Pi 3B+.',
+        tags: ['Vanilla JS', 'Raspberry Pi', 'CSS']
+      }
+    ];
+
+    const grid = document.createElement('div');
+    grid.className = 'ie-projects__grid';
+
+    projects.forEach(function (proj) {
+      const card = document.createElement('div');
+      card.className = 'ie-projects__card';
+
+      const cardTitle = document.createElement('h2');
+      cardTitle.className = 'ie-projects__card-title';
+      cardTitle.textContent = proj.title;
+
+      const cardMeta = document.createElement('p');
+      cardMeta.className = 'ie-projects__card-meta';
+      cardMeta.textContent = proj.meta;
+
+      const cardDesc = document.createElement('p');
+      cardDesc.className = 'ie-projects__card-desc';
+      cardDesc.textContent = proj.desc;
+
+      const tagsEl = document.createElement('p');
+      tagsEl.className = 'ie-projects__card-tags';
+      proj.tags.forEach(function (tag) {
+        const badge = document.createElement('span');
+        badge.className = 'ie-projects__tag';
+        badge.textContent = tag;
+        tagsEl.appendChild(badge);
+      });
+
+      card.appendChild(cardTitle);
+      card.appendChild(cardMeta);
+      card.appendChild(cardDesc);
+      card.appendChild(tagsEl);
+      grid.appendChild(card);
+    });
+
+    const clear = document.createElement('div');
+    clear.className = 'ie-projects__clear';
+    grid.appendChild(clear);
+
+    page.appendChild(grid);
+    pageEl.appendChild(page);
+  }
+
+  // --- Guestbook -------------------------------------------------------
+
+  function renderGuestbook() {
+    // Inject Altcha web component script once (Pi-hosted, loaded on demand).
+    injectAltchaScript();
+
+    const page = document.createElement('div');
+    page.className = 'ie-guestbook';
+
+    // Header
+    const header = document.createElement('div');
+    header.className = 'ie-guestbook__header';
+
+    const h1 = document.createElement('h1');
+    h1.className = 'ie-guestbook__title';
+    h1.textContent = 'Guestbook';
+
+    const sub = document.createElement('p');
+    sub.className = 'ie-guestbook__subtitle';
+    sub.textContent = 'Leave a message! Sign to unlock the Resume page.';
+
+    header.appendChild(h1);
+    header.appendChild(sub);
+    page.appendChild(header);
+
+    // Form section
+    const formSection = document.createElement('div');
+    formSection.className = 'ie-guestbook__form-section';
+
+    const formTitle = document.createElement('h2');
+    formTitle.className = 'ie-guestbook__section-title';
+    formTitle.textContent = 'Sign the Book';
+    formSection.appendChild(formTitle);
+
+    // formArea holds error + form; on success its contents are replaced
+    const formArea = document.createElement('div');
+    formArea.className = 'ie-guestbook__form-area';
+
+    // Error message — hidden by default, shown via class removal
+    const errorEl = document.createElement('p');
+    errorEl.className = 'ie-guestbook__error ie-guestbook__message--hidden';
+    errorEl.setAttribute('role', 'alert');
+    formArea.appendChild(errorEl);
+
+    const form = document.createElement('form');
+    form.className = 'ie-guestbook__form';
+    form.setAttribute('novalidate', '');
+
+    // Helper: builds a labeled field row
+    function makeField(labelText, inputEl, required) {
+      const row = document.createElement('div');
+      row.className = 'ie-guestbook__field';
+      const label = document.createElement('label');
+      label.className = 'ie-guestbook__label';
+      label.textContent = labelText + (required ? ' *' : '');
+      label.setAttribute('for', inputEl.id);
+      row.appendChild(label);
+      row.appendChild(inputEl);
+      return row;
+    }
+
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.id = 'gb-name';
+    nameInput.className = 'ie-guestbook__input';
+    nameInput.setAttribute('required', '');
+    nameInput.setAttribute('maxlength', '100');
+    nameInput.setAttribute('autocomplete', 'name');
+    form.appendChild(makeField('Name', nameInput, true));
+
+    const emailInput = document.createElement('input');
+    emailInput.type = 'email';
+    emailInput.id = 'gb-email';
+    emailInput.className = 'ie-guestbook__input';
+    emailInput.setAttribute('required', '');
+    emailInput.setAttribute('maxlength', '200');
+    emailInput.setAttribute('autocomplete', 'email');
+    form.appendChild(makeField('Email (not displayed)', emailInput, true));
+
+    const websiteInput = document.createElement('input');
+    websiteInput.type = 'url';
+    websiteInput.id = 'gb-website';
+    websiteInput.className = 'ie-guestbook__input';
+    websiteInput.placeholder = 'https://';
+    websiteInput.setAttribute('maxlength', '200');
+    websiteInput.setAttribute('autocomplete', 'url');
+    form.appendChild(makeField('Website', websiteInput, false));
+
+    const messageInput = document.createElement('textarea');
+    messageInput.id = 'gb-message';
+    messageInput.className = 'ie-guestbook__textarea';
+    messageInput.setAttribute('required', '');
+    messageInput.setAttribute('maxlength', '1000');
+    messageInput.rows = 4;
+    form.appendChild(makeField('Message', messageInput, true));
+
+    // Altcha proof-of-work widget — resolved by Pi service at /altcha/challenge.
+    // Widget adds a hidden input named 'altcha' to the form when solved.
+    // Form submits without it until Pocketbase hook verification is added (Phase 6).
+    const altchaRow = document.createElement('div');
+    altchaRow.className = 'ie-guestbook__field ie-guestbook__field--altcha';
+    const altchaWidget = document.createElement('altcha-widget');
+    altchaWidget.setAttribute('challengeurl', '/altcha/challenge');
+    altchaWidget.setAttribute('name', 'altcha');
+    altchaRow.appendChild(altchaWidget);
+    form.appendChild(altchaRow);
+
+    const submitBtn = document.createElement('button');
+    submitBtn.type = 'submit';
+    submitBtn.className = 'ie-guestbook__submit';
+    submitBtn.textContent = 'Sign the Book';
+    form.appendChild(submitBtn);
+
+    const reqNote = document.createElement('p');
+    reqNote.className = 'ie-guestbook__required-note';
+    reqNote.textContent = '* Required fields';
+    form.appendChild(reqNote);
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      errorEl.classList.add('ie-guestbook__message--hidden');
+
+      const name    = nameInput.value.trim();
+      const email   = emailInput.value.trim();
+      const website = websiteInput.value.trim();
+      const message = messageInput.value.trim();
+
+      if (!name || !email || !message) {
+        errorEl.textContent = 'Please fill in all required fields.';
+        errorEl.classList.remove('ie-guestbook__message--hidden');
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Sending...';
+
+      const payload = { name: name, email: email, message: message };
+      if (website) { payload.website = website; }
+
+      // Include altcha solution if the widget has resolved (sets hidden input 'altcha').
+      const altchaValue = new FormData(form).get('altcha');
+      if (altchaValue) { payload.altcha = String(altchaValue); }
+
+      fetch(GUESTBOOK_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      .then(function (res) {
+        if (!res.ok) { throw new Error('HTTP ' + res.status); }
+        return res.json();
+      })
+      .then(function () {
+        // Set sessionStorage gate flag so Resume page becomes accessible.
+        sessionStorage.setItem('guestbook_submitted', '1');
+        if (window.umami) {
+          window.umami.track('guestbook_submit', { success: true });
+        }
+        // Replace form area with success message.
+        formArea.innerHTML = '';
+        const successEl = document.createElement('p');
+        successEl.className = 'ie-guestbook__success';
+        successEl.textContent = 'Your message will appear within 24 hours after review.';
+        formArea.appendChild(successEl);
+      })
+      .catch(function () {
+        if (window.umami) {
+          window.umami.track('guestbook_submit', { success: false });
+        }
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Sign the Book';
+        errorEl.textContent = 'Something went wrong. Please try again later.';
+        errorEl.classList.remove('ie-guestbook__message--hidden');
+      });
+    });
+
+    formArea.appendChild(form);
+    formSection.appendChild(formArea);
+    page.appendChild(formSection);
+
+    const divider = document.createElement('hr');
+    divider.className = 'ie-guestbook__divider';
+    divider.setAttribute('aria-hidden', 'true');
+    page.appendChild(divider);
+
+    // Entries section
+    const entriesSection = document.createElement('div');
+    entriesSection.className = 'ie-guestbook__entries-section';
+
+    const entriesTitle = document.createElement('h2');
+    entriesTitle.className = 'ie-guestbook__section-title';
+    entriesTitle.textContent = 'Recent Entries';
+    entriesSection.appendChild(entriesTitle);
+
+    const entriesContainer = document.createElement('div');
+    entriesContainer.className = 'ie-guestbook__entries';
+
+    const loadingMsg = document.createElement('p');
+    loadingMsg.className = 'ie-guestbook__loading';
+    loadingMsg.textContent = 'Loading entries...';
+    entriesContainer.appendChild(loadingMsg);
+
+    entriesSection.appendChild(entriesContainer);
+    page.appendChild(entriesSection);
+    pageEl.appendChild(page);
+
+    // Fetch entries after page is in DOM so async updates render correctly.
+    loadGuestbookEntries(entriesContainer);
+  }
+
+  // Fetch approved guestbook entries, using a 24h sessionStorage cache.
+  function loadGuestbookEntries(container) {
+    const cacheTs   = sessionStorage.getItem('guestbook_cache_ts');
+    const cacheData = sessionStorage.getItem('guestbook_cache');
+
+    if (cacheTs && cacheData) {
+      const age = Date.now() - parseInt(cacheTs, 10);
+      if (age < GUESTBOOK_CACHE_TTL_MS) {
+        try {
+          renderEntries(container, JSON.parse(cacheData));
+          return;
+        } catch (e) {
+          // Cache corrupt — fall through to fetch
+        }
+      }
+    }
+
+    fetch(GUESTBOOK_API_URL + '?filter=(approved%3Dtrue)&sort=-created')
+      .then(function (res) {
+        if (!res.ok) { throw new Error('HTTP ' + res.status); }
+        return res.json();
+      })
+      .then(function (data) {
+        const entries = (data && Array.isArray(data.items)) ? data.items : [];
+        sessionStorage.setItem('guestbook_cache', JSON.stringify(entries));
+        sessionStorage.setItem('guestbook_cache_ts', String(Date.now()));
+        renderEntries(container, entries);
+      })
+      .catch(function () {
+        container.innerHTML = '';
+        const err = document.createElement('p');
+        err.className = 'ie-guestbook__error';
+        err.textContent = 'Could not load entries. Please try again later.';
+        container.appendChild(err);
+      });
+  }
+
+  // Render fetched entries into container; all user content via textContent (no XSS).
+  function renderEntries(container, entries) {
+    container.innerHTML = '';
+
+    if (!entries || entries.length === 0) {
+      const empty = document.createElement('p');
+      empty.className = 'ie-guestbook__empty';
+      empty.textContent = 'No entries yet. Be the first to sign!';
+      container.appendChild(empty);
+      return;
+    }
+
+    entries.forEach(function (entry) {
+      const item = document.createElement('div');
+      item.className = 'ie-guestbook__entry';
+
+      const meta = document.createElement('div');
+      meta.className = 'ie-guestbook__entry-meta';
+
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'ie-guestbook__entry-name';
+      nameSpan.textContent = entry.name;
+      meta.appendChild(nameSpan);
+
+      // Validate website before rendering as a link — only https/http allowed.
+      if (entry.website && isValidUrl(entry.website)) {
+        meta.appendChild(document.createTextNode(' · '));
+        const link = document.createElement('a');
+        link.className = 'ie-guestbook__entry-link';
+        link.href = entry.website;
+        link.textContent = entry.website;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        meta.appendChild(link);
+      }
+
+      if (entry.created) {
+        meta.appendChild(document.createTextNode(' · '));
+        const dateSpan = document.createElement('span');
+        dateSpan.className = 'ie-guestbook__entry-date';
+        try {
+          dateSpan.textContent = new Date(entry.created).toLocaleDateString('en-US', {
+            year: 'numeric', month: 'short', day: 'numeric'
+          });
+        } catch (ignore) {
+          dateSpan.textContent = entry.created;
+        }
+        meta.appendChild(dateSpan);
+      }
+
+      item.appendChild(meta);
+
+      const msg = document.createElement('p');
+      msg.className = 'ie-guestbook__entry-msg';
+      msg.textContent = entry.message;
+      item.appendChild(msg);
+
+      container.appendChild(item);
+    });
+  }
+
+  // Inject Altcha web component script into <head> once.
+  // Served from Pi at /altcha/altcha.min.js — not a CDN call.
+  // Guard prevents double-injection on subsequent guestbook renders.
+  function injectAltchaScript() {
+    if (document.querySelector('script[data-altcha-widget]')) { return; }
+    const s = document.createElement('script');
+    s.src = '/altcha/altcha.min.js';
+    s.async = true;
+    s.setAttribute('data-altcha-widget', '1');
+    document.head.appendChild(s);
+  }
+
+  // Validate a URL before rendering as an <a> — accepts https/http only.
+  // Rejects javascript:, data:, and anything that throws in URL constructor.
+  function isValidUrl(str) {
+    if (!str || typeof str !== 'string') { return false; }
+    try {
+      const url = new URL(str);
+      return url.protocol === 'https:' || url.protocol === 'http:';
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // --- Resume ----------------------------------------------------------
+
+  function renderResume() {
+    // Gate: Resume is only accessible after a successful guestbook submission.
+    if (!sessionStorage.getItem('guestbook_submitted')) {
+      const locked = document.createElement('div');
+      locked.className = 'ie-resume ie-resume--locked';
+
+      const lockMsg = document.createElement('p');
+      lockMsg.className = 'ie-resume__lock-msg';
+      lockMsg.textContent = 'The resume is locked. Please sign the guestbook to unlock access.';
+
+      const lockLink = document.createElement('a');
+      lockLink.className = 'ie-resume__lock-link';
+      lockLink.href = '#';
+      lockLink.textContent = '→ Go to Guestbook';
+      lockLink.addEventListener('click', function (e) {
+        e.preventDefault();
+        navigate('ahisaka.com/guestbook', false);
+      });
+
+      locked.appendChild(lockMsg);
+      locked.appendChild(lockLink);
+      pageEl.appendChild(locked);
+      return;
+    }
+
+    if (window.umami) { window.umami.track('resume_click'); }
+
+    const page = document.createElement('div');
+    page.className = 'ie-resume';
+
+    // Header
+    const header = document.createElement('div');
+    header.className = 'ie-resume__header';
+
+    const name = document.createElement('h1');
+    name.className = 'ie-resume__name';
+    name.textContent = 'Atsushi Hisaka';
+
+    const role = document.createElement('p');
+    role.className = 'ie-resume__role';
+    role.textContent = 'Product Manager';
+
+    const contact = document.createElement('p');
+    contact.className = 'ie-resume__contact';
+    contact.textContent = 'Portland, OR · ahisaka.com';
+
+    header.appendChild(name);
+    header.appendChild(role);
+    header.appendChild(contact);
+    page.appendChild(header);
+
+    const topDivider = document.createElement('hr');
+    topDivider.className = 'ie-resume__divider';
+    topDivider.setAttribute('aria-hidden', 'true');
+    page.appendChild(topDivider);
+
+    // Sections — placeholder content, replaced in Phase 9
+    const sections = [
+      {
+        title: 'Experience',
+        items: [
+          {
+            heading: 'Product Manager — Company Name',
+            sub: '20XX – Present · City, State',
+            body: 'Placeholder — real experience in Phase 9. ' +
+              'Led cross-functional teams to ship key product initiatives with measurable impact.'
+          },
+          {
+            heading: 'Associate Product Manager — Company Name',
+            sub: '20XX – 20XX · City, State',
+            body: 'Placeholder — real experience in Phase 9. ' +
+              'Owned roadmap, wrote specs, ran sprint cycles, and shipped features to production.'
+          }
+        ]
+      },
+      {
+        title: 'Education',
+        items: [
+          {
+            heading: 'B.S. [Field] — University Name',
+            sub: '20XX',
+            body: 'Placeholder — real education in Phase 9.'
+          }
+        ]
+      },
+      {
+        title: 'Skills',
+        items: [
+          {
+            heading: '',
+            sub: '',
+            body: 'Product Strategy · Roadmapping · User Research · A/B Testing · ' +
+              'SQL · Figma · Jira · Cross-functional Leadership'
+          }
+        ]
+      }
+    ];
+
+    sections.forEach(function (sec) {
+      const section = document.createElement('div');
+      section.className = 'ie-resume__section';
+
+      const secTitle = document.createElement('h2');
+      secTitle.className = 'ie-resume__section-title';
+      secTitle.textContent = sec.title;
+      section.appendChild(secTitle);
+
+      sec.items.forEach(function (item) {
+        const itemEl = document.createElement('div');
+        itemEl.className = 'ie-resume__item';
+
+        if (item.heading) {
+          const heading = document.createElement('p');
+          heading.className = 'ie-resume__item-heading';
+          heading.textContent = item.heading;
+          itemEl.appendChild(heading);
+        }
+
+        if (item.sub) {
+          const sub = document.createElement('p');
+          sub.className = 'ie-resume__item-sub';
+          sub.textContent = item.sub;
+          itemEl.appendChild(sub);
+        }
+
+        const body = document.createElement('p');
+        body.className = 'ie-resume__item-body';
+        body.textContent = item.body;
+        itemEl.appendChild(body);
+
+        section.appendChild(itemEl);
+      });
+
+      page.appendChild(section);
+    });
+
     pageEl.appendChild(page);
   }
 
