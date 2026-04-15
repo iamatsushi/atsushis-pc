@@ -2,6 +2,9 @@
     root * /home/atsushi/site
     file_server
 
+    header /js/* Cache-Control "no-cache, must-revalidate"
+    header /css/* Cache-Control "no-cache, must-revalidate"
+
     respond /_/* 403
     respond /api/admins/* 403
 
