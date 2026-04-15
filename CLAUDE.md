@@ -1,5 +1,4 @@
-
-# Atsushi's PC – AI Coding Rules & Standards (CLAUDE.md)
+# Atsushi's PC – AI Coding Rules & Standards ([CLAUDE.md](http://CLAUDE.md))
 
 ## Instructions for Claude Code
 
@@ -168,6 +167,35 @@ atsushis-pc/
   * `js/boot.js`: Handles Matrix → terminal prompt → loading bar → desktop fade-in
   * `js/ie.js`: IE window (routing, dial-up logic, navigation)
   * `js/widgets.js`: Taskbar widgets (weather, RAM, clock)
+
+### Matrix Rain Spec
+
+The Click to Start gate screen uses a canvas-based Matrix rain effect. All values below are exact — do not approximate or substitute.
+
+**Character set (drawn in #00FF41, no filter):**
+
+* Half-width katakana: ｦ ｧ ｨ ｩ ｪ ｫ ｬ ｭ ｮ ｯ ｰ ｱ ｲ ｳ ｴ ｵ ｶ ｷ ｸ ｹ ｺ ｻ ｼ ｽ ｾ ｿ ﾀ ﾁ ﾂ ﾃ ﾄ ﾅ ﾆ ﾇ ﾈ ﾉ ﾊ ﾋ ﾌ ﾍ ﾎ ﾏ ﾐ ﾑ ﾒ ﾓ ﾔ ﾕ ﾖ ﾗ ﾘ ﾙ ﾚ ﾛ ﾜ ﾝ
+* ASCII uppercase: A–Z
+* Digits: 0–9
+* Symbols: @ # $ % \* + - = : < > / \\ |
+
+**Emoji list (drawn with CSS filter applied, 5–8% frequency):**
+
+🤣 🤔 😍 😂 🥰 😘 😊 😎 🙏 💪 👍 ✨ 🔥 🤗 🥲 🙈 🙉 🙊 💯 🎉 💩 🤪 😳 🥴 🧐 😮 🫡 🫠 😌 😏 😶 😅 😁 🥸 😒 😜 😝 🤭 🤐 🫢 🫣 🤫 🤥 💤
+
+**Emoji frequency constant:** `MATRIX_EMOJI_FREQUENCY = 0.065` (6.5% — midpoint of 5–8% range)
+
+**Emoji CSS filter (apply to ctx.filter before drawing each emoji, reset to 'none' immediately after):**
+
+```
+ctx.filter = 'brightness(0) saturate(100%) invert(57%) sepia(99%) saturate(400%) hue-rotate(85deg) brightness(110%)';
+// draw emoji
+ctx.filter = 'none';
+```
+
+**Rain color:** `#00FF41` — used exclusively for Matrix rain and the My Thoughts page. Never bleed into Win98 chrome.
+
+**Terminal prompt text (exact):** `C:\> press any key to continue_` — blinking block cursor at end (\~530ms blink interval). This is the exact string. Do not paraphrase or substitute.
 
 ### Data Fetching
 
