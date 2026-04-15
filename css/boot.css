@@ -1,0 +1,99 @@
+/* ============================================================
+   boot.css — Gate screen styles (Matrix rain + Click to Start)
+   Scope: #gate-screen and children only. No Win98 chrome here.
+   ============================================================ */
+
+/* --- Gate screen container --------------------------------- */
+
+#gate-screen {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  z-index: 9999;
+  cursor: pointer;
+  outline: none;
+}
+
+/* --- Canvas fills the full gate screen --------------------- */
+
+#matrix-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* --- Centered prompt overlay ------------------------------- */
+
+#gate-prompt {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  pointer-events: none;
+  outline: none;
+  user-select: none;
+}
+
+/* --- "Click to Start" label — blinking at 1s --------------- */
+
+#gate-label {
+  font-family: 'Courier New', monospace;
+  font-size: 22px;
+  color: #00FF41;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  margin: 0 0 20px 0;
+  animation: label-blink 1000ms step-end infinite;
+}
+
+/* --- Terminal prompt line ----------------------------------- */
+
+#gate-terminal {
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  color: #00FF41;
+  letter-spacing: 1px;
+  margin: 0;
+}
+
+/* --- Blinking block cursor — exact 530ms spec -------------- */
+
+#gate-cursor {
+  display: inline-block;
+  animation: cursor-blink 530ms step-end infinite;
+}
+
+/* --- Fade-out transition triggered by JS ------------------- */
+
+#gate-screen.gate-screen--fade {
+  animation: gate-fade-out 600ms ease-in forwards;
+}
+
+/* --- Desktop placeholder hidden until boot completes ------- */
+
+.desktop--hidden {
+  display: none;
+}
+
+/* --- Keyframe animations ----------------------------------- */
+
+/* Sharp on/off label blink (1s) */
+@keyframes label-blink {
+  from, to { opacity: 1; }
+  50%      { opacity: 0; }
+}
+
+/* Sharp on/off cursor blink (530ms, per spec) */
+@keyframes cursor-blink {
+  from, to { opacity: 1; }
+  50%      { opacity: 0; }
+}
+
+/* Gate screen fade to black on start */
+@keyframes gate-fade-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}

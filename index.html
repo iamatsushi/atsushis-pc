@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Atsushi's PC</title>
+  <link rel="stylesheet" href="css/boot.css">
+  <script defer src="https://cloud.umami.is/script.js"
+    data-website-id="d26f2f30-ead0-4092-b7c5-99afac8eda72"></script>
+</head>
+<body>
+
+  <!-- Gate screen: Matrix rain + Click to Start prompt -->
+  <div id="gate-screen" aria-label="System startup screen">
+    <canvas id="matrix-canvas" aria-hidden="true"></canvas>
+    <div id="gate-prompt"
+         role="button"
+         tabindex="0"
+         aria-label="Click or press any key to start Atsushi's PC">
+      <p id="gate-label">Click to Start</p>
+      <p id="gate-terminal">C:\&gt; press any key to continue<span
+        id="gate-cursor"
+        aria-hidden="true">█</span></p>
+    </div>
+  </div>
+
+  <!-- Desktop shell — rendered after boot sequence completes (future milestone) -->
+  <div id="desktop" class="desktop--hidden"></div>
+
+  <script src="js/boot.js"></script>
+  <script>
+    window.APC.boot.init();
+  </script>
+
+</body>
+</html>
