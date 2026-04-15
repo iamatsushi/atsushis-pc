@@ -226,6 +226,8 @@
   right: 0;
   bottom: 28px;
   /* overflow: visible — windows may extend to edges */
+  /* Transparent container must not swallow clicks destined for desktop icons */
+  pointer-events: none;
 }
 
 /* ---------------------------------------------------------------
@@ -235,6 +237,7 @@
 .win98-window {
   position: absolute;
   background: #C0C0C0;
+  pointer-events: auto;
   /* 2px raised inner border */
   border: 2px solid;
   border-color: #FFFFFF #808080 #808080 #FFFFFF;
