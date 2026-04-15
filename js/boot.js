@@ -60,6 +60,8 @@ window.APC.boot = (function () {
     // to comply with browser autoplay policy — never call before interaction.
     startupAudio = new Audio('assets/audio/startup.mp3');
     startupAudio.preload = 'auto';
+    // Suppress load errors (e.g. 404) silently — boot must continue regardless.
+    startupAudio.addEventListener('error', () => {});
 
     resizeCanvas();
     animFrame = requestAnimationFrame(drawFrame);
