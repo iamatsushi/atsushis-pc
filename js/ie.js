@@ -989,7 +989,8 @@ window.APC.ie = (function () {
         name: name,
         email: email,
         message: message,
-        resume_requested: resumeCheckbox.checked
+        resume_requested: resumeCheckbox.checked,
+        approved: false
       };
       if (website) { payload.website = website; }
 
