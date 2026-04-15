@@ -47,8 +47,15 @@ window.APC.ie = (function () {
   // Manual URL entry always re-triggers regardless of this flag.
   let hasDialedUp = false;
   let ieWindowState = null;   // win98 window state object from desktop.js
-  let dialupAudio = null;
   let currentUrl = DEFAULT_URL;
+
+  // Preload dial-up audio at module init time — same pattern as startup.mp3 in boot.js.
+  // Created here (not in open()) so the browser has time to buffer the file and the
+  // Audio object exists well before any .play() call, satisfying autoplay policy.
+  // .play() is only called inside showDialup(), after a user gesture has occurred.
+  const dialupAudio = new Audio('assets/audio/dialup.mp3');
+  dialupAudio.preload = 'auto';
+  dialupAudio.addEventListener('error', function () {});
   let pageEl = null;          // .ie-chrome__page element (scroll container)
   let addressInput = null;    // address bar <input>
   let statusEl = null;        // .ie-chrome__status-text span
@@ -76,12 +83,6 @@ window.APC.ie = (function () {
       ieWindowState.el.dispatchEvent(new MouseEvent('mousedown'));
       return;
     }
-
-    // Preload dial-up audio. .play() is deferred to showDialup() after user
-    // gesture — complies with browser autoplay policy.
-    dialupAudio = new Audio('assets/audio/dialup.mp3');
-    dialupAudio.preload = 'auto';
-    dialupAudio.addEventListener('error', function () {});
 
     // Create the Win98 window shell via desktop.js.
     ieWindowState = window.APC.desktop.createWindow({
