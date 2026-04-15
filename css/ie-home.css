@@ -1,0 +1,170 @@
+/* ============================================================
+   ie-home.css — ahisaka.com Homepage page content styles
+   CSS custom properties allowed here (IE page content theming,
+   not Win98 chrome). Font: Verdana per CLAUDE.md spec.
+   ============================================================ */
+
+/* Page-level custom properties — scoped to .ie-home */
+.ie-home {
+  --ie-home-bg:           #000080;
+  --ie-home-text:         #C0C0C0;
+  --ie-home-link:         #FFAA00;
+  --ie-home-link-hover:   #FFCC44;
+  --ie-home-heading:      #FFFFFF;
+  --ie-home-divider:      #C0C0C0;
+  --ie-home-section:      #FFFFFF;
+  --ie-home-footer-muted: #888888;
+}
+
+/* ---------------------------------------------------------------
+   Page root
+--------------------------------------------------------------- */
+
+.ie-home {
+  background: var(--ie-home-bg);
+  color: var(--ie-home-text);
+  font-family: Verdana, sans-serif;
+  font-size: 11px;
+  padding: 12px 14px;
+  min-height: 100%;
+  box-sizing: border-box;
+}
+
+/* ---------------------------------------------------------------
+   Header: site title, tagline, divider
+--------------------------------------------------------------- */
+
+.ie-home__header {
+  margin-bottom: 12px;
+}
+
+.ie-home__title {
+  font-family: Verdana, sans-serif;
+  font-size: 18px;
+  font-weight: bold;
+  color: var(--ie-home-heading);
+  letter-spacing: 3px;
+  margin: 0 0 4px;
+  padding: 0;
+}
+
+.ie-home__tagline {
+  font-family: Verdana, sans-serif;
+  font-size: 11px;
+  color: var(--ie-home-text);
+  margin: 0 0 10px;
+}
+
+.ie-home__divider {
+  border: none;
+  border-top: 1px solid var(--ie-home-divider);
+  margin: 0;
+}
+
+/* ---------------------------------------------------------------
+   Two-column layout — float-based, no flex/grid
+--------------------------------------------------------------- */
+
+.ie-home__cols {
+  margin-top: 12px;
+}
+
+.ie-home__col {
+  float: left;
+}
+
+.ie-home__col--left {
+  width: 38%;
+}
+
+.ie-home__col--right {
+  width: 59%;
+  margin-left: 3%;
+}
+
+/* Clearfix: ends float context so footer sits below both columns */
+.ie-home__clear {
+  clear: both;
+}
+
+/* ---------------------------------------------------------------
+   Section title ([ NAVIGATE ], [ WELCOME ])
+--------------------------------------------------------------- */
+
+.ie-home__section-title {
+  font-family: Verdana, sans-serif;
+  font-size: 11px;
+  font-weight: bold;
+  color: var(--ie-home-section);
+  margin: 0 0 8px;
+}
+
+/* ---------------------------------------------------------------
+   Navigation links
+--------------------------------------------------------------- */
+
+.ie-home__nav {
+  margin: 0;
+}
+
+.ie-home__nav-link {
+  color: var(--ie-home-link);
+  font-family: Verdana, sans-serif;
+  font-size: 11px;
+  text-decoration: none;
+  display: inline-block;
+  margin-bottom: 5px;
+  /* Amber links, period-authentic — no underline by default */
+}
+
+.ie-home__nav-link:hover {
+  color: var(--ie-home-link-hover);
+  text-decoration: underline;
+}
+
+.ie-home__nav-link:visited {
+  color: var(--ie-home-link);
+}
+
+.ie-home__nav-link:focus {
+  outline: 1px dotted var(--ie-home-link);
+  outline-offset: 1px;
+}
+
+/* ---------------------------------------------------------------
+   Intro / body copy (right column)
+--------------------------------------------------------------- */
+
+.ie-home__intro {
+  font-family: Verdana, sans-serif;
+  font-size: 11px;
+  color: var(--ie-home-text);
+  line-height: 1.6;
+  margin: 0 0 10px;
+}
+
+/* ---------------------------------------------------------------
+   Footer: hit counter + last updated stamp
+--------------------------------------------------------------- */
+
+.ie-home__footer {
+  border-top: 1px solid var(--ie-home-divider);
+  margin-top: 14px;
+  padding-top: 10px;
+  text-align: center;
+}
+
+.ie-home__counter {
+  font-family: Verdana, sans-serif;
+  font-size: 11px;
+  color: var(--ie-home-text);
+  margin: 0 0 4px;
+}
+
+.ie-home__updated {
+  font-family: Verdana, sans-serif;
+  font-size: 10px;
+  color: var(--ie-home-footer-muted);
+  font-style: italic;
+  margin: 0;
+}

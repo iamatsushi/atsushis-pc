@@ -1,0 +1,355 @@
+/* ============================================================
+   ie-base.css — Internet Explorer 4 chrome + dial-up modal
+   Scope: .ie-chrome and children; .dialup-modal and children.
+   Rules: no flex/grid; absolute positioning for layer layout;
+   table for toolbar; no CSS variables (Win98 chrome colors only).
+   ============================================================ */
+
+/* ---------------------------------------------------------------
+   IE chrome root — fills .win98-window__content (height set by JS)
+--------------------------------------------------------------- */
+
+.ie-chrome {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #C0C0C0;
+}
+
+/* ---------------------------------------------------------------
+   Menubar — absolute at top, 20px tall
+--------------------------------------------------------------- */
+
+.ie-chrome__menubar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 20px;
+  background: #C0C0C0;
+  /* Inset bottom line separating menubar from toolbar */
+  border-bottom: 1px solid #808080;
+  overflow: hidden;
+}
+
+/* Stub menu item buttons — no borders, inherit silver bg */
+.ie-chrome__menu-item {
+  display: inline-block;
+  height: 20px;
+  background: none;
+  border: none;
+  font-family: 'MS Sans Serif', Tahoma, sans-serif;
+  font-size: 11px;
+  padding: 0 6px;
+  cursor: default;
+  vertical-align: top;
+  line-height: 20px;
+}
+
+.ie-chrome__menu-item:hover {
+  background: #000080;
+  color: #FFFFFF;
+}
+
+.ie-chrome__menu-item:focus {
+  outline: 1px dotted #000000;
+  outline-offset: -2px;
+}
+
+/* ---------------------------------------------------------------
+   Toolbar — absolute below menubar, 28px tall, table-based layout
+--------------------------------------------------------------- */
+
+.ie-chrome__toolbar {
+  position: absolute;
+  top: 20px;
+  left: 0;
+  right: 0;
+  height: 28px;
+  background: #C0C0C0;
+  /* Raised bottom border — visually separates toolbar from page */
+  border-bottom: 2px solid;
+  border-bottom-color: #808080;
+  overflow: hidden;
+}
+
+/* Table fills toolbar width; address bar cell gets remaining space */
+.ie-chrome__toolbar-table {
+  width: 100%;
+  height: 28px;
+  border-collapse: collapse;
+  table-layout: auto;
+}
+
+.ie-chrome__toolbar-cell {
+  padding: 3px 2px;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+/* Expand address bar column to fill remaining width */
+.ie-chrome__toolbar-cell--addr {
+  width: 100%;
+}
+
+/* Label cell: shrink-wrap to text */
+.ie-chrome__toolbar-cell--addr-label {
+  padding-right: 4px;
+}
+
+/* Vertical separator between nav buttons and address area */
+.ie-chrome__toolbar-sep {
+  width: 6px;
+  border-left: 1px solid #808080;
+  border-right: 1px solid #FFFFFF;
+  padding: 0;
+}
+
+/* Navigation buttons: Back, Forward, Refresh */
+.ie-chrome__nav-btn {
+  width: 24px;
+  height: 20px;
+  background: #C0C0C0;
+  border: 1px solid;
+  border-color: #FFFFFF #808080 #808080 #FFFFFF;
+  font-family: 'MS Sans Serif', Tahoma, sans-serif;
+  font-size: 9px;
+  line-height: 18px;
+  text-align: center;
+  padding: 0;
+  cursor: pointer;
+  vertical-align: middle;
+}
+
+.ie-chrome__nav-btn:active {
+  border-color: #808080 #FFFFFF #FFFFFF #808080;
+  padding-top: 1px;
+  padding-left: 1px;
+}
+
+.ie-chrome__nav-btn:focus {
+  outline: 1px dotted #000000;
+  outline-offset: -3px;
+}
+
+/* Disabled-looking nav buttons (Back/Forward stubs) */
+.ie-chrome__nav-btn--disabled {
+  color: #808080;
+  cursor: default;
+}
+
+.ie-chrome__nav-btn--disabled:active {
+  border-color: #FFFFFF #808080 #808080 #FFFFFF;
+  padding-top: 0;
+  padding-left: 0;
+}
+
+/* "Address" label text */
+.ie-chrome__addr-label {
+  font-family: 'MS Sans Serif', Tahoma, sans-serif;
+  font-size: 11px;
+  color: #000000;
+  cursor: default;
+}
+
+/* Address bar input — sunken inset border */
+.ie-chrome__address-input {
+  display: block;
+  width: 100%;
+  height: 18px;
+  background: #FFFFFF;
+  border: 1px solid;
+  /* Inset/sunken: dark top-left, light bottom-right */
+  border-color: #808080 #FFFFFF #FFFFFF #808080;
+  font-family: 'MS Sans Serif', Tahoma, sans-serif;
+  font-size: 11px;
+  color: #000000;
+  padding: 0 2px;
+  box-sizing: border-box;
+}
+
+.ie-chrome__address-input:focus {
+  outline: none;
+  /* Keep the sunken appearance on focus — no browser focus ring */
+  border-color: #808080 #FFFFFF #FFFFFF #808080;
+}
+
+/* Go button — raised Win98 style */
+.ie-chrome__go-btn {
+  height: 20px;
+  background: #C0C0C0;
+  border: 1px solid;
+  border-color: #FFFFFF #808080 #808080 #FFFFFF;
+  font-family: 'MS Sans Serif', Tahoma, sans-serif;
+  font-size: 11px;
+  padding: 0 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.ie-chrome__go-btn:active {
+  border-color: #808080 #FFFFFF #FFFFFF #808080;
+  padding-top: 1px;
+  padding-left: 9px;
+}
+
+.ie-chrome__go-btn:focus {
+  outline: 1px dotted #000000;
+  outline-offset: -3px;
+}
+
+/* ---------------------------------------------------------------
+   Page viewport — scrollable content area between toolbar and statusbar
+--------------------------------------------------------------- */
+
+.ie-chrome__page {
+  position: absolute;
+  top: 48px;
+  left: 0;
+  right: 0;
+  /* 20px = statusbar height */
+  bottom: 20px;
+  overflow: auto;
+  background: #FFFFFF;
+}
+
+/* ---------------------------------------------------------------
+   Status bar — absolute at bottom, 20px tall, sunken inset border
+--------------------------------------------------------------- */
+
+.ie-chrome__statusbar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 20px;
+  background: #C0C0C0;
+  border-top: 1px solid #808080;
+  overflow: hidden;
+}
+
+.ie-chrome__status-text {
+  display: block;
+  font-family: 'MS Sans Serif', Tahoma, sans-serif;
+  font-size: 11px;
+  line-height: 18px;
+  padding: 0 4px;
+  color: #000000;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------------------------------------------------------------
+   Dial-up modal overlay — fixed, z-index 5000, above all windows
+--------------------------------------------------------------- */
+
+.dialup-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  /* Transparent overlay — Win98 modals float without a backdrop */
+  z-index: 5000;
+}
+
+/* Modal window — centered via transform (display positioning, not layout) */
+.dialup-modal__win {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 280px;
+  background: #C0C0C0;
+  /* Win98 raised inner border */
+  border: 2px solid;
+  border-color: #FFFFFF #808080 #808080 #FFFFFF;
+  /* 1px black outer border */
+  outline: 1px solid #000000;
+}
+
+/* Titlebar: same gradient as .win98-window__titlebar */
+.dialup-modal__titlebar {
+  height: 18px;
+  padding: 2px;
+  background: linear-gradient(to right, #000080, #1084D0);
+}
+
+.dialup-modal__title {
+  display: block;
+  color: #FFFFFF;
+  font-family: 'MS Sans Serif', Tahoma, sans-serif;
+  font-size: 11px;
+  font-weight: bold;
+  line-height: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* Body: icon, phone number, status message, cancel button */
+.dialup-modal__body {
+  padding: 16px 12px 12px;
+  text-align: center;
+}
+
+.dialup-modal__icon {
+  font-size: 32px;
+  line-height: 1;
+  margin-bottom: 10px;
+}
+
+.dialup-modal__phone {
+  font-family: 'MS Sans Serif', Tahoma, sans-serif;
+  font-size: 11px;
+  margin: 0 0 8px;
+  color: #000000;
+}
+
+/* Status text: updates as steps advance — min-height prevents layout shift */
+.dialup-modal__status {
+  font-family: 'MS Sans Serif', Tahoma, sans-serif;
+  font-size: 11px;
+  margin: 0 0 14px;
+  min-height: 14px;
+  color: #000000;
+}
+
+/* Cancel button — standard Win98 dialog button */
+.dialup-modal__cancel {
+  background: #C0C0C0;
+  border: 2px solid;
+  border-color: #FFFFFF #808080 #808080 #FFFFFF;
+  font-family: 'MS Sans Serif', Tahoma, sans-serif;
+  font-size: 11px;
+  padding: 3px 0;
+  min-width: 75px;
+  cursor: pointer;
+}
+
+.dialup-modal__cancel:active {
+  border-color: #808080 #FFFFFF #FFFFFF #808080;
+  padding-top: 4px;
+  padding-left: 1px;
+}
+
+.dialup-modal__cancel:focus {
+  outline: 1px dotted #000000;
+  outline-offset: -4px;
+}
+
+/* ---------------------------------------------------------------
+   IE stub page — placeholder for pages not yet built
+--------------------------------------------------------------- */
+
+.ie-stub {
+  padding: 16px;
+  font-family: Verdana, sans-serif;
+  font-size: 11px;
+  color: #C0C0C0;
+  background: #000080;
+  min-height: 100%;
+  box-sizing: border-box;
+}
