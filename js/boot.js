@@ -173,8 +173,15 @@ window.APC.boot = (function () {
     window.removeEventListener('resize', resizeCanvas);
 
     // Play startup audio. This is the first user gesture — autoplay is safe here.
-    // Catch is a silent fallback; boot continues regardless of audio state.
-    startupAudio.play().catch(() => {});
+    // .catch() handles Promise rejection (async failure).
+    // try/catch handles synchronous DOMException thrown by some browsers when the
+    // audio element is in error state (e.g. 404) — without this, the throw aborts
+    // onGateInteract before the fade class and setTimeout are ever reached.
+    try {
+      startupAudio.play().catch(() => {});
+    } catch (e) {
+      // Silent fallback — audio failure must never block the boot sequence.
+    }
 
     // Fire Umami analytics event. Guard in case script hasn't loaded yet.
     if (window.umami) {
