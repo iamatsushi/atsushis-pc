@@ -90,6 +90,21 @@
   margin-bottom: 10px;
 }
 
+.ie-guestbook__field--checkbox {
+  margin-bottom: 10px;
+}
+
+.ie-guestbook__checkbox {
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+.ie-guestbook__label--checkbox {
+  display: inline;
+  font-weight: normal;
+  cursor: pointer;
+}
+
 .ie-guestbook__label {
   display: block;
   font-family: Verdana, sans-serif;

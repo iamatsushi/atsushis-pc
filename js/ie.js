@@ -41,8 +41,7 @@ window.APC.ie = (function () {
     'ahisaka.com/about':     'about',
     'ahisaka.com/thoughts':  'thoughts',
     'ahisaka.com/projects':  'projects',
-    'ahisaka.com/guestbook': 'guestbook',
-    'ahisaka.com/resume':    'resume'
+    'ahisaka.com/guestbook': 'guestbook'
   };
 
   // --- Module state ----------------------------------------------------
@@ -69,10 +68,11 @@ window.APC.ie = (function () {
   let navIndex = -1;          // pointer into navHistory; -1 = nothing visited yet
   let backBtn = null;         // reference to Back <button> for aria-disabled updates
   let fwdBtn = null;          // reference to Forward <button>
+  let currentParams = {};     // parsed query params for the current page
 
   // --- Public API ------------------------------------------------------
 
-  function open() {
+  function open(targetUrl) {
     // If IE window already exists, restore or focus it — don't open a second.
     if (ieWindowState) {
       if (ieWindowState.minimized) {
@@ -85,6 +85,8 @@ window.APC.ie = (function () {
       }
       // Trigger mousedown to bring window to front via desktop.js bringToFront.
       ieWindowState.el.dispatchEvent(new MouseEvent('mousedown'));
+      // If a target URL was requested (e.g. from resume.exe icon), navigate to it.
+      if (targetUrl) { navigate(targetUrl, false); }
       return;
     }
 
@@ -123,8 +125,8 @@ window.APC.ie = (function () {
       window.umami.track('app_open', { app_name: 'ie' });
     }
 
-    // Navigate to homepage — will trigger dial-up on first launch.
-    navigate(DEFAULT_URL, false);
+    // Navigate to target URL (or homepage) — will trigger dial-up on first launch.
+    navigate(targetUrl || DEFAULT_URL, false);
   }
 
   // --- IE Chrome builder -----------------------------------------------
@@ -335,6 +337,19 @@ window.APC.ie = (function () {
       normalized = normalized.slice(0, -1);
     }
 
+    // Extract and parse query params; route matching uses the base URL only.
+    const qIdx = normalized.indexOf('?');
+    currentParams = {};
+    if (qIdx !== -1) {
+      normalized.slice(qIdx + 1).split('&').forEach(function (pair) {
+        const parts = pair.split('=');
+        if (parts[0]) {
+          currentParams[decodeURIComponent(parts[0])] = parts[1] ? decodeURIComponent(parts[1]) : '';
+        }
+      });
+      normalized = normalized.slice(0, qIdx);
+    }
+
     currentUrl = normalized;
     if (addressInput) { addressInput.value = normalized; }
 
@@ -378,8 +393,7 @@ window.APC.ie = (function () {
       about:     renderAbout,
       thoughts:  renderThoughts,
       projects:  renderProjects,
-      guestbook: renderGuestbook,
-      resume:    renderResume
+      guestbook: renderGuestbook
     };
     (renderers[pageKey] || renderHome)();
   }
@@ -432,8 +446,7 @@ window.APC.ie = (function () {
       { label: '» About Me',    url: 'ahisaka.com/about'     },
       { label: '» My Thoughts', url: 'ahisaka.com/thoughts'  },
       { label: '» Work',        url: 'ahisaka.com/projects'  },
-      { label: '» Guestbook',   url: 'ahisaka.com/guestbook' },
-      { label: '» Resume',      url: 'ahisaka.com/resume'    }
+      { label: '» Guestbook',   url: 'ahisaka.com/guestbook' }
     ];
 
     navLinks.forEach(function (link) {
@@ -473,7 +486,7 @@ window.APC.ie = (function () {
     const intro2 = document.createElement('p');
     intro2.className = 'ie-home__intro';
     intro2.textContent =
-      'Sign the guestbook to unlock my resume. ' +
+      'Sign the guestbook and say hello. ' +
       'Click around — there are a few surprises.';
     rightCol.appendChild(intro2);
 
@@ -722,25 +735,34 @@ window.APC.ie = (function () {
     // Project cards — placeholder content, replaced in Phase 9
     const projects = [
       {
-        title: 'Project Alpha',
-        meta: 'Product Manager · 2024–2025',
-        desc: 'Placeholder — real project details in Phase 9. Brief description ' +
-          'of what was built, the problem it solved, and the impact delivered.',
-        tags: ['Product Strategy', 'B2B SaaS', 'Cross-functional']
+        title:   'Project Alpha',
+        role:    'Product Manager',
+        company: 'Company Name',
+        years:   '2024–2025',
+        impact:  'Shipped a key product initiative that drove measurable growth, reduced ' +
+                 'churn, and improved retention across a core user segment. Real metrics ' +
+                 'and details to be filled in Phase 9.',
+        skills:  ['Product Strategy', 'B2B SaaS', 'Roadmapping', 'Cross-functional']
       },
       {
-        title: 'Project Beta',
-        meta: 'Product Lead · 2023–2024',
-        desc: 'Placeholder — real project details in Phase 9. Another project ' +
-          'description with outcome metrics and team size context.',
-        tags: ['Mobile', 'Growth', 'A/B Testing']
+        title:   'Project Beta',
+        role:    'Product Lead',
+        company: 'Company Name',
+        years:   '2023–2024',
+        impact:  'Led a mobile-first redesign that improved conversion and increased DAU, ' +
+                 'validated through A/B testing over 8 weeks. Real metrics and details ' +
+                 'to be filled in Phase 9.',
+        skills:  ['Mobile', 'Growth', 'A/B Testing', 'User Research']
       },
       {
-        title: 'Atsushi\'s PC',
-        meta: 'Side Project · 2026',
-        desc: 'A browser-based Windows 98 desktop simulation serving as a portfolio. ' +
-          'Built with vanilla HTML/CSS/JS, hosted on a Raspberry Pi 3B+.',
-        tags: ['Vanilla JS', 'Raspberry Pi', 'CSS']
+        title:   'Atsushi\'s PC',
+        role:    'Solo Builder',
+        company: 'Side Project',
+        years:   '2026',
+        impact:  'Browser-based Windows 98 desktop simulation serving as a portfolio. ' +
+                 'Built with vanilla HTML/CSS/JS, hosted on a Raspberry Pi 3B+ via ' +
+                 'Caddy and Cloudflare Tunnel.',
+        skills:  ['Vanilla JS', 'Raspberry Pi', 'Caddy', 'CSS']
       }
     ];
 
@@ -757,25 +779,45 @@ window.APC.ie = (function () {
 
       const cardMeta = document.createElement('p');
       cardMeta.className = 'ie-projects__card-meta';
-      cardMeta.textContent = proj.meta;
+      cardMeta.textContent = proj.role + ' · ' + proj.company + ' · ' + proj.years;
 
-      const cardDesc = document.createElement('p');
-      cardDesc.className = 'ie-projects__card-desc';
-      cardDesc.textContent = proj.desc;
+      const impactSection = document.createElement('div');
+      impactSection.className = 'ie-projects__card-section';
+
+      const impactLabel = document.createElement('p');
+      impactLabel.className = 'ie-projects__card-label';
+      impactLabel.textContent = 'IMPACT';
+
+      const cardImpact = document.createElement('p');
+      cardImpact.className = 'ie-projects__card-impact';
+      cardImpact.textContent = proj.impact;
+
+      impactSection.appendChild(impactLabel);
+      impactSection.appendChild(cardImpact);
+
+      const skillsSection = document.createElement('div');
+      skillsSection.className = 'ie-projects__card-section';
+
+      const skillsLabel = document.createElement('p');
+      skillsLabel.className = 'ie-projects__card-label';
+      skillsLabel.textContent = 'SKILLS';
 
       const tagsEl = document.createElement('p');
       tagsEl.className = 'ie-projects__card-tags';
-      proj.tags.forEach(function (tag) {
+      proj.skills.forEach(function (tag) {
         const badge = document.createElement('span');
         badge.className = 'ie-projects__tag';
         badge.textContent = tag;
         tagsEl.appendChild(badge);
       });
 
+      skillsSection.appendChild(skillsLabel);
+      skillsSection.appendChild(tagsEl);
+
       card.appendChild(cardTitle);
       card.appendChild(cardMeta);
-      card.appendChild(cardDesc);
-      card.appendChild(tagsEl);
+      card.appendChild(impactSection);
+      card.appendChild(skillsSection);
       grid.appendChild(card);
     });
 
@@ -806,7 +848,7 @@ window.APC.ie = (function () {
 
     const sub = document.createElement('p');
     sub.className = 'ie-guestbook__subtitle';
-    sub.textContent = 'Leave a message! Sign to unlock the Resume page.';
+    sub.textContent = 'Leave a message and say hello!';
 
     header.appendChild(h1);
     header.appendChild(sub);
@@ -883,6 +925,26 @@ window.APC.ie = (function () {
     messageInput.rows = 4;
     form.appendChild(makeField('Message', messageInput, true));
 
+    // Resume request checkbox — auto-checked when ?resume=1 param is present
+    const resumeRow = document.createElement('div');
+    resumeRow.className = 'ie-guestbook__field ie-guestbook__field--checkbox';
+
+    const resumeCheckbox = document.createElement('input');
+    resumeCheckbox.type = 'checkbox';
+    resumeCheckbox.id = 'gb-resume';
+    resumeCheckbox.name = 'resume_requested';
+    resumeCheckbox.className = 'ie-guestbook__checkbox';
+    if (currentParams.resume === '1') { resumeCheckbox.checked = true; }
+
+    const resumeLabel = document.createElement('label');
+    resumeLabel.className = 'ie-guestbook__label ie-guestbook__label--checkbox';
+    resumeLabel.setAttribute('for', 'gb-resume');
+    resumeLabel.textContent = 'I\'d like a copy of your resume';
+
+    resumeRow.appendChild(resumeCheckbox);
+    resumeRow.appendChild(resumeLabel);
+    form.appendChild(resumeRow);
+
     // Altcha proof-of-work widget — resolved by Pi service at /altcha/challenge.
     // Widget adds a hidden input named 'altcha' to the form when solved.
     // Form submits without it until Pocketbase hook verification is added (Phase 6).
@@ -923,7 +985,12 @@ window.APC.ie = (function () {
       submitBtn.disabled = true;
       submitBtn.textContent = 'Sending...';
 
-      const payload = { name: name, email: email, message: message };
+      const payload = {
+        name: name,
+        email: email,
+        message: message,
+        resume_requested: resumeCheckbox.checked
+      };
       if (website) { payload.website = website; }
 
       // Include altcha solution if the widget has resolved (sets hidden input 'altcha').
@@ -940,8 +1007,6 @@ window.APC.ie = (function () {
         return res.json();
       })
       .then(function () {
-        // Set sessionStorage gate flag so Resume page becomes accessible.
-        sessionStorage.setItem('guestbook_submitted', '1');
         if (window.umami) {
           window.umami.track('guestbook_submit', { success: true });
         }
@@ -949,7 +1014,9 @@ window.APC.ie = (function () {
         formArea.innerHTML = '';
         const successEl = document.createElement('p');
         successEl.className = 'ie-guestbook__success';
-        successEl.textContent = 'Your message will appear within 24 hours after review.';
+        successEl.textContent =
+          'Thanks for signing the guestbook! Your message will appear within 24 hours ' +
+          'after review. If you requested a resume, I will email it to you directly.';
         formArea.appendChild(successEl);
       })
       .catch(function () {
@@ -1117,147 +1184,6 @@ window.APC.ie = (function () {
     } catch (e) {
       return false;
     }
-  }
-
-  // --- Resume ----------------------------------------------------------
-
-  function renderResume() {
-    // Gate: Resume is only accessible after a successful guestbook submission.
-    if (!sessionStorage.getItem('guestbook_submitted')) {
-      const locked = document.createElement('div');
-      locked.className = 'ie-resume ie-resume--locked';
-
-      const lockMsg = document.createElement('p');
-      lockMsg.className = 'ie-resume__lock-msg';
-      lockMsg.textContent = 'The resume is locked. Please sign the guestbook to unlock access.';
-
-      const lockLink = document.createElement('a');
-      lockLink.className = 'ie-resume__lock-link';
-      lockLink.href = '#';
-      lockLink.textContent = '→ Go to Guestbook';
-      lockLink.addEventListener('click', function (e) {
-        e.preventDefault();
-        navigate('ahisaka.com/guestbook', false);
-      });
-
-      locked.appendChild(lockMsg);
-      locked.appendChild(lockLink);
-      pageEl.appendChild(locked);
-      return;
-    }
-
-    if (window.umami) { window.umami.track('resume_click'); }
-
-    const page = document.createElement('div');
-    page.className = 'ie-resume';
-
-    // Header
-    const header = document.createElement('div');
-    header.className = 'ie-resume__header';
-
-    const name = document.createElement('h1');
-    name.className = 'ie-resume__name';
-    name.textContent = 'Atsushi Hisaka';
-
-    const role = document.createElement('p');
-    role.className = 'ie-resume__role';
-    role.textContent = 'Product Manager';
-
-    const contact = document.createElement('p');
-    contact.className = 'ie-resume__contact';
-    contact.textContent = 'Portland, OR · ahisaka.com';
-
-    header.appendChild(name);
-    header.appendChild(role);
-    header.appendChild(contact);
-    page.appendChild(header);
-
-    const topDivider = document.createElement('hr');
-    topDivider.className = 'ie-resume__divider';
-    topDivider.setAttribute('aria-hidden', 'true');
-    page.appendChild(topDivider);
-
-    // Sections — placeholder content, replaced in Phase 9
-    const sections = [
-      {
-        title: 'Experience',
-        items: [
-          {
-            heading: 'Product Manager — Company Name',
-            sub: '20XX – Present · City, State',
-            body: 'Placeholder — real experience in Phase 9. ' +
-              'Led cross-functional teams to ship key product initiatives with measurable impact.'
-          },
-          {
-            heading: 'Associate Product Manager — Company Name',
-            sub: '20XX – 20XX · City, State',
-            body: 'Placeholder — real experience in Phase 9. ' +
-              'Owned roadmap, wrote specs, ran sprint cycles, and shipped features to production.'
-          }
-        ]
-      },
-      {
-        title: 'Education',
-        items: [
-          {
-            heading: 'B.S. [Field] — University Name',
-            sub: '20XX',
-            body: 'Placeholder — real education in Phase 9.'
-          }
-        ]
-      },
-      {
-        title: 'Skills',
-        items: [
-          {
-            heading: '',
-            sub: '',
-            body: 'Product Strategy · Roadmapping · User Research · A/B Testing · ' +
-              'SQL · Figma · Jira · Cross-functional Leadership'
-          }
-        ]
-      }
-    ];
-
-    sections.forEach(function (sec) {
-      const section = document.createElement('div');
-      section.className = 'ie-resume__section';
-
-      const secTitle = document.createElement('h2');
-      secTitle.className = 'ie-resume__section-title';
-      secTitle.textContent = sec.title;
-      section.appendChild(secTitle);
-
-      sec.items.forEach(function (item) {
-        const itemEl = document.createElement('div');
-        itemEl.className = 'ie-resume__item';
-
-        if (item.heading) {
-          const heading = document.createElement('p');
-          heading.className = 'ie-resume__item-heading';
-          heading.textContent = item.heading;
-          itemEl.appendChild(heading);
-        }
-
-        if (item.sub) {
-          const sub = document.createElement('p');
-          sub.className = 'ie-resume__item-sub';
-          sub.textContent = item.sub;
-          itemEl.appendChild(sub);
-        }
-
-        const body = document.createElement('p');
-        body.className = 'ie-resume__item-body';
-        body.textContent = item.body;
-        itemEl.appendChild(body);
-
-        section.appendChild(itemEl);
-      });
-
-      page.appendChild(section);
-    });
-
-    pageEl.appendChild(page);
   }
 
   // --- Dial-up modal ---------------------------------------------------

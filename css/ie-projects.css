@@ -105,6 +105,27 @@
   margin: 0 0 8px;
 }
 
+/* Labeled sub-section within a card (Impact, Skills) */
+.ie-projects__card-section {
+  margin-top: 8px;
+}
+
+.ie-projects__card-label {
+  font-size: 9px;
+  font-weight: bold;
+  color: var(--projects-meta);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin: 0 0 2px;
+}
+
+.ie-projects__card-impact {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--projects-text);
+  margin: 0;
+}
+
 /* Tag badges */
 .ie-projects__card-tags {
   margin: 0;

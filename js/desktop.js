@@ -102,6 +102,16 @@ window.APC.desktop = (function () {
       openMyComputer();
     } else if (app === 'ie') {
       openIE();
+    } else if (app === 'resume-exe') {
+      openResumeExe();
+    }
+  }
+
+  function openResumeExe() {
+    // Open IE (or focus it if already open) and navigate to guestbook?resume=1.
+    // ie.js open(targetUrl) handles both cases: new window and already-open window.
+    if (window.APC.ie && typeof window.APC.ie.open === 'function') {
+      window.APC.ie.open('ahisaka.com/guestbook?resume=1');
     }
   }
 
