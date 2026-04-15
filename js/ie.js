@@ -13,12 +13,20 @@ window.APC.ie = (function () {
   const DEFAULT_URL = 'ahisaka.com';
   const DIALUP_PHONE = '867-9305';
 
-  // Each step: message shown, random delay before advancing to next step.
+  // Fallback duration if audio 'ended' event never fires (e.g. load error).
+  // Matches dialup.mp3 length of 10.5 seconds.
+  const DIALUP_FALLBACK_MS = 10500;
+
+  // Offsets at which each step message appears during the audio.
+  // Cosmetic only — completion is driven by audio 'ended', not these timers.
+  const DIALUP_STEP_OFFSETS_MS = [0, 2500, 5500, 8500];
+
+  // Step messages displayed sequentially during the dial-up audio.
   const DIALUP_STEPS = [
-    { msg: 'Dialing ' + DIALUP_PHONE + '...',      minMs: 500,  maxMs: 900  },
-    { msg: 'Verifying username and password...',   minMs: 600,  maxMs: 1100 },
-    { msg: 'Logging on to network...',             minMs: 400,  maxMs: 800  },
-    { msg: 'Connected at 28,800 bps',              minMs: 400,  maxMs: 600  }
+    { msg: 'Dialing ' + DIALUP_PHONE + '...'    },
+    { msg: 'Verifying username and password...' },
+    { msg: 'Logging on to network...'           },
+    { msg: 'Connected at 28,800 bps'            }
   ];
 
   // Client-side routing map: normalized URL → page key.
@@ -44,6 +52,12 @@ window.APC.ie = (function () {
   let pageEl = null;          // .ie-chrome__page element (scroll container)
   let addressInput = null;    // address bar <input>
   let statusEl = null;        // .ie-chrome__status-text span
+
+  // Navigation history stack
+  let navHistory = [];        // array of normalized URL strings in visit order
+  let navIndex = -1;          // pointer into navHistory; -1 = nothing visited yet
+  let backBtn = null;         // reference to Back <button> for aria-disabled updates
+  let fwdBtn = null;          // reference to Forward <button>
 
   // --- Public API ------------------------------------------------------
 
@@ -79,7 +93,7 @@ window.APC.ie = (function () {
       y: 40
     });
 
-    // When the window is closed, reset module-level DOM refs.
+    // When the window is closed, reset all module-level DOM refs and nav state.
     // desktop.js already removes the element and taskbar button.
     const closeBtn = ieWindowState.el.querySelector('[data-action="close"]');
     if (closeBtn) {
@@ -88,6 +102,10 @@ window.APC.ie = (function () {
         pageEl = null;
         addressInput = null;
         statusEl = null;
+        backBtn = null;
+        fwdBtn = null;
+        navHistory = [];
+        navIndex = -1;
       });
     }
 
@@ -164,16 +182,20 @@ window.APC.ie = (function () {
     const tbody = document.createElement('tbody');
     const tr = document.createElement('tr');
 
-    // Back (stub)
-    tr.appendChild(makeNavBtnCell('◄', 'Back', null));
+    // Back — starts disabled (no history yet); stores ref for updateNavButtons().
+    const backTd = makeNavBtnCell('◄', 'Back', goBack, true);
+    backBtn = backTd.querySelector('button');
+    tr.appendChild(backTd);
 
-    // Forward (stub)
-    tr.appendChild(makeNavBtnCell('►', 'Forward', null));
+    // Forward — starts disabled; stores ref for updateNavButtons().
+    const fwdTd = makeNavBtnCell('►', 'Forward', goForward, true);
+    fwdBtn = fwdTd.querySelector('button');
+    tr.appendChild(fwdTd);
 
-    // Refresh — re-navigates to currentUrl without dial-up.
+    // Refresh — re-navigates to currentUrl without dial-up; always enabled.
     tr.appendChild(makeNavBtnCell('↻', 'Refresh', function () {
       navigate(currentUrl, false);
-    }));
+    }, false));
 
     // Vertical separator
     const tdSep = document.createElement('td');
@@ -231,7 +253,8 @@ window.APC.ie = (function () {
     return toolbar;
   }
 
-  function makeNavBtnCell(symbol, label, onClick) {
+  // isDisabled: true = start with --disabled class and aria-disabled="true"
+  function makeNavBtnCell(symbol, label, onClick, isDisabled) {
     const td = document.createElement('td');
     td.className = 'ie-chrome__toolbar-cell ie-chrome__toolbar-cell--btn';
     const btn = document.createElement('button');
@@ -239,15 +262,58 @@ window.APC.ie = (function () {
     btn.setAttribute('aria-label', label);
     btn.title = label;
     btn.textContent = symbol;
-    if (onClick) {
-      btn.addEventListener('click', onClick);
-    } else {
-      // Stub — disabled appearance without actually disabled (maintains tab order)
+    btn.addEventListener('click', onClick);
+    if (isDisabled) {
       btn.classList.add('ie-chrome__nav-btn--disabled');
       btn.setAttribute('aria-disabled', 'true');
     }
     td.appendChild(btn);
     return td;
+  }
+
+  // --- Navigation history ----------------------------------------------
+
+  function goBack() {
+    if (navIndex <= 0) { return; }
+    navIndex--;
+    const url = navHistory[navIndex];
+    currentUrl = url;
+    if (addressInput) { addressInput.value = url; }
+    renderPage(PAGE_ROUTES[url] || 'home');
+    updateNavButtons();
+  }
+
+  function goForward() {
+    if (navIndex >= navHistory.length - 1) { return; }
+    navIndex++;
+    const url = navHistory[navIndex];
+    currentUrl = url;
+    if (addressInput) { addressInput.value = url; }
+    renderPage(PAGE_ROUTES[url] || 'home');
+    updateNavButtons();
+  }
+
+  function updateNavButtons() {
+    const canBack = navIndex > 0;
+    const canFwd  = navIndex < navHistory.length - 1;
+
+    if (backBtn) {
+      backBtn.setAttribute('aria-disabled', canBack ? 'false' : 'true');
+      if (canBack) {
+        backBtn.classList.remove('ie-chrome__nav-btn--disabled');
+      } else {
+        backBtn.classList.add('ie-chrome__nav-btn--disabled');
+      }
+    }
+
+    if (fwdBtn) {
+      fwdBtn.setAttribute('aria-disabled', canFwd ? 'false' : 'true');
+      if (canFwd) {
+        fwdBtn.classList.remove('ie-chrome__nav-btn--disabled');
+      } else {
+        fwdBtn.classList.add('ie-chrome__nav-btn--disabled');
+      }
+    }
   }
 
   // --- Navigation ------------------------------------------------------
@@ -265,13 +331,19 @@ window.APC.ie = (function () {
     currentUrl = normalized;
     if (addressInput) { addressInput.value = normalized; }
 
+    // Push to history, truncating any forward entries first.
+    navHistory = navHistory.slice(0, navIndex + 1);
+    navHistory.push(normalized);
+    navIndex = navHistory.length - 1;
+    updateNavButtons();
+
     // Resolve to page key; unknown URLs fall back silently to homepage.
     const pageKey = PAGE_ROUTES[normalized] || 'home';
 
     // Dial-up trigger rules:
     // - First IE launch (hasDialedUp === false): always dial. Event: 'dialup_trigger'.
     // - Manual URL entry (fromUserInput): always dial. Event: 'dialup_url_entry'.
-    // - Programmatic link navigation after first dial: skip dial, render directly.
+    // - In-session link navigation after first dial: skip dial, render directly.
     if (!hasDialedUp || fromUserInput) {
       const eventName = fromUserInput ? 'dialup_url_entry' : 'dialup_trigger';
       if (window.umami) { window.umami.track(eventName); }
@@ -477,14 +549,9 @@ window.APC.ie = (function () {
     statusText.setAttribute('aria-live', 'polite');
     statusText.textContent = DIALUP_STEPS[0].msg;
 
-    // Cancel dismisses modal without completing the connection.
     const cancelBtn = document.createElement('button');
     cancelBtn.className = 'dialup-modal__cancel';
     cancelBtn.textContent = 'Cancel';
-    cancelBtn.addEventListener('click', function () {
-      cleanup();
-      // Cancelled — do not call onComplete; page stays blank.
-    });
 
     body.appendChild(icon);
     body.appendChild(phoneNum);
@@ -497,18 +564,16 @@ window.APC.ie = (function () {
     // Focus cancel button for keyboard accessibility (focus trap: only one control).
     cancelBtn.focus();
 
-    // Play dial-up audio. User gesture already occurred (gate screen click).
-    if (dialupAudio) {
-      try {
-        dialupAudio.currentTime = 0;
-        dialupAudio.play().catch(function () {});
-      } catch (e) {
-        // Silent fallback — audio failure must never block the connection sequence.
-      }
-    }
+    // completed guard: prevents double-fire if audio 'ended' and fallback both race.
+    let completed = false;
+    let fallbackTimer = null;
+    const stepTimers = [];
 
     function cleanup() {
+      clearTimeout(fallbackTimer);
+      stepTimers.forEach(clearTimeout);
       if (dialupAudio) {
+        dialupAudio.removeEventListener('ended', onAudioEnded);
         dialupAudio.pause();
         dialupAudio.currentTime = 0;
       }
@@ -517,29 +582,51 @@ window.APC.ie = (function () {
       }
     }
 
-    // Advance through DIALUP_STEPS sequentially with random delays.
-    let stepIdx = 0;
-
-    function runNextStep() {
-      stepIdx++;
-      if (stepIdx >= DIALUP_STEPS.length) {
-        // All steps done — hold briefly on "Connected" then hand off.
-        setTimeout(function () {
-          cleanup();
-          onComplete();
-        }, 300);
-        return;
-      }
-      const step = DIALUP_STEPS[stepIdx];
-      statusText.textContent = step.msg;
-      const delay = step.minMs + Math.random() * (step.maxMs - step.minMs);
-      setTimeout(runNextStep, delay);
+    function complete() {
+      if (completed) { return; }
+      completed = true;
+      cleanup();
+      onComplete();
     }
 
-    // Kick off first step delay (step[0] message already displayed above).
-    const firstStep = DIALUP_STEPS[0];
-    const firstDelay = firstStep.minMs + Math.random() * (firstStep.maxMs - firstStep.minMs);
-    setTimeout(runNextStep, firstDelay);
+    // Primary completion trigger: audio 'ended' event fires when dialup.mp3 finishes.
+    // Named function so it can be removed in cleanup without lingering on the element.
+    function onAudioEnded() {
+      complete();
+    }
+
+    if (dialupAudio) {
+      dialupAudio.addEventListener('ended', onAudioEnded);
+      try {
+        dialupAudio.currentTime = 0;
+        dialupAudio.play().catch(function () {});
+      } catch (e) {
+        // Silent fallback — audio failure must never block the connection sequence.
+      }
+    }
+
+    // Fallback timer: if audio never fires 'ended' (load error, 404, etc.),
+    // dismiss the modal after DIALUP_FALLBACK_MS (10500ms = dialup.mp3 length).
+    fallbackTimer = setTimeout(complete, DIALUP_FALLBACK_MS);
+
+    // Cosmetic step text updates — purely visual, decoupled from completion.
+    // Step 0 is already set above; schedule steps 1–3 at their offsets.
+    DIALUP_STEP_OFFSETS_MS.forEach(function (offsetMs, idx) {
+      if (idx === 0) { return; } // already displayed at modal open
+      const t = setTimeout(function () {
+        if (!completed && DIALUP_STEPS[idx]) {
+          statusText.textContent = DIALUP_STEPS[idx].msg;
+        }
+      }, offsetMs);
+      stepTimers.push(t);
+    });
+
+    // Cancel: suppress onComplete, clean up everything.
+    cancelBtn.addEventListener('click', function () {
+      completed = true;   // prevent complete() from calling onComplete
+      cleanup();
+      // Page stays blank — user cancelled the connection.
+    });
   }
 
   // --- Public exports --------------------------------------------------
