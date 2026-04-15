@@ -993,10 +993,6 @@ window.APC.ie = (function () {
       };
       if (website) { payload.website = website; }
 
-      // Include altcha solution if the widget has resolved (sets hidden input 'altcha').
-      const altchaValue = new FormData(form).get('altcha');
-      if (altchaValue) { payload.altcha = String(altchaValue); }
-
       fetch(GUESTBOOK_API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1019,7 +1015,8 @@ window.APC.ie = (function () {
           'after review. If you requested a resume, I will email it to you directly.';
         formArea.appendChild(successEl);
       })
-      .catch(function () {
+      .catch(function (err) {
+        console.error('Guestbook POST failed:', err);
         if (window.umami) {
           window.umami.track('guestbook_submit', { success: false });
         }
