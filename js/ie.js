@@ -998,8 +998,12 @@ window.APC.ie = (function () {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       })
-      .then(function (res) {
-        if (!res.ok) { throw new Error('HTTP ' + res.status); }
+      .then(async function (res) {
+        if (!res.ok) {
+          const errBody = await res.json().catch(function () { return {}; });
+          console.error('Pocketbase error body:', errBody);
+          throw new Error('HTTP ' + res.status);
+        }
         return res.json();
       })
       .then(function () {
