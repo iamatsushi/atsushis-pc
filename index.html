@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Atsushi's PC</title>
+  <link rel="stylesheet" href="css/win98.css">
   <link rel="stylesheet" href="css/boot.css">
   <script defer src="https://cloud.umami.is/script.js"
     data-website-id="d26f2f30-ead0-4092-b7c5-99afac8eda72"></script>
@@ -35,8 +36,45 @@
   </div>
 
   <!-- Desktop shell — shown after boot sequence completes -->
-  <div id="desktop" class="desktop--hidden"></div>
+  <div id="desktop" class="desktop--hidden">
 
+    <!-- Desktop icons -->
+    <div id="desktop-icons" aria-label="Desktop">
+      <div class="desktop-icon" data-app="my-computer"
+           tabindex="0" role="button" aria-label="My Computer">
+        <span class="desktop-icon__img" aria-hidden="true">🖥</span>
+        <span class="desktop-icon__label">My Computer</span>
+      </div>
+      <div class="desktop-icon" data-app="ie"
+           tabindex="0" role="button" aria-label="Internet Explorer">
+        <span class="desktop-icon__img" aria-hidden="true">🌐</span>
+        <span class="desktop-icon__label">Internet Explorer</span>
+      </div>
+    </div>
+
+    <!-- Window layer — windows are appended here by desktop.js -->
+    <div id="window-layer"></div>
+
+    <!-- Start menu stub — toggled by start button -->
+    <div id="start-menu" aria-label="Start menu" role="menu">
+      <p class="start-menu__stub">Start menu coming soon</p>
+    </div>
+
+    <!-- Taskbar: start button (float left), system tray (float right),
+         taskbar-windows fills remaining width via BFC (overflow:hidden) -->
+    <div id="taskbar" role="toolbar" aria-label="Taskbar">
+      <button id="start-button" aria-haspopup="true" aria-expanded="false">
+        Start
+      </button>
+      <div id="system-tray" aria-label="System tray">
+        <span id="taskbar-clock" aria-live="polite" aria-label="System clock"></span>
+      </div>
+      <div id="taskbar-windows" role="group" aria-label="Open windows"></div>
+    </div>
+
+  </div>
+
+  <script src="js/desktop.js"></script>
   <script src="js/boot.js"></script>
   <script>
     window.APC.boot.init();

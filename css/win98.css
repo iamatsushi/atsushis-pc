@@ -1,0 +1,349 @@
+/* ============================================================
+   win98.css — Windows 98 desktop chrome
+   Rules: no border-radius, no flex/grid, no CSS variables for
+   chrome colors, no external fonts. Float/absolute/tables only.
+   linear-gradient used only for titlebar — purely visual, not layout.
+   ============================================================ */
+
+/* ---------------------------------------------------------------
+   Desktop
+--------------------------------------------------------------- */
+
+#desktop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #008080;
+  overflow: hidden;
+}
+
+/* ---------------------------------------------------------------
+   Desktop icons
+--------------------------------------------------------------- */
+
+#desktop-icons {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 28px;
+}
+
+.desktop-icon {
+  position: absolute;
+  width: 64px;
+  text-align: center;
+  cursor: default;
+  padding: 4px;
+}
+
+.desktop-icon:nth-child(1) {
+  top: 16px;
+  left: 10px;
+}
+
+.desktop-icon:nth-child(2) {
+  top: 96px;
+  left: 10px;
+}
+
+.desktop-icon__img {
+  display: block;
+  font-size: 32px;
+  line-height: 1;
+  width: 32px;
+  height: 32px;
+  margin: 0 auto 4px;
+}
+
+.desktop-icon__label {
+  display: block;
+  font-family: 'MS Sans Serif', Tahoma, sans-serif;
+  font-size: 11px;
+  color: #FFFFFF;
+  /* Black drop-shadow for legibility on teal desktop */
+  text-shadow: 1px 1px 0 #000000;
+  word-break: break-word;
+  line-height: 1.3;
+}
+
+/* Selected state: navy highlight behind icon + label */
+.desktop-icon--selected .desktop-icon__img {
+  outline: 1px dotted #FFFFFF;
+  background: #000080;
+}
+
+.desktop-icon--selected .desktop-icon__label {
+  background: #000080;
+  color: #FFFFFF;
+}
+
+/* ---------------------------------------------------------------
+   Taskbar — float-only layout:
+   start button floats left, system tray floats right,
+   taskbar-windows fills remaining space via overflow:hidden BFC.
+--------------------------------------------------------------- */
+
+#taskbar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 28px;
+  background: #C0C0C0;
+  border-top: 2px solid #FFFFFF;
+  /* Contain floated children */
+  overflow: hidden;
+  /* Above windows, below start menu */
+  z-index: 999;
+}
+
+#start-button {
+  float: left;
+  height: 22px;
+  margin: 3px 2px;
+  padding: 0 8px 0 6px;
+  background: #C0C0C0;
+  font-family: 'MS Sans Serif', Tahoma, sans-serif;
+  font-size: 11px;
+  font-weight: bold;
+  border: 2px solid;
+  border-color: #FFFFFF #808080 #808080 #FFFFFF;
+  cursor: pointer;
+  /* Sharp corners — no border-radius */
+}
+
+#start-button:active {
+  border-color: #808080 #FFFFFF #FFFFFF #808080;
+  /* Simulate press: shift content 1px down-right */
+  padding: 1px 7px 0 7px;
+}
+
+#start-button:focus {
+  outline: 1px dotted #000000;
+  outline-offset: -4px;
+}
+
+/* Windows buttons for open/minimized windows */
+#taskbar-windows {
+  /* overflow:hidden creates a BFC that fills remaining width
+     between the floated start button and floated system tray */
+  overflow: hidden;
+  height: 28px;
+  padding: 3px 2px;
+}
+
+.taskbar-btn {
+  float: left;
+  height: 22px;
+  max-width: 160px;
+  min-width: 80px;
+  padding: 0 8px;
+  margin-right: 2px;
+  background: #C0C0C0;
+  font-family: 'MS Sans Serif', Tahoma, sans-serif;
+  font-size: 11px;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border: 2px solid;
+  border-color: #FFFFFF #808080 #808080 #FFFFFF;
+  cursor: pointer;
+}
+
+.taskbar-btn:active,
+.taskbar-btn--active {
+  border-color: #808080 #FFFFFF #FFFFFF #808080;
+  padding: 1px 7px 0 9px;
+}
+
+.taskbar-btn--minimized {
+  font-style: italic;
+  color: #808080;
+}
+
+/* System tray — floated right, inset border, contains clock */
+#system-tray {
+  float: right;
+  height: 22px;
+  margin: 3px 2px;
+  padding: 0 6px;
+  border: 1px solid;
+  /* Inset/sunken border: reverse of raised */
+  border-color: #808080 #FFFFFF #FFFFFF #808080;
+}
+
+#taskbar-clock {
+  display: block;
+  font-family: 'MS Sans Serif', Tahoma, sans-serif;
+  font-size: 11px;
+  /* 22px tray height − 2px border top/bottom = 20px inner; center text */
+  line-height: 20px;
+  white-space: nowrap;
+  color: #000000;
+}
+
+/* ---------------------------------------------------------------
+   Start menu stub
+--------------------------------------------------------------- */
+
+#start-menu {
+  position: absolute;
+  bottom: 28px;
+  left: 0;
+  width: 200px;
+  background: #C0C0C0;
+  border: 2px solid;
+  border-color: #FFFFFF #808080 #808080 #FFFFFF;
+  outline: 1px solid #000000;
+  z-index: 1000;
+  display: none;
+}
+
+#start-menu.start-menu--open {
+  display: block;
+}
+
+.start-menu__stub {
+  font-family: 'MS Sans Serif', Tahoma, sans-serif;
+  font-size: 11px;
+  color: #808080;
+  padding: 12px;
+  margin: 0;
+}
+
+/* ---------------------------------------------------------------
+   Window layer container
+--------------------------------------------------------------- */
+
+#window-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 28px;
+  /* overflow: visible — windows may extend to edges */
+}
+
+/* ---------------------------------------------------------------
+   Win98 window shell
+--------------------------------------------------------------- */
+
+.win98-window {
+  position: absolute;
+  background: #C0C0C0;
+  /* 2px raised inner border */
+  border: 2px solid;
+  border-color: #FFFFFF #808080 #808080 #FFFFFF;
+  /* 1px black outer border */
+  outline: 1px solid #000000;
+  min-width: 200px;
+  min-height: 80px;
+  /* box-sizing: border-box so style.width/height match offsetWidth/Height */
+  box-sizing: border-box;
+}
+
+/* Inactive (unfocused) — titlebar turns gray, handled via child rule */
+.win98-window--inactive .win98-window__titlebar {
+  background: #808080;
+}
+
+/* ---------------------------------------------------------------
+   Resize handles — 8 directions, transparent, z-index below titlebar
+--------------------------------------------------------------- */
+
+.win98-window__resize {
+  position: absolute;
+  z-index: 5;
+  /* Transparent — cursor change signals resize zone */
+}
+
+/* Corner handles: 8×8 px */
+.win98-window__resize--nw { top: 0;    left: 0;    width: 8px;  height: 8px;  cursor: nw-resize; }
+.win98-window__resize--ne { top: 0;    right: 0;   width: 8px;  height: 8px;  cursor: ne-resize; }
+.win98-window__resize--sw { bottom: 0; left: 0;    width: 8px;  height: 8px;  cursor: sw-resize; }
+.win98-window__resize--se { bottom: 0; right: 0;   width: 8px;  height: 8px;  cursor: se-resize; }
+
+/* Edge handles: 4px thick strips between corners */
+.win98-window__resize--n { top: 0;    left: 8px;   right: 8px;   height: 4px; cursor: n-resize; }
+.win98-window__resize--s { bottom: 0; left: 8px;   right: 8px;   height: 4px; cursor: s-resize; }
+.win98-window__resize--w { top: 8px;  left: 0;     width: 4px;  bottom: 8px;  cursor: w-resize; }
+.win98-window__resize--e { top: 8px;  right: 0;    width: 4px;  bottom: 8px;  cursor: e-resize; }
+
+/* ---------------------------------------------------------------
+   Titlebar
+--------------------------------------------------------------- */
+
+.win98-window__titlebar {
+  position: relative;
+  /* z-index above resize handles (5), so NW/N/NE handles don't steal clicks */
+  z-index: 10;
+  height: 18px;
+  padding: 2px;
+  /* linear-gradient: the one intentional modern CSS property in Win98 chrome.
+     Required for period-authentic navy-to-blue titlebar gradient. */
+  background: linear-gradient(to right, #000080, #1084D0);
+  cursor: default;
+}
+
+/* Title text — reserves right-side space for control buttons */
+.win98-window__title {
+  display: block;
+  color: #FFFFFF;
+  font-family: 'MS Sans Serif', Tahoma, sans-serif;
+  font-size: 11px;
+  font-weight: bold;
+  line-height: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  /* Reserve space for three 16px buttons + 2px margins each = ~60px */
+  padding-right: 60px;
+}
+
+/* Control buttons — absolute positioned top-right of titlebar */
+.win98-window__controls {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+}
+
+.win98-window__btn {
+  display: inline-block;
+  width: 16px;
+  height: 14px;
+  background: #C0C0C0;
+  border: 1px solid;
+  border-color: #FFFFFF #808080 #808080 #FFFFFF;
+  font-family: 'MS Sans Serif', Tahoma, sans-serif;
+  font-size: 9px;
+  line-height: 12px;
+  text-align: center;
+  vertical-align: top;
+  cursor: pointer;
+  padding: 0;
+  margin-left: 2px;
+}
+
+.win98-window__btn:active {
+  border-color: #808080 #FFFFFF #FFFFFF #808080;
+  padding-top: 1px;
+  padding-left: 1px;
+}
+
+.win98-window__btn:focus {
+  outline: 1px dotted #000000;
+  outline-offset: -2px;
+}
+
+/* ---------------------------------------------------------------
+   Window content area
+--------------------------------------------------------------- */
+
+.win98-window__content {
+  background: #FFFFFF;
+  overflow: auto;
+  /* Height set by JS: window height − 22px titlebar (18 + 2+2 padding) */
+}
