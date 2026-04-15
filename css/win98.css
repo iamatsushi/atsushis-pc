@@ -171,6 +171,9 @@
   height: 22px;
   margin: 3px 2px;
   padding: 0 6px;
+  /* min-width prevents float collapse before renderClock() sets the clock text,
+     which would break the BFC layout of #taskbar-windows */
+  min-width: 56px;
   border: 1px solid;
   /* Inset/sunken border: reverse of raised */
   border-color: #808080 #FFFFFF #FFFFFF #808080;
