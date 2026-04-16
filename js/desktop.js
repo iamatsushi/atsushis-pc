@@ -25,6 +25,10 @@ window.APC.desktop = (function () {
   const windows = {};             // id → window state object
   const iconLastClick = {};       // app → timestamp of last click
 
+  // Clock easter egg state
+  let clockClickCount = 0;
+  let clockFirstClickTime = 0;
+
   // Context menu / wallpaper / system properties state
   let contextMenuEl = null;       // active context menu DOM node (or null)
   let wallpaperIndex = 0;         // current wallpaper variant index (0 = default teal)
@@ -53,19 +57,101 @@ window.APC.desktop = (function () {
   function startClock() {
     renderClock();
     setInterval(renderClock, CLOCK_INTERVAL_MS);
+    bindClockEasterEgg();
   }
 
   function renderClock() {
     const el = document.getElementById('taskbar-clock');
     if (!el) { return; }
     const now = new Date();
+    const month = now.getMonth() + 1;
+    const day   = now.getDate();
+    const year  = now.getFullYear();
     let h = now.getHours();
     const m = now.getMinutes();
     const ampm = h >= 12 ? 'PM' : 'AM';
     h = h % 12;
     if (h === 0) { h = 12; }
     const mm = m < 10 ? '0' + m : '' + m;
-    el.textContent = h + ':' + mm + ' ' + ampm;
+    el.textContent = month + '/' + day + '/' + year + ' ' + h + ':' + mm + ' ' + ampm;
+  }
+
+  // --- Clock easter egg ------------------------------------------------
+  // 10 clicks within 5 seconds → Y2K Warning dialog
+
+  function bindClockEasterEgg() {
+    const el = document.getElementById('taskbar-clock');
+    if (!el) { return; }
+    el.addEventListener('click', function () {
+      const now = Date.now();
+      // Reset window if more than 5 seconds have elapsed since first click
+      if (clockClickCount > 0 && now - clockFirstClickTime > 5000) {
+        clockClickCount = 0;
+      }
+      if (clockClickCount === 0) { clockFirstClickTime = now; }
+      clockClickCount++;
+      if (clockClickCount >= 10) {
+        clockClickCount = 0;
+        clockFirstClickTime = 0;
+        showY2KDialog();
+      }
+    });
+  }
+
+  function showY2KDialog() {
+    const overlay = document.createElement('div');
+    overlay.className = 'win98-msgbox-overlay';
+
+    const box = document.createElement('div');
+    box.className = 'win98-msgbox';
+
+    const tb = document.createElement('div');
+    tb.className = 'win98-window__titlebar';
+    const titleSpan = document.createElement('span');
+    titleSpan.className = 'win98-window__title';
+    titleSpan.textContent = 'Y2K WARNING';
+    const ctrls = document.createElement('span');
+    ctrls.className = 'win98-window__controls';
+    const xBtn = document.createElement('button');
+    xBtn.className = 'win98-window__btn';
+    xBtn.textContent = '\u00D7';
+    xBtn.setAttribute('aria-label', 'Close');
+    ctrls.appendChild(xBtn);
+    tb.appendChild(titleSpan);
+    tb.appendChild(ctrls);
+
+    const body = document.createElement('div');
+    body.className = 'win98-msgbox__body';
+    const msg = document.createElement('p');
+    msg.className = 'win98-msgbox__msg';
+    msg.textContent =
+      'It is the year 2000. All systems are failing. ' +
+      'Please contact your IT department immediately.';
+    const okBtn = document.createElement('button');
+    okBtn.className = 'win98-msgbox__ok';
+    okBtn.textContent = 'OK';
+    body.appendChild(msg);
+    body.appendChild(okBtn);
+
+    box.appendChild(tb);
+    box.appendChild(body);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    const closeOverlay = function () {
+      if (overlay.parentNode) { overlay.parentNode.removeChild(overlay); }
+      document.removeEventListener('keydown', onKey);
+    };
+    const onKey = function (e) { if (e.key === 'Escape') { closeOverlay(); } };
+    document.addEventListener('keydown', onKey);
+    xBtn.addEventListener('click', closeOverlay);
+    okBtn.addEventListener('click', closeOverlay);
+    overlay.addEventListener('click', function (e) {
+      if (e.target === overlay) { closeOverlay(); }
+    });
+
+    if (window.umami) { window.umami.track('easteregg_trigger', { easter_egg: 'y2k' }); }
+    okBtn.focus();
   }
 
   // --- Desktop icons ---------------------------------------------------

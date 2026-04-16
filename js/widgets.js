@@ -1,6 +1,8 @@
 // widgets.js — Taskbar weather and RAM widgets
 // Fetches /weather (Caddy proxy → OpenWeatherMap) and /ram (Caddy proxy → Pi RAM server).
 // All fetches use setTimeout-chained scheduling — never setInterval (per project rules).
+// Weather uses browser Geolocation API to pass visitor coords to the proxy; falls back
+// to Pi default (Portland, OR) if geolocation is denied or unavailable.
 // API key for OpenWeatherMap lives only in Pi env vars; client-side JS never sees it.
 // Namespaced under window.APC.widgets per project conventions.
 
@@ -13,10 +15,14 @@ window.APC.widgets = (function () {
   const WEATHER_INTERVAL_MS = 10 * 60 * 1000;  // 10 minutes
   const RAM_INTERVAL_MS     = 30 * 1000;        // 30 seconds
 
+  // Easter egg thresholds
+  const RAM_EGG_CLICKS  = 5;
+  const RAM_EGG_WINDOW  = 3000;  // ms
+
   // --- Weather condition code → emoji ---------------------------------
   // Maps OpenWeatherMap condition ID groups to display emoji.
   // Group boundaries: 2xx thunderstorm, 3xx drizzle, 5xx rain,
-  // 6xx snow, 7xx atmosphere, 800 clear, 80x clouds.
+  // 6xx snow, 7xx atmosphere, 800 clear, 801 few clouds, 802–899 cloudy.
 
   function getWeatherEmoji(id) {
     if (id === 800)                { return '\u2600\uFE0F'; }  // ☀️  clear sky
@@ -35,25 +41,54 @@ window.APC.widgets = (function () {
 
   var weatherEl = null;
   var lastWeatherText = '--';
+  var cachedLat = null;   // visitor latitude from Geolocation API (null until resolved)
+  var cachedLon = null;   // visitor longitude
 
   function initWeather() {
     weatherEl = document.getElementById('taskbar-weather');
     if (weatherEl) { weatherEl.textContent = '--'; }
-    fetchWeather();
+
+    // Request geolocation once; cache coords for all subsequent fetches.
+    // If denied, timed out, or unavailable, fall back to Pi default (Portland).
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        function (pos) {
+          cachedLat = pos.coords.latitude;
+          cachedLon = pos.coords.longitude;
+          fetchWeather();
+        },
+        function () {
+          // Permission denied or error — proceed without coords
+          fetchWeather();
+        },
+        { timeout: 5000, maximumAge: 60000 }
+      );
+    } else {
+      fetchWeather();
+    }
+  }
+
+  // Build the /weather URL, appending visitor coords when available.
+  function buildWeatherUrl() {
+    if (cachedLat !== null && cachedLon !== null) {
+      return '/weather?lat=' + cachedLat.toFixed(4) + '&lon=' + cachedLon.toFixed(4);
+    }
+    return '/weather';
   }
 
   function fetchWeather() {
-    fetch('/weather')
+    fetch(buildWeatherUrl())
       .then(function (res) {
         if (!res.ok) { throw new Error('HTTP ' + res.status); }
         return res.json();
       })
       .then(function (data) {
-        // OpenWeatherMap response shape: { main: { temp }, weather: [{ id }] }
+        // OWM response: { main: { temp }, weather: [{ id }], name: 'CityName' }
         var temp = Math.round(data.main.temp);
         var condId = data.weather && data.weather[0] ? data.weather[0].id : null;
         var emoji = condId !== null ? getWeatherEmoji(condId) : '\uD83C\uDF21';
-        lastWeatherText = emoji + ' Portland, OR ' + temp + '\u00B0F';
+        var city = (data.name && data.name.length) ? data.name : 'Local';
+        lastWeatherText = emoji + ' ' + city + ' ' + temp + '\u00B0F';
         if (weatherEl) { weatherEl.textContent = lastWeatherText; }
       })
       .catch(function () {
@@ -69,10 +104,15 @@ window.APC.widgets = (function () {
 
   var ramEl = null;
   var lastRamText = '--';
+  var ramClickCount = 0;
+  var ramFirstClickTime = 0;
 
   function initRam() {
     ramEl = document.getElementById('taskbar-ram');
-    if (ramEl) { ramEl.textContent = '--'; }
+    if (ramEl) {
+      ramEl.textContent = '--';
+      bindRamEasterEgg();
+    }
     fetchRam();
   }
 
@@ -96,6 +136,89 @@ window.APC.widgets = (function () {
         // Schedule next fetch from failure path so polling always continues
         setTimeout(fetchRam, RAM_INTERVAL_MS);
       });
+  }
+
+  // --- RAM easter egg -------------------------------------------------
+  // 5 clicks within 3 seconds → FATAL ERROR dialog
+
+  function bindRamEasterEgg() {
+    ramEl.addEventListener('click', function () {
+      var now = Date.now();
+      if (ramClickCount > 0 && now - ramFirstClickTime > RAM_EGG_WINDOW) {
+        ramClickCount = 0;
+      }
+      if (ramClickCount === 0) { ramFirstClickTime = now; }
+      ramClickCount++;
+      if (ramClickCount >= RAM_EGG_CLICKS) {
+        ramClickCount = 0;
+        ramFirstClickTime = 0;
+        showWidgetModal(
+          'FATAL ERROR',
+          'Insufficient memory to complete this operation. ' +
+          'Please close all programs and sacrifice a floppy disk to continue.'
+        );
+        if (window.umami) {
+          window.umami.track('easteregg_trigger', { easter_egg: 'ram_overload' });
+        }
+      }
+    });
+  }
+
+  // --- Shared modal helper --------------------------------------------
+  // Builds a Win98-style message dialog using the .win98-msgbox-overlay
+  // CSS classes defined in win98.css. Shared by widget easter eggs.
+
+  function showWidgetModal(title, message) {
+    const overlay = document.createElement('div');
+    overlay.className = 'win98-msgbox-overlay';
+
+    const box = document.createElement('div');
+    box.className = 'win98-msgbox';
+
+    const tb = document.createElement('div');
+    tb.className = 'win98-window__titlebar';
+    const titleSpan = document.createElement('span');
+    titleSpan.className = 'win98-window__title';
+    titleSpan.textContent = title;
+    const ctrls = document.createElement('span');
+    ctrls.className = 'win98-window__controls';
+    const xBtn = document.createElement('button');
+    xBtn.className = 'win98-window__btn';
+    xBtn.textContent = '\u00D7';
+    xBtn.setAttribute('aria-label', 'Close');
+    ctrls.appendChild(xBtn);
+    tb.appendChild(titleSpan);
+    tb.appendChild(ctrls);
+
+    const body = document.createElement('div');
+    body.className = 'win98-msgbox__body';
+    const msg = document.createElement('p');
+    msg.className = 'win98-msgbox__msg';
+    msg.textContent = message;
+    const okBtn = document.createElement('button');
+    okBtn.className = 'win98-msgbox__ok';
+    okBtn.textContent = 'OK';
+    body.appendChild(msg);
+    body.appendChild(okBtn);
+
+    box.appendChild(tb);
+    box.appendChild(body);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    const closeOverlay = function () {
+      if (overlay.parentNode) { overlay.parentNode.removeChild(overlay); }
+      document.removeEventListener('keydown', onKey);
+    };
+    const onKey = function (e) { if (e.key === 'Escape') { closeOverlay(); } };
+    document.addEventListener('keydown', onKey);
+    xBtn.addEventListener('click', closeOverlay);
+    okBtn.addEventListener('click', closeOverlay);
+    overlay.addEventListener('click', function (e) {
+      if (e.target === overlay) { closeOverlay(); }
+    });
+
+    okBtn.focus();
   }
 
   // --- Public API -----------------------------------------------------
