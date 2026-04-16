@@ -25,12 +25,23 @@ window.APC.desktop = (function () {
   const windows = {};             // id → window state object
   const iconLastClick = {};       // app → timestamp of last click
 
+  // Context menu / wallpaper / system properties state
+  let contextMenuEl = null;       // active context menu DOM node (or null)
+  let wallpaperIndex = 0;         // current wallpaper variant index (0 = default teal)
+  let syspropsState = null;       // System Properties window state (singleton)
+  const WALLPAPER_CLASSES = [     // wallpaper variant CSS classes; index 0 = no class (default teal)
+    '',
+    'desktop--wallpaper-stars',
+    'desktop--wallpaper-ascii'
+  ];
+
   // --- Public API ------------------------------------------------------
 
   function init() {
     startClock();
     bindDesktopIcons();
     bindStartButton();
+    bindContextMenu();
     // Widgets fire their first fetch immediately; subsequent fetches self-schedule via setTimeout.
     if (window.APC.widgets && typeof window.APC.widgets.init === 'function') {
       window.APC.widgets.init();
@@ -690,6 +701,294 @@ window.APC.desktop = (function () {
       }
     });
     if (topState) { bringToFront(topState.el); }
+  }
+
+  // --- Context menu -------------------------------------------------------
+
+  function bindContextMenu() {
+    const desktopEl = document.getElementById('desktop');
+    if (!desktopEl) { return; }
+    desktopEl.addEventListener('contextmenu', function (e) {
+      // Suppress menu when right-clicking inside a window, icon, taskbar, or start menu
+      let t = e.target;
+      while (t && t !== desktopEl) {
+        if (t.classList && (
+          t.classList.contains('win98-window') ||
+          t.classList.contains('desktop-icon') ||
+          t.id === 'taskbar' ||
+          t.id === 'start-menu'
+        )) { return; }
+        t = t.parentNode;
+      }
+      e.preventDefault();
+      showContextMenu(e.clientX, e.clientY);
+    });
+  }
+
+  function showContextMenu(x, y) {
+    hideContextMenu();
+    const menu = document.createElement('div');
+    menu.className = 'desktop-context-menu';
+
+    const items = [
+      { label: 'Arrange Icons',    action: showArrangeIconsDialog },
+      { label: 'Refresh',          action: function () { location.reload(); } },
+      { label: 'Change Wallpaper', action: cycleWallpaper },
+      { sep: true },
+      { label: 'Properties',       action: openSystemProperties }
+    ];
+
+    items.forEach(function (item) {
+      if (item.sep) {
+        const sep = document.createElement('div');
+        sep.className = 'desktop-context-menu__sep';
+        menu.appendChild(sep);
+        return;
+      }
+      const btn = document.createElement('button');
+      btn.className = 'desktop-context-menu__item';
+      btn.textContent = item.label;
+      (function (action) {
+        btn.addEventListener('click', function () {
+          hideContextMenu();
+          action();
+        });
+      }(item.action));
+      menu.appendChild(btn);
+    });
+
+    menu.style.left = x + 'px';
+    menu.style.top  = y + 'px';
+    document.body.appendChild(menu);
+    contextMenuEl = menu;
+
+    // Edge detection: reposition if menu clips outside viewport
+    const rect = menu.getBoundingClientRect();
+    const vw = document.documentElement.clientWidth;
+    const vh = document.documentElement.clientHeight;
+    if (x + rect.width  > vw) { x = vw - rect.width  - 4; }
+    if (y + rect.height > vh) { y = vh - rect.height - 4; }
+    if (x < 0) { x = 0; }
+    if (y < 0) { y = 0; }
+    menu.style.left = x + 'px';
+    menu.style.top  = y + 'px';
+
+    // Dismiss on outside click or Escape — setTimeout avoids same-event immediate dismiss
+    const onDocClick = function (e) {
+      if (contextMenuEl && !contextMenuEl.contains(e.target)) { hideContextMenu(); }
+    };
+    const onDocKey = function (e) {
+      if (e.key === 'Escape') { hideContextMenu(); }
+    };
+    setTimeout(function () {
+      document.addEventListener('click', onDocClick);
+      document.addEventListener('keydown', onDocKey);
+    }, 0);
+    menu._dismissClick = onDocClick;
+    menu._dismissKey   = onDocKey;
+
+    const first = menu.querySelector('.desktop-context-menu__item');
+    if (first) { first.focus(); }
+  }
+
+  function hideContextMenu() {
+    if (!contextMenuEl) { return; }
+    if (contextMenuEl._dismissClick) {
+      document.removeEventListener('click', contextMenuEl._dismissClick);
+    }
+    if (contextMenuEl._dismissKey) {
+      document.removeEventListener('keydown', contextMenuEl._dismissKey);
+    }
+    if (contextMenuEl.parentNode) {
+      contextMenuEl.parentNode.removeChild(contextMenuEl);
+    }
+    contextMenuEl = null;
+  }
+
+  // --- Arrange Icons dialog -----------------------------------------------
+
+  function showArrangeIconsDialog() {
+    const overlay = document.createElement('div');
+    overlay.className = 'win98-msgbox-overlay';
+
+    const box = document.createElement('div');
+    box.className = 'win98-msgbox';
+
+    // Titlebar (reuse win98-window titlebar classes for authentic look)
+    const tb = document.createElement('div');
+    tb.className = 'win98-window__titlebar';
+    const titleSpan = document.createElement('span');
+    titleSpan.className = 'win98-window__title';
+    titleSpan.textContent = 'Desktop';
+    const ctrls = document.createElement('span');
+    ctrls.className = 'win98-window__controls';
+    const xBtn = document.createElement('button');
+    xBtn.className = 'win98-window__btn';
+    xBtn.textContent = '\u00D7';
+    xBtn.setAttribute('aria-label', 'Close');
+    ctrls.appendChild(xBtn);
+    tb.appendChild(titleSpan);
+    tb.appendChild(ctrls);
+
+    // Body
+    const body = document.createElement('div');
+    body.className = 'win98-msgbox__body';
+    const msg = document.createElement('p');
+    msg.className = 'win98-msgbox__msg';
+    msg.textContent = 'Icons arranged successfully.';
+    const okBtn = document.createElement('button');
+    okBtn.className = 'win98-msgbox__ok';
+    okBtn.textContent = 'OK';
+    body.appendChild(msg);
+    body.appendChild(okBtn);
+
+    box.appendChild(tb);
+    box.appendChild(body);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    // Unified close handler — cleans up key listener on every exit path
+    const closeOverlay = function () {
+      if (overlay.parentNode) { overlay.parentNode.removeChild(overlay); }
+      document.removeEventListener('keydown', onKey);
+    };
+    const onKey = function (e) {
+      if (e.key === 'Escape') { closeOverlay(); }
+    };
+    document.addEventListener('keydown', onKey);
+    xBtn.addEventListener('click', closeOverlay);
+    okBtn.addEventListener('click', closeOverlay);
+    overlay.addEventListener('click', function (e) {
+      if (e.target === overlay) { closeOverlay(); }
+    });
+
+    okBtn.focus();
+  }
+
+  // --- Wallpaper cycling --------------------------------------------------
+
+  function cycleWallpaper() {
+    const desktopEl = document.getElementById('desktop');
+    if (!desktopEl) { return; }
+    // Remove current wallpaper class (index 0 has no class — skip)
+    if (WALLPAPER_CLASSES[wallpaperIndex]) {
+      desktopEl.classList.remove(WALLPAPER_CLASSES[wallpaperIndex]);
+    }
+    wallpaperIndex = (wallpaperIndex + 1) % WALLPAPER_CLASSES.length;
+    if (WALLPAPER_CLASSES[wallpaperIndex]) {
+      desktopEl.classList.add(WALLPAPER_CLASSES[wallpaperIndex]);
+    }
+  }
+
+  // --- System Properties window -------------------------------------------
+
+  function openSystemProperties() {
+    if (syspropsState) {
+      // Already open — restore or focus
+      if (syspropsState.minimized) { restoreWindow(syspropsState); }
+      else { bringToFront(syspropsState.el); }
+      return;
+    }
+    const state = createWindow({
+      title: 'System Properties',
+      width: 340,
+      height: 370
+    });
+    syspropsState = state;
+    // Clear singleton reference when window is closed
+    const closeBtn = state.el.querySelector('[data-action="close"]');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', function () { syspropsState = null; });
+    }
+    buildSyspropsContent(state.contentEl);
+    state.show();
+  }
+
+  function buildSyspropsContent(contentEl) {
+    contentEl.className += ' sysprops-content-area';
+
+    const wrap = document.createElement('div');
+    wrap.className = 'sysprops-wrap';
+
+    // Tab bar — General is active; others disabled
+    const tabBar = document.createElement('div');
+    tabBar.className = 'sysprops-tab-bar';
+    ['General', 'Device Manager', 'Hardware Profiles', 'Performance'].forEach(function (name, i) {
+      const tab = document.createElement('button');
+      tab.className = 'sysprops-tab' + (i === 0 ? ' sysprops-tab--active' : ' sysprops-tab--inactive');
+      tab.textContent = name;
+      if (i !== 0) { tab.setAttribute('disabled', 'disabled'); }
+      tabBar.appendChild(tab);
+    });
+    // Clearfix for floated tabs
+    const tabClear = document.createElement('div');
+    tabClear.style.clear = 'both';
+    tabBar.appendChild(tabClear);
+
+    // Panel
+    const panel = document.createElement('div');
+    panel.className = 'sysprops-panel';
+
+    // General tab: computer icon on left, OS info on right
+    const tbl = document.createElement('table');
+    tbl.className = 'sysprops-general';
+    tbl.setAttribute('cellpadding', '0');
+    tbl.setAttribute('cellspacing', '0');
+    const tbody = document.createElement('tbody');
+    const tr = document.createElement('tr');
+
+    const tdL = document.createElement('td');
+    tdL.className = 'sysprops-general__icon';
+    const iconSpan = document.createElement('span');
+    iconSpan.textContent = '\uD83D\uDCBB';  // 💻
+    iconSpan.setAttribute('aria-hidden', 'true');
+    tdL.appendChild(iconSpan);
+
+    const tdR = document.createElement('td');
+    tdR.className = 'sysprops-general__info';
+    [
+      { bold: true,  text: 'Microsoft Windows 98' },
+      { bold: false, text: '4.10.1998' },
+      { bold: false, text: '\u00A0' },
+      { bold: false, text: 'This product is licensed to:' },
+      { bold: true,  text: 'Atsushi Hisaka' },
+      { bold: false, text: 'Product ID: 24796-OEM-0014736-66386' },
+      { bold: false, text: '\u00A0' },
+      { bold: false, text: 'AMD Athlon 300MHz' },
+      { bold: false, text: '64.0MB RAM' }
+    ].forEach(function (line) {
+      const p = document.createElement('p');
+      p.className = 'sysprops-general__line' + (line.bold ? ' sysprops-general__line--bold' : '');
+      p.textContent = line.text;
+      tdR.appendChild(p);
+    });
+
+    tr.appendChild(tdL);
+    tr.appendChild(tdR);
+    tbody.appendChild(tr);
+    tbl.appendChild(tbody);
+    panel.appendChild(tbl);
+
+    // OK / Cancel buttons
+    const btnRow = document.createElement('div');
+    btnRow.className = 'sysprops-btnrow';
+    ['OK', 'Cancel'].forEach(function (label) {
+      const btn = document.createElement('button');
+      btn.className = 'sysprops-btn';
+      btn.textContent = label;
+      btn.addEventListener('click', function () {
+        if (syspropsState) {
+          const cb = syspropsState.el.querySelector('[data-action="close"]');
+          if (cb) { cb.click(); }
+        }
+      });
+      btnRow.appendChild(btn);
+    });
+
+    wrap.appendChild(tabBar);
+    wrap.appendChild(panel);
+    wrap.appendChild(btnRow);
+    contentEl.appendChild(wrap);
   }
 
   // --- Public exports --------------------------------------------------
