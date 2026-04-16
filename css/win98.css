@@ -49,6 +49,16 @@
   left: 10px;
 }
 
+.desktop-icon:nth-child(3) {
+  top: 176px;
+  left: 10px;
+}
+
+.desktop-icon:nth-child(4) {
+  top: 256px;
+  left: 10px;
+}
+
 .desktop-icon__img {
   display: block;
   font-size: 32px;
