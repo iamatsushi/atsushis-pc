@@ -34,7 +34,7 @@ window.APC.apps.calculator = (function () {
       title: 'Calculator',
       app: 'calculator',
       width:  isConnected ? 280 : 240,
-      height: isConnected ? 190 : 290,
+      height: isConnected ? 190 : 212,
       x: 140,
       y: 120
     });
@@ -70,7 +70,7 @@ window.APC.apps.calculator = (function () {
 
     setTimeout(function () {
       if (!winState) { return; }
-      window.open(RICKROLL_URL, '_blank');
+      window.open('https://www.youtube.com/watch?v=dQw4w9WgXcQ', '_blank', 'noopener,noreferrer');
       root.innerHTML = '';
       const trollMsg = document.createElement('p');
       trollMsg.className = 'calculator-app__troll';
