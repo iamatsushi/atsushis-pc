@@ -16,7 +16,7 @@
     # (Removed: reverse_proxy /altcha/* 127.0.0.1:3000 — Altcha no longer self-hosted)
     handle /altcha/challenge {
         header Content-Type "application/json"
-        respond `{"algorithm":"SHA-256","challenge":"a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3","maxnumber":50000,"salt":"altcha2026","signature":""}`
+        respond `{"algorithm":"SHA-256","challenge":"a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3","maxnumber":10000,"salt":"altcha2026","signature":""}`
     }
 
     handle /ram {
