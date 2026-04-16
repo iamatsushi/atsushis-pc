@@ -15,8 +15,8 @@ window.APC.boot = (function () {
   const FADE_DURATION_MS = 600;
 
   const BOOT_BLOCK_COUNT = 20;
-  const BOOT_BLOCK_INTERVAL_MS = 100;  // 20 × 100ms = 2s fill; total boot ~3s
   const BOOT_FADE_DURATION_MS = 600;
+  const BOOT_DESKTOP_PAUSE_MS = 1500;  // teal desktop visible before icons populate
 
   // Exact character set from CLAUDE.md spec — half-width katakana + ASCII + symbols.
   // Spread operator used for correct Unicode code-point splitting.
@@ -49,7 +49,7 @@ window.APC.boot = (function () {
     // Skip both gate and boot screens if already completed this session.
     if (sessionStorage.getItem('boot_complete')) {
       hideGate();
-      goToDesktop();
+      goToDesktop(true);  // skip delay and audio on session restore
       return;
     }
 
@@ -172,16 +172,9 @@ window.APC.boot = (function () {
     document.removeEventListener('keydown', onDocKeyDown);
     window.removeEventListener('resize', resizeCanvas);
 
-    // Play startup audio. This is the first user gesture — autoplay is safe here.
-    // .catch() handles Promise rejection (async failure).
-    // try/catch handles synchronous DOMException thrown by some browsers when the
-    // audio element is in error state (e.g. 404) — without this, the throw aborts
-    // onGateInteract before the fade class and setTimeout are ever reached.
-    try {
-      startupAudio.play().catch(() => {});
-    } catch (e) {
-      // Silent fallback — audio failure must never block the boot sequence.
-    }
+    // Audio element was preloaded at init — the gate click is the first user gesture
+    // that satisfies autoplay policy. .play() is deferred to goToDesktop() so the
+    // chime fires as the teal desktop fades in, not at the gate click.
 
     // Fire Umami analytics event. Guard in case script hasn't loaded yet.
     if (window.umami) {
@@ -222,6 +215,15 @@ window.APC.boot = (function () {
     const track = document.getElementById('boot-progress-track');
     let blocksFilled = 0;
 
+    // Simulate Win98 uneven disk loading: 85% normal (200–600ms), 15% stall (800–1200ms).
+    // Expected avg ~490ms × 20 blocks ≈ 8–10s total fill time per session.
+    function randomBlockDelay() {
+      if (Math.random() < 0.15) {
+        return 800 + Math.floor(Math.random() * 400);   // occasional stall
+      }
+      return 200 + Math.floor(Math.random() * 400);     // normal uneven load
+    }
+
     function addBlock() {
       if (blocksFilled >= BOOT_BLOCK_COUNT) {
         // Bar is full — hold briefly so it's visible, then complete boot.
@@ -239,7 +241,7 @@ window.APC.boot = (function () {
       const pct = Math.round((blocksFilled / BOOT_BLOCK_COUNT) * 100);
       track.setAttribute('aria-valuenow', pct);
 
-      setTimeout(addBlock, BOOT_BLOCK_INTERVAL_MS);
+      setTimeout(addBlock, randomBlockDelay());
     }
 
     addBlock();
@@ -267,13 +269,29 @@ window.APC.boot = (function () {
 
   // --- Desktop handoff -------------------------------------------------
 
-  function goToDesktop() {
+  function goToDesktop(skipDelay) {
+    // Play startup chime as the teal desktop fades in.
+    // startupAudio is null on session restore (init() never ran), so this guard
+    // ensures the chime only fires on a real first-boot, never on page refresh.
+    if (startupAudio) {
+      try {
+        startupAudio.play().catch(() => {});
+      } catch (e) {
+        // Silent fallback — audio failure must never block the desktop reveal.
+      }
+    }
+
     const desktop = document.getElementById('desktop');
     desktop.classList.remove('desktop--hidden');
 
-    if (window.APC.desktop && typeof window.APC.desktop.init === 'function') {
-      window.APC.desktop.init();
-    }
+    // Pause before desktop init — teal background is visible but empty, simulating
+    // Win98's 'loading desktop' moment before icons and taskbar appear.
+    // skipDelay is true on session restore so refreshes are instant.
+    setTimeout(function () {
+      if (window.APC.desktop && typeof window.APC.desktop.init === 'function') {
+        window.APC.desktop.init();
+      }
+    }, skipDelay ? 0 : BOOT_DESKTOP_PAUSE_MS);
   }
 
   return { init };
