@@ -1083,8 +1083,8 @@ window.APC.ie = (function () {
 
   // Fetch approved guestbook entries, using a 24h sessionStorage cache.
   function loadGuestbookEntries(container) {
-    const cacheTs   = sessionStorage.getItem('guestbook_cache_ts');
-    const cacheData = sessionStorage.getItem('guestbook_cache');
+    const cacheTs   = sessionStorage.getItem('guestbook_entries_ts');
+    const cacheData = sessionStorage.getItem('guestbook_entries');
 
     if (cacheTs && cacheData) {
       const age = Date.now() - parseInt(cacheTs, 10);
@@ -1098,15 +1098,15 @@ window.APC.ie = (function () {
       }
     }
 
-    fetch(GUESTBOOK_API_URL + '?filter=(approved%3Dtrue)&sort=-created')
+    fetch(GUESTBOOK_API_URL + '?sort=-created')
       .then(function (res) {
         if (!res.ok) { throw new Error('HTTP ' + res.status); }
         return res.json();
       })
       .then(function (data) {
         const entries = (data && Array.isArray(data.items)) ? data.items : [];
-        sessionStorage.setItem('guestbook_cache', JSON.stringify(entries));
-        sessionStorage.setItem('guestbook_cache_ts', String(Date.now()));
+        sessionStorage.setItem('guestbook_entries', JSON.stringify(entries));
+        sessionStorage.setItem('guestbook_entries_ts', String(Date.now()));
         renderEntries(container, entries);
       })
       .catch(function () {
