@@ -1234,11 +1234,11 @@ window.APC.ie = (function () {
 
     const link = document.createElement('a');
     link.className = 'ie-noconn__link';
-    link.href = '#';
+    link.href = 'javascript:void(0)';
     link.textContent = 'Open Dial-Up Networking';
     link.addEventListener('click', function (e) {
       e.preventDefault();
-      connect(function () {
+      window.APC.ie.connect(function () {
         navigate(DEFAULT_URL, false);
       });
     });
