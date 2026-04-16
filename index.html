@@ -87,6 +87,12 @@
       <div id="system-tray" aria-label="System tray">
         <span id="taskbar-clock" aria-live="polite" aria-label="System clock"></span>
       </div>
+      <div id="taskbar-ram"
+           aria-label="RAM usage"
+           aria-live="polite">--</div>
+      <div id="taskbar-weather"
+           aria-label="Current weather"
+           aria-live="polite">--</div>
       <div id="taskbar-windows" role="group" aria-label="Open windows"></div>
     </div>
 
@@ -98,6 +104,7 @@
   <script src="js/apps/calculator.js"></script>
   <script src="js/apps/notepad.js"></script>
   <script src="js/apps/minesweeper.js"></script>
+  <script src="js/widgets.js"></script>
   <script src="js/boot.js"></script>
   <script>
     window.APC.boot.init();

@@ -31,6 +31,10 @@ window.APC.desktop = (function () {
     startClock();
     bindDesktopIcons();
     bindStartButton();
+    // Widgets fire their first fetch immediately; subsequent fetches self-schedule via setTimeout.
+    if (window.APC.widgets && typeof window.APC.widgets.init === 'function') {
+      window.APC.widgets.init();
+    }
   }
 
   // --- Clock -----------------------------------------------------------

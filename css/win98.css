@@ -199,6 +199,24 @@
   color: #000000;
 }
 
+/* Weather and RAM widgets — match system-tray inset style */
+#taskbar-weather,
+#taskbar-ram {
+  float: right;
+  height: 22px;
+  margin: 3px 2px;
+  padding: 0 6px;
+  border: 1px solid;
+  /* Inset/sunken border: same as system tray */
+  border-color: #808080 #FFFFFF #FFFFFF #808080;
+  font-family: 'MS Sans Serif', Tahoma, sans-serif;
+  font-size: 11px;
+  /* 22px height − 2px border = 20px inner; center text */
+  line-height: 20px;
+  white-space: nowrap;
+  color: #000000;
+}
+
 /* ---------------------------------------------------------------
    Start menu stub
 --------------------------------------------------------------- */
