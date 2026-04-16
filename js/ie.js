@@ -960,9 +960,9 @@ window.APC.ie = (function () {
     resumeRow.appendChild(resumeLabel);
     form.appendChild(resumeRow);
 
-    // Altcha proof-of-work widget — resolved by Pi service at /altcha/challenge.
-    // Widget adds a hidden input named 'altcha' to the form when solved.
-    // Form submits without it until Pocketbase hook verification is added (Phase 6).
+    // Altcha proof-of-work widget — challenge served by Caddy static respond.
+    // No hmackey attribute → widget skips signature validation (client-side only).
+    // Server-side HMAC verification via ALTCHA_HMAC_SECRET to be added later.
     const altchaRow = document.createElement('div');
     altchaRow.className = 'ie-guestbook__field ie-guestbook__field--altcha';
     const altchaWidget = document.createElement('altcha-widget');
@@ -975,7 +975,17 @@ window.APC.ie = (function () {
     submitBtn.type = 'submit';
     submitBtn.className = 'ie-guestbook__submit';
     submitBtn.textContent = 'Sign the Book';
+    // Disabled until Altcha proof-of-work is solved.
+    submitBtn.disabled = true;
+    submitBtn.setAttribute('aria-disabled', 'true');
     form.appendChild(submitBtn);
+
+    // Enable submit only when Altcha reports 'verified'; re-disable on error/expired.
+    altchaWidget.addEventListener('statechange', function (e) {
+      var verified = e.detail && e.detail.state === 'verified';
+      submitBtn.disabled = !verified;
+      submitBtn.setAttribute('aria-disabled', verified ? 'false' : 'true');
+    });
 
     const reqNote = document.createElement('p');
     reqNote.className = 'ie-guestbook__required-note';
@@ -1008,6 +1018,9 @@ window.APC.ie = (function () {
         approved: false
       };
       if (website) { payload.website = website; }
+      // Include Altcha PoW proof for future server-side HMAC verification.
+      var altchaValue = altchaWidget.value;
+      if (altchaValue) { payload.altcha = altchaValue; }
 
       fetch(GUESTBOOK_API_URL, {
         method: 'POST',
@@ -1180,12 +1193,12 @@ window.APC.ie = (function () {
   }
 
   // Inject Altcha web component script into <head> once.
-  // Served from Pi at /altcha/altcha.min.js — not a CDN call.
+  // Loaded from jsDelivr CDN — intentional deviation from no-CDN rule (approved).
   // Guard prevents double-injection on subsequent guestbook renders.
   function injectAltchaScript() {
     if (document.querySelector('script[data-altcha-widget]')) { return; }
     const s = document.createElement('script');
-    s.src = '/altcha/altcha.min.js';
+    s.src = 'https://cdn.jsdelivr.net/npm/altcha/dist/altcha.min.js';
     s.async = true;
     s.setAttribute('data-altcha-widget', '1');
     document.head.appendChild(s);
