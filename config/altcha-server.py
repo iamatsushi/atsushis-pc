@@ -25,7 +25,7 @@ MAX_NUMBER = 10000  # client brute-forces up to this value; ~1-2s at typical har
 
 class AltchaHandler(BaseHTTPRequestHandler):
     def do_GET(self):
-        if self.path != '/altcha/challenge':
+        if not self.path.startswith('/altcha/challenge'):
             self.send_response(404)
             self.end_headers()
             return
