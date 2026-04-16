@@ -142,14 +142,80 @@ window.APC.desktop = (function () {
       y: 50
     });
 
-    const msg = document.createElement('p');
-    msg.style.padding = '8px';
-    msg.style.fontFamily = '\'MS Sans Serif\', Tahoma, sans-serif';
-    msg.style.fontSize = '11px';
-    msg.textContent = 'My Computer';
-    state.contentEl.appendChild(msg);
+    // Path / address bar
+    const pathBar = document.createElement('div');
+    pathBar.className = 'explorer-path';
+    pathBar.setAttribute('aria-label', 'Current folder');
+    pathBar.textContent = 'C:\\My Computer';
+    state.contentEl.appendChild(pathBar);
 
+    // Icon area
+    const iconArea = document.createElement('div');
+    iconArea.className = 'explorer-icons';
+    iconArea.setAttribute('role', 'listbox');
+    iconArea.setAttribute('aria-label', 'Programs');
+
+    const explorerLastClick = {};
+
+    const appDefs = [
+      { app: 'winamp',      icon: '\uD83C\uDFB5', label: 'Winamp'      },
+      { app: 'calculator',  icon: '\uD83E\uDDF2', label: 'Calculator'  },
+      { app: 'notepad',     icon: '\uD83D\uDCDD', label: 'README.txt'  },
+      { app: 'minesweeper', icon: '\uD83D\uDCA3', label: 'Minesweeper' }
+    ];
+
+    appDefs.forEach(function (def) {
+      const iconEl = document.createElement('div');
+      iconEl.className = 'explorer-icon';
+      iconEl.setAttribute('role', 'option');
+      iconEl.setAttribute('aria-label', def.label);
+      iconEl.setAttribute('tabindex', '0');
+
+      const imgSpan = document.createElement('span');
+      imgSpan.className = 'explorer-icon__img';
+      imgSpan.setAttribute('aria-hidden', 'true');
+      imgSpan.textContent = def.icon;
+
+      const labelSpan = document.createElement('span');
+      labelSpan.className = 'explorer-icon__label';
+      labelSpan.textContent = def.label;
+
+      iconEl.appendChild(imgSpan);
+      iconEl.appendChild(labelSpan);
+
+      iconEl.addEventListener('click', function (e) {
+        e.stopPropagation();
+        const now = Date.now();
+        // Clear all icon selections in this explorer
+        iconArea.querySelectorAll('.explorer-icon--selected').forEach(function (el) {
+          el.classList.remove('explorer-icon--selected');
+        });
+        iconEl.classList.add('explorer-icon--selected');
+
+        if (explorerLastClick[def.app] && (now - explorerLastClick[def.app]) < DBLCLICK_MS) {
+          explorerLastClick[def.app] = 0;
+          launchApp(def.app);
+        } else {
+          explorerLastClick[def.app] = now;
+        }
+      });
+
+      iconArea.appendChild(iconEl);
+    });
+
+    const clearDiv = document.createElement('div');
+    clearDiv.className = 'explorer-clear';
+    iconArea.appendChild(clearDiv);
+
+    state.contentEl.appendChild(iconArea);
     state.show();
+  }
+
+  // Dispatch to mini-app open() via window.APC.apps namespace
+  function launchApp(app) {
+    if (window.APC.apps && window.APC.apps[app] && typeof window.APC.apps[app].open === 'function') {
+      window.APC.apps[app].open();
+    }
   }
 
   function openIE() {

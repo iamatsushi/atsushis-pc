@@ -1,0 +1,126 @@
+/* ============================================================
+   winamp.css — Winamp 2.x music player mini-app
+   Scope: .winamp and children.
+   Black background, #00BB00 green spectrum and text.
+   ============================================================ */
+
+/* Root: black, fills the win98 content area */
+.winamp {
+  background: #000000;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Inner title bar — mimics Winamp's own navy titlebar */
+.winamp__inner-title {
+  background: #000080;
+  color: #FFFFFF;
+  font-family: 'MS Sans Serif', Tahoma, sans-serif;
+  font-size: 9px;
+  font-weight: bold;
+  text-align: center;
+  padding: 1px 4px;
+  line-height: 14px;
+}
+
+/* Track info area */
+.winamp__track-info {
+  background: #000000;
+  padding: 3px 8px 2px;
+}
+
+/* Scrolling track name: green phosphor text */
+.winamp__track-name {
+  display: block;
+  color: #00BB00;
+  font-family: 'MS Sans Serif', Tahoma, sans-serif;
+  font-size: 9px;
+  line-height: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Time display: monospace, larger */
+.winamp__time {
+  display: block;
+  color: #00BB00;
+  font-family: 'Courier New', monospace;
+  font-size: 16px;
+  line-height: 20px;
+  text-align: right;
+}
+
+/* Spectrum analyzer canvas — display:block removes bottom gap */
+.winamp__spectrum {
+  display: block;
+  background: #000000;
+}
+
+/* Transport controls row */
+.winamp__controls {
+  background: #000000;
+  padding: 3px 6px;
+  white-space: nowrap;
+}
+
+/* Individual transport buttons */
+.winamp__btn {
+  display: inline-block;
+  height: 20px;
+  background: #C0C0C0;
+  border: 1px solid;
+  border-color: #FFFFFF #808080 #808080 #FFFFFF;
+  font-family: 'MS Sans Serif', Tahoma, sans-serif;
+  font-size: 9px;
+  line-height: 18px;
+  text-align: center;
+  padding: 0 4px;
+  cursor: pointer;
+  margin-right: 2px;
+  vertical-align: top;
+}
+
+.winamp__btn:active {
+  border-color: #808080 #FFFFFF #FFFFFF #808080;
+  padding-top: 1px;
+  padding-left: 5px;
+}
+
+.winamp__btn:focus {
+  outline: 1px dotted #000000;
+  outline-offset: -2px;
+}
+
+/* Volume row: label + track bar */
+.winamp__vol-row {
+  background: #000000;
+  padding: 2px 8px 4px;
+  overflow: hidden;
+}
+
+.winamp__vol-label {
+  float: left;
+  color: #00BB00;
+  font-family: 'MS Sans Serif', Tahoma, sans-serif;
+  font-size: 9px;
+  line-height: 12px;
+  margin-right: 6px;
+  padding-top: 1px;
+}
+
+/* Volume track: fills remaining width (BFC via overflow: hidden) */
+.winamp__vol-track {
+  overflow: hidden;
+  height: 12px;
+  border: 1px solid;
+  border-color: #808080 #FFFFFF #FFFFFF #808080;
+  background: #000000;
+}
+
+/* Volume fill: fixed at 75% — decorative only */
+.winamp__vol-fill {
+  width: 75%;
+  height: 100%;
+  background: #00BB00;
+}

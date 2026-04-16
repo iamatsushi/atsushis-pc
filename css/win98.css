@@ -363,3 +363,112 @@
   overflow: auto;
   /* Height set by JS: window height − 22px titlebar (18 + 2+2 padding) */
 }
+
+/* ---------------------------------------------------------------
+   My Computer — file explorer layout
+   Float-based: icons float left inside the icon area.
+--------------------------------------------------------------- */
+
+.explorer-path {
+  background: #C0C0C0;
+  border-bottom: 1px solid #808080;
+  padding: 2px 6px;
+  font-family: 'MS Sans Serif', Tahoma, sans-serif;
+  font-size: 11px;
+  line-height: 18px;
+  height: 18px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.explorer-icons {
+  padding: 8px;
+  overflow: hidden;
+}
+
+.explorer-icon {
+  float: left;
+  width: 72px;
+  text-align: center;
+  cursor: default;
+  padding: 4px;
+}
+
+.explorer-icon__img {
+  display: block;
+  font-size: 32px;
+  line-height: 1;
+  width: 32px;
+  height: 32px;
+  margin: 0 auto 4px;
+}
+
+.explorer-icon__label {
+  display: block;
+  font-family: 'MS Sans Serif', Tahoma, sans-serif;
+  font-size: 11px;
+  color: #000000;
+  word-break: break-word;
+  line-height: 1.3;
+}
+
+.explorer-icon--selected .explorer-icon__img {
+  outline: 1px dotted #000000;
+  background: #000080;
+}
+
+.explorer-icon--selected .explorer-icon__label {
+  background: #000080;
+  color: #FFFFFF;
+}
+
+.explorer-clear {
+  clear: both;
+}
+
+/* ---------------------------------------------------------------
+   Notepad — README.txt content area
+--------------------------------------------------------------- */
+
+.notepad-content {
+  display: block;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 4px 8px;
+  box-sizing: border-box;
+  background: #FFFFFF;
+  color: #000000;
+  font-family: 'Courier New', monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: pre;
+  overflow: auto;
+}
+
+/* ---------------------------------------------------------------
+   Calculator — troll mini-app
+--------------------------------------------------------------- */
+
+.calculator-app {
+  background: #C0C0C0;
+  height: 100%;
+  text-align: center;
+  padding-top: 48px;
+  box-sizing: border-box;
+}
+
+.calculator-app__loading {
+  font-family: 'MS Sans Serif', Tahoma, sans-serif;
+  font-size: 11px;
+  color: #000000;
+  margin: 0;
+}
+
+.calculator-app__troll {
+  font-family: 'MS Sans Serif', Tahoma, sans-serif;
+  font-size: 14px;
+  font-weight: bold;
+  color: #000000;
+  margin: 0;
+}

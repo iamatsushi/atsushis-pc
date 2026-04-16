@@ -1,0 +1,146 @@
+/* ============================================================
+   minesweeper.css — Minesweeper mini-app
+   Scope: .ms-outer and children.
+   Win98-authentic chrome: raised/sunken borders, LCD displays.
+   ============================================================ */
+
+/* Outer container: silver, padding around info bar + board */
+.ms-outer {
+  background: #C0C0C0;
+  padding: 6px;
+  height: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* Info bar: sunken inset border, contains mine count + smiley + timer */
+.ms-info {
+  border: 2px solid;
+  border-color: #808080 #FFFFFF #FFFFFF #808080;
+  padding: 3px 4px;
+  margin-bottom: 6px;
+}
+
+/* Table fills the info bar width for even three-column distribution */
+.ms-info-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+}
+
+.ms-info-cell {
+  padding: 0;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+/* Center column expands to push LCDs to outer edges */
+.ms-info-cell--center {
+  width: 100%;
+  text-align: center;
+}
+
+.ms-info-cell--right {
+  text-align: right;
+}
+
+/* LCD digit display: black bg, red digits — mine count and timer */
+.ms-lcd {
+  display: inline-block;
+  background: #000000;
+  color: #CC0000;
+  font-family: 'Courier New', monospace;
+  font-size: 18px;
+  font-weight: bold;
+  line-height: 24px;
+  padding: 0 3px;
+  min-width: 40px;
+  text-align: right;
+  letter-spacing: 1px;
+  vertical-align: middle;
+}
+
+/* Smiley / new-game button */
+.ms-smiley {
+  display: inline-block;
+  width: 26px;
+  height: 26px;
+  background: #C0C0C0;
+  border: 2px solid;
+  border-color: #FFFFFF #808080 #808080 #FFFFFF;
+  font-size: 14px;
+  line-height: 22px;
+  text-align: center;
+  cursor: pointer;
+  padding: 0;
+  vertical-align: middle;
+}
+
+.ms-smiley:active {
+  border-color: #808080 #FFFFFF #FFFFFF #808080;
+  padding-top: 2px;
+  padding-left: 2px;
+}
+
+.ms-smiley:focus {
+  outline: 1px dotted #000000;
+  outline-offset: -3px;
+}
+
+/* Game board: sunken inset border around the cell grid */
+.ms-board {
+  border: 2px solid;
+  border-color: #808080 #FFFFFF #FFFFFF #808080;
+}
+
+/* Row: font-size 0 eliminates inline-block whitespace gaps between cells */
+.ms-row {
+  white-space: nowrap;
+  font-size: 0;
+}
+
+/* Unrevealed cell: raised Win98 border */
+.ms-cell {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  background: #C0C0C0;
+  border: 2px solid;
+  border-color: #FFFFFF #808080 #808080 #FFFFFF;
+  font-family: 'MS Sans Serif', Tahoma, sans-serif;
+  font-size: 11px;
+  font-weight: bold;
+  text-align: center;
+  line-height: 16px;
+  cursor: default;
+  box-sizing: border-box;
+  vertical-align: top;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Revealed cell: flat inset, no raised effect */
+.ms-cell--revealed {
+  background: #C0C0C0;
+  border: 1px solid;
+  border-color: #808080 #C0C0C0 #C0C0C0 #808080;
+  line-height: 18px;
+}
+
+/* Exploded mine (the one the player clicked): red background */
+.ms-cell--exploded {
+  background: #FF0000;
+}
+
+/* ---------------------------------------------------------------
+   Number color classes per Windows 98 Minesweeper convention
+--------------------------------------------------------------- */
+.ms-n1 { color: #0000FF; }
+.ms-n2 { color: #008000; }
+.ms-n3 { color: #FF0000; }
+.ms-n4 { color: #000080; }
+.ms-n5 { color: #800000; }
+.ms-n6 { color: #008080; }
+.ms-n7 { color: #000000; }
+.ms-n8 { color: #808080; }
