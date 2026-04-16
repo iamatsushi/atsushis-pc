@@ -104,6 +104,16 @@ window.APC.desktop = (function () {
       openIE();
     } else if (app === 'resume-exe') {
       openResumeExe();
+    } else if (app === 'dialup') {
+      openDialupNetworking();
+    }
+  }
+
+  function openDialupNetworking() {
+    // Trigger the dial-up sequence via ie.js. No IE window is opened —
+    // connecting is a separate step from browsing, per Win98 behavior.
+    if (window.APC.ie && typeof window.APC.ie.connect === 'function') {
+      window.APC.ie.connect();
     }
   }
 

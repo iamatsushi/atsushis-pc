@@ -5,6 +5,11 @@
 
 window.APC = window.APC || {};
 
+// Session-level state shared across modules.
+// isConnected: true once the user has completed the dial-up sequence this session.
+window.APC.session = window.APC.session || {};
+window.APC.session.isConnected = window.APC.session.isConnected || false;
+
 window.APC.ie = (function () {
   'use strict';
 
@@ -46,9 +51,9 @@ window.APC.ie = (function () {
 
   // --- Module state ----------------------------------------------------
 
-  // hasDialedUp: true once dial-up has run this session.
-  // Manual URL entry always re-triggers regardless of this flag.
-  let hasDialedUp = false;
+  // isDialingUp: true while the dial-up modal is currently showing.
+  // Guards against double-triggering if the Dial-Up icon is clicked twice.
+  let isDialingUp = false;
   let ieWindowState = null;   // win98 window state object from desktop.js
   let currentUrl = DEFAULT_URL;
 
@@ -71,6 +76,20 @@ window.APC.ie = (function () {
   let currentParams = {};     // parsed query params for the current page
 
   // --- Public API ------------------------------------------------------
+
+  // connect(onComplete) — plays the dial-up sequence and sets isConnected.
+  // Called by the Dial-Up Networking desktop icon (no onComplete needed)
+  // and by the no-connection page link (onComplete navigates to homepage).
+  function connect(onComplete) {
+    if (isDialingUp || window.APC.session.isConnected) { return; }
+    isDialingUp = true;
+    if (window.umami) { window.umami.track('dialup_trigger'); }
+    showDialup(function () {
+      isDialingUp = false;
+      window.APC.session.isConnected = true;
+      if (onComplete) { onComplete(); }
+    });
+  }
 
   function open(targetUrl) {
     // If IE window already exists, restore or focus it — don't open a second.
@@ -101,8 +120,8 @@ window.APC.ie = (function () {
     });
 
     // When the window is closed, reset DOM refs and nav stack.
-    // hasDialedUp is intentionally NOT reset here — dial-up fires once per
-    // browser session regardless of how many times the window is opened/closed.
+    // window.APC.session.isConnected is intentionally NOT reset here —
+    // the connection persists for the browser session regardless of IE open/close.
     // desktop.js already removes the element and taskbar button.
     const closeBtn = ieWindowState.el.querySelector('[data-action="close"]');
     if (closeBtn) {
@@ -125,7 +144,8 @@ window.APC.ie = (function () {
       window.umami.track('app_open', { app_name: 'ie' });
     }
 
-    // Navigate to target URL (or homepage) — will trigger dial-up on first launch.
+    // Navigate to target URL (or homepage). navigate() checks isConnected —
+    // if not yet connected, the no-connection page is shown instead.
     navigate(targetUrl || DEFAULT_URL, false);
   }
 
@@ -362,20 +382,15 @@ window.APC.ie = (function () {
     // Resolve to page key; unknown URLs fall back silently to homepage.
     const pageKey = PAGE_ROUTES[normalized] || 'home';
 
-    // Track manual URL bar entries as an analytics event — no dial-up re-trigger.
+    // Track manual URL bar entries for analytics.
     if (fromUserInput && window.umami) {
       window.umami.track('dialup_url_entry');
     }
 
-    // Dial-up fires once per browser session — first IE launch only.
-    // All subsequent navigations (links, address bar, back/forward) go direct.
-    if (!hasDialedUp) {
-      if (window.umami) { window.umami.track('dialup_trigger'); }
-      if (statusEl) { statusEl.textContent = 'Connecting to ' + normalized + '...'; }
-      showDialup(function () {
-        hasDialedUp = true;
-        renderPage(pageKey);
-      });
+    // Connection check: show no-connection page until the user dials up.
+    // Once isConnected is true for the session, all navigations go direct.
+    if (!window.APC.session.isConnected) {
+      renderNoConnection();
     } else {
       renderPage(pageKey);
     }
@@ -1188,6 +1203,54 @@ window.APC.ie = (function () {
     }
   }
 
+  // --- No-connection page ----------------------------------------------
+
+  function renderNoConnection() {
+    if (!pageEl) { return; }
+    pageEl.innerHTML = '';
+    if (statusEl) { statusEl.textContent = 'Not connected'; }
+
+    const page = document.createElement('div');
+    page.className = 'ie-noconn';
+
+    const icon = document.createElement('p');
+    icon.className = 'ie-noconn__icon';
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = '\u2715'; // ✕
+
+    const h1 = document.createElement('h1');
+    h1.className = 'ie-noconn__title';
+    h1.textContent = 'This page cannot be displayed';
+
+    const divider = document.createElement('hr');
+    divider.className = 'ie-noconn__divider';
+    divider.setAttribute('aria-hidden', 'true');
+
+    const body = document.createElement('p');
+    body.className = 'ie-noconn__body';
+    body.textContent =
+      'You are not connected to the internet. Please double-click the ' +
+      'Dial-Up Networking icon on your desktop to connect, or use the link below.';
+
+    const link = document.createElement('a');
+    link.className = 'ie-noconn__link';
+    link.href = '#';
+    link.textContent = 'Open Dial-Up Networking';
+    link.addEventListener('click', function (e) {
+      e.preventDefault();
+      connect(function () {
+        navigate(DEFAULT_URL, false);
+      });
+    });
+
+    page.appendChild(icon);
+    page.appendChild(h1);
+    page.appendChild(divider);
+    page.appendChild(body);
+    page.appendChild(link);
+    pageEl.appendChild(page);
+  }
+
   // --- Dial-up modal ---------------------------------------------------
 
   function showDialup(onComplete) {
@@ -1309,6 +1372,6 @@ window.APC.ie = (function () {
 
   // --- Public exports --------------------------------------------------
 
-  return { open: open };
+  return { open: open, connect: connect };
 
 }());
