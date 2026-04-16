@@ -1194,12 +1194,14 @@ window.APC.ie = (function () {
 
   // Inject Altcha web component script into <head> once.
   // Loaded from jsDelivr CDN — intentional deviation from no-CDN rule (approved).
+  // type="module" required: altcha.js is an ES module (web component registration
+  // uses export). Acceptable exception — this is third-party widget code, not ours.
   // Guard prevents double-injection on subsequent guestbook renders.
   function injectAltchaScript() {
     if (document.querySelector('script[data-altcha-widget]')) { return; }
     const s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/npm/altcha/dist/altcha.min.js';
-    s.async = true;
+    s.src = 'https://cdn.jsdelivr.net/npm/altcha/dist/altcha.js';
+    s.type = 'module';
     s.setAttribute('data-altcha-widget', '1');
     document.head.appendChild(s);
   }
