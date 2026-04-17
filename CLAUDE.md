@@ -894,6 +894,11 @@ These decisions are final. No source spec, comment, or future AI session may ove
 - **DO NOT:** Add File System or Virtual Memory tabs until there is a specific, meaningful interaction or easter egg to place inside them.
 - **DO:** Retain the "File System..." and "Virtual Memory..." deep-link buttons on the Performance tab as non-functional stubs; they anticipate future tabs but must not open anything yet.
 
+### System Properties — Dialog Width
+
+- **DO:** Use ~480px width. This corrects a discrepancy between spec document 2e3b940e (480px) and an earlier ~400px figure. 480px is the correct value for pixel-accurate Win98 SYSDM.CPL chrome.
+- **DO NOT:** Use ~400px — that value is superseded.
+
 ### Start Menu — Shut Down Radio Options
 
 - **DO:** Use exactly these three radio options in the Shut Down modal: (1) Shut down [default], (2) Restart, (3) Log Off.
