@@ -570,6 +570,9 @@ window.APC.boot = (function () {
     if (window.APC.desktop && typeof window.APC.desktop.reset === 'function') {
       window.APC.desktop.reset();
     }
+    if (window.APC.widgets && typeof window.APC.widgets.reset === 'function') {
+      window.APC.widgets.reset();
+    }
 
     // Clear session keys so init() runs the full sequence.
     sessionStorage.removeItem('boot_complete');
