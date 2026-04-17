@@ -53,12 +53,18 @@ window.APC.boot = (function () {
   // --- Mobile detection ----------------------------------------------------
 
   function isMobileOrTouch() {
-    // Both conditions must be true: genuine touch hardware (maxTouchPoints > 1)
-    // AND a physically small screen (screen.width, not window.innerWidth).
-    // Using screen.width prevents false positives on laptops with small windows.
-    // maxTouchPoints > 1 (not > 0) excludes laptops that report a single
-    // touch point for Force Touch / precision touchpad on macOS.
-    return navigator.maxTouchPoints > 1 && screen.width < 1024;
+    // All three conditions must be true:
+    // 1. Genuine touch hardware (maxTouchPoints > 1).
+    //    > 1 (not > 0) excludes macOS Force Touch / precision touchpad.
+    // 2. Physically small screen (screen.width < 1024).
+    //    screen.width (not window.innerWidth) avoids false positives on
+    //    laptops with small browser windows.
+    // 3. No fine pointer (mouse / trackpad).
+    //    Excludes docked tablets and small desktop monitors that have a
+    //    touch layer but are primarily operated with a precise pointer.
+    return navigator.maxTouchPoints > 1 &&
+           screen.width < 1024 &&
+           !window.matchMedia('(pointer: fine)').matches;
   }
 
   function showMobileInterstitial() {
@@ -244,12 +250,10 @@ window.APC.boot = (function () {
 
   function startIdentityLines() {
     if (hasStarted) { return; }
-    const rows = Math.floor(canvas.height / FONT_SIZE);
-    // Anchor roughly 42% down the screen — prompt at 50% will sit below.
-    const anchorRow = Math.floor(rows * 0.42);
+    // identityX is constant (no dependency on canvas dimensions).
+    // identityY1/Y2 are recalculated each frame in drawFrame() so they
+    // stay accurate if the window is resized between now and draw time.
     identityX  = 2 * FONT_SIZE;
-    identityY1 = (anchorRow + 1) * FONT_SIZE;
-    identityY2 = (anchorRow + 2) * FONT_SIZE;
     identityPhase = 'line1';
     typeNextChar();
   }
@@ -394,7 +398,12 @@ window.APC.boot = (function () {
 
     // Redraw typed identity lines at full brightness each frame so the fade
     // overlay doesn't dim them while they're still being typed.
+    // Y positions recalculated here so a window resize between startIdentityLines()
+    // and this frame doesn't leave the text at a stale vertical position.
     if (identityPhase !== 'waiting') {
+      const anchorRow = Math.floor(Math.floor(canvas.height / FONT_SIZE) * 0.42);
+      identityY1 = (anchorRow + 1) * FONT_SIZE;
+      identityY2 = (anchorRow + 2) * FONT_SIZE;
       ctx.font = FONT_SIZE + 'px "Courier New", monospace';
       ctx.fillStyle = MATRIX_COLOR;
       if (identityTyped1) {
@@ -463,6 +472,10 @@ window.APC.boot = (function () {
   }
 
   function animateProgressBar() {
+    // Guard: if win98-timing.js failed to load, BOOT_BLOCK_COUNT is undefined.
+    // Without this, addBlock() would see blocksFilled >= undefined (false forever)
+    // and loop indefinitely, or NaN arithmetic would break the progress display.
+    if (!window.APC.timing || !window.APC.timing.BOOT_BLOCK_COUNT) { return; }
     const t = window.APC.timing;
     const track = document.getElementById('boot-progress-track');
     let blocksFilled = 0;
