@@ -236,7 +236,7 @@ window.APC.netescape = (function () {
 
     // Vertical separator
     const tdSep = document.createElement('td');
-    tdSep.className = 'netescape-chrome__toolbar-cell ie-chrome__toolbar-sep';
+    tdSep.className = 'netescape-chrome__toolbar-cell netescape-chrome__toolbar-sep';
     tr.appendChild(tdSep);
 
     // "Address" label
@@ -433,7 +433,8 @@ window.APC.netescape = (function () {
   }
 
   // startPageLoad — runs the Protected Path status bar sequence then renders the page.
-  // delay is capped at 1000ms (Protected Path rule: max 1s, no failures).
+  // delay is capped at 1000ms — this limits the renderPage portion only, not the
+  // full end-to-end navigation time (dial-up simulation adds on top of this).
   function startPageLoad(url, pageKey, delay) {
     cancelPageLoad();
     var capped = Math.min(delay, 1000);
@@ -1404,7 +1405,11 @@ window.APC.netescape = (function () {
     footer.appendChild(cancelBtn);
     win.appendChild(footer);
     overlay.appendChild(win);
-    document.body.appendChild(overlay);
+    // Append inside the chrome container, not document.body. position:absolute
+    // (set in CSS) scopes the overlay to the NetEscape window rather than the
+    // full viewport, so other open desktop windows remain accessible.
+    var freezeContainer = (pageEl && pageEl.parentNode) ? pageEl.parentNode : document.body;
+    freezeContainer.appendChild(overlay);
 
     // Focus OK button for keyboard accessibility.
     okBtn.focus();
