@@ -1,15 +1,17 @@
 // pb_hooks/guestbook_verify.pb.js
 // Server-side Altcha proof-of-work verification for guestbook submissions.
-// Runs on every guestbook beforeCreate event; rejects any POST that does not
-// carry a valid, HMAC-signed Altcha payload.
+// Runs on every guestbook record create request; rejects any POST that does
+// not carry a valid, HMAC-signed Altcha payload.
 //
-// Verified against PocketBase 0.28.2 API:
-//   $app.onRecordBeforeCreateRequest(handler, 'collection')
+// PocketBase 0.28 API used:
+//   onRecordCreateRequest(handler, 'collection')
+//   e.record                       → the record being created (RequestEvent field)
+//   e.app                          → app instance (RequestEvent field)
+//   e.next()                       → proceed with record creation
 //   $security.sha256(text)         → hex SHA-256 string
 //   $security.hs256(text, key)     → hex HMAC-SHA256 string
 //   $os.getenv(key)                → environment variable string
 //   throw new BadRequestError(msg) → 400 response
-//   e.next()                       → proceed with record creation
 //
 // atob() and Buffer are NOT available in PocketBase's goja runtime.
 // base64Decode() below is a pure-JS implementation.
@@ -63,10 +65,10 @@ function base64Decode(str) {
 }
 
 // ---------------------------------------------------------------------------
-// Guestbook beforeCreate hook
+// Guestbook create hook
 // ---------------------------------------------------------------------------
 
-$app.onRecordBeforeCreateRequest(function (e) {
+onRecordCreateRequest((e) => {
   // 1. Read the submitted Altcha payload
   var payload = e.record.get('altcha');
   if (!payload) {
