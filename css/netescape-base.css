@@ -1,6 +1,6 @@
 /* ============================================================
-   ie-base.css — Internet Explorer 4 chrome + dial-up modal
-   Scope: .ie-chrome and children; .dialup-modal and children.
+   netescape-base.css — NetEscape 4 chrome + dial-up modal
+   Scope: .netescape-chrome and children; .dialup-modal and children.
    Rules: no flex/grid; absolute positioning for layer layout;
    table for toolbar; no CSS variables (Win98 chrome colors only).
    ============================================================ */
@@ -9,7 +9,7 @@
    IE chrome root — fills .win98-window__content (height set by JS)
 --------------------------------------------------------------- */
 
-.ie-chrome {
+.netescape-chrome {
   position: relative;
   width: 100%;
   height: 100%;
@@ -21,7 +21,7 @@
    Menubar — absolute at top, 20px tall
 --------------------------------------------------------------- */
 
-.ie-chrome__menubar {
+.netescape-chrome__menubar {
   position: absolute;
   top: 0;
   left: 0;
@@ -34,7 +34,7 @@
 }
 
 /* Stub menu item buttons — no borders, inherit silver bg */
-.ie-chrome__menu-item {
+.netescape-chrome__menu-item {
   display: inline-block;
   height: 20px;
   background: none;
@@ -47,12 +47,12 @@
   line-height: 20px;
 }
 
-.ie-chrome__menu-item:hover {
+.netescape-chrome__menu-item:hover {
   background: #000080;
   color: #FFFFFF;
 }
 
-.ie-chrome__menu-item:focus {
+.netescape-chrome__menu-item:focus {
   outline: 1px dotted #000000;
   outline-offset: -2px;
 }
@@ -61,7 +61,7 @@
    Toolbar — absolute below menubar, 28px tall, table-based layout
 --------------------------------------------------------------- */
 
-.ie-chrome__toolbar {
+.netescape-chrome__toolbar {
   position: absolute;
   top: 20px;
   left: 0;
@@ -75,31 +75,31 @@
 }
 
 /* Table fills toolbar width; address bar cell gets remaining space */
-.ie-chrome__toolbar-table {
+.netescape-chrome__toolbar-table {
   width: 100%;
   height: 28px;
   border-collapse: collapse;
   table-layout: auto;
 }
 
-.ie-chrome__toolbar-cell {
+.netescape-chrome__toolbar-cell {
   padding: 3px 2px;
   vertical-align: middle;
   white-space: nowrap;
 }
 
 /* Expand address bar column to fill remaining width */
-.ie-chrome__toolbar-cell--addr {
+.netescape-chrome__toolbar-cell--addr {
   width: 100%;
 }
 
 /* Label cell: shrink-wrap to text */
-.ie-chrome__toolbar-cell--addr-label {
+.netescape-chrome__toolbar-cell--addr-label {
   padding-right: 4px;
 }
 
 /* Vertical separator between nav buttons and address area */
-.ie-chrome__toolbar-sep {
+.netescape-chrome__toolbar-sep {
   width: 6px;
   border-left: 1px solid #808080;
   border-right: 1px solid #FFFFFF;
@@ -107,7 +107,7 @@
 }
 
 /* Navigation buttons: Back, Forward, Refresh */
-.ie-chrome__nav-btn {
+.netescape-chrome__nav-btn {
   width: 24px;
   height: 20px;
   background: #C0C0C0;
@@ -122,31 +122,31 @@
   vertical-align: middle;
 }
 
-.ie-chrome__nav-btn:active {
+.netescape-chrome__nav-btn:active {
   border-color: #808080 #FFFFFF #FFFFFF #808080;
   padding-top: 1px;
   padding-left: 1px;
 }
 
-.ie-chrome__nav-btn:focus {
+.netescape-chrome__nav-btn:focus {
   outline: 1px dotted #000000;
   outline-offset: -3px;
 }
 
 /* Disabled-looking nav buttons (Back/Forward stubs) */
-.ie-chrome__nav-btn--disabled {
+.netescape-chrome__nav-btn--disabled {
   color: #808080;
   cursor: default;
 }
 
-.ie-chrome__nav-btn--disabled:active {
+.netescape-chrome__nav-btn--disabled:active {
   border-color: #FFFFFF #808080 #808080 #FFFFFF;
   padding-top: 0;
   padding-left: 0;
 }
 
 /* "Address" label text */
-.ie-chrome__addr-label {
+.netescape-chrome__addr-label {
   font-family: 'MS Sans Serif', Tahoma, sans-serif;
   font-size: 11px;
   color: #000000;
@@ -154,7 +154,7 @@
 }
 
 /* Address bar input — sunken inset border */
-.ie-chrome__address-input {
+.netescape-chrome__address-input {
   display: block;
   width: 100%;
   height: 18px;
@@ -169,14 +169,14 @@
   box-sizing: border-box;
 }
 
-.ie-chrome__address-input:focus {
+.netescape-chrome__address-input:focus {
   outline: none;
   /* Keep the sunken appearance on focus — no browser focus ring */
   border-color: #808080 #FFFFFF #FFFFFF #808080;
 }
 
 /* Go button — raised Win98 style */
-.ie-chrome__go-btn {
+.netescape-chrome__go-btn {
   height: 20px;
   background: #C0C0C0;
   border: 1px solid;
@@ -189,13 +189,13 @@
   vertical-align: middle;
 }
 
-.ie-chrome__go-btn:active {
+.netescape-chrome__go-btn:active {
   border-color: #808080 #FFFFFF #FFFFFF #808080;
   padding-top: 1px;
   padding-left: 9px;
 }
 
-.ie-chrome__go-btn:focus {
+.netescape-chrome__go-btn:focus {
   outline: 1px dotted #000000;
   outline-offset: -3px;
 }
@@ -204,7 +204,7 @@
    Page viewport — scrollable content area between toolbar and statusbar
 --------------------------------------------------------------- */
 
-.ie-chrome__page {
+.netescape-chrome__page {
   position: absolute;
   top: 48px;
   left: 0;
@@ -219,7 +219,7 @@
    Status bar — absolute at bottom, 20px tall, sunken inset border
 --------------------------------------------------------------- */
 
-.ie-chrome__statusbar {
+.netescape-chrome__statusbar {
   position: absolute;
   bottom: 0;
   left: 0;
@@ -230,7 +230,7 @@
   overflow: hidden;
 }
 
-.ie-chrome__status-text {
+.netescape-chrome__status-text {
   display: block;
   font-family: 'MS Sans Serif', Tahoma, sans-serif;
   font-size: 11px;
@@ -344,7 +344,7 @@
    IE stub page — placeholder for pages not yet built
 --------------------------------------------------------------- */
 
-.ie-stub {
+.netescape-stub {
   padding: 16px;
   font-family: Verdana, sans-serif;
   font-size: 11px;
@@ -358,7 +358,7 @@
    No-connection error page — shown when isConnected is false
 --------------------------------------------------------------- */
 
-.ie-noconn {
+.netescape-noconn {
   background: #FFFFFF;
   font-family: 'MS Sans Serif', Tahoma, sans-serif;
   font-size: 12px;
@@ -367,7 +367,7 @@
   box-sizing: border-box;
 }
 
-.ie-noconn__icon {
+.netescape-noconn__icon {
   font-size: 32px;
   font-weight: bold;
   color: #CC0000;
@@ -375,7 +375,7 @@
   line-height: 1;
 }
 
-.ie-noconn__title {
+.netescape-noconn__title {
   font-family: 'MS Sans Serif', Tahoma, sans-serif;
   font-size: 16px;
   font-weight: bold;
@@ -384,13 +384,13 @@
   padding: 0;
 }
 
-.ie-noconn__divider {
+.netescape-noconn__divider {
   border: none;
   border-top: 1px solid #808080;
   margin: 8px 0 12px;
 }
 
-.ie-noconn__body {
+.netescape-noconn__body {
   font-size: 12px;
   line-height: 1.5;
   color: #000000;
@@ -398,7 +398,7 @@
   max-width: 480px;
 }
 
-.ie-noconn__link {
+.netescape-noconn__link {
   font-size: 12px;
   color: #0000CC;
 }

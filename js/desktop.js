@@ -201,8 +201,8 @@ window.APC.desktop = (function () {
   function openIconApp(app) {
     if (app === 'my-computer') {
       openMyComputer();
-    } else if (app === 'ie') {
-      openIE();
+    } else if (app === 'netescape') {
+      openNetEscape();
     } else if (app === 'resume-exe') {
       openResumeExe();
     } else if (app === 'dialup') {
@@ -211,18 +211,18 @@ window.APC.desktop = (function () {
   }
 
   function openDialupNetworking() {
-    // Trigger the dial-up sequence via ie.js. No IE window is opened —
+    // Trigger the dial-up sequence via netescape.js. No IE window is opened —
     // connecting is a separate step from browsing, per Win98 behavior.
-    if (window.APC.ie && typeof window.APC.ie.connect === 'function') {
-      window.APC.ie.connect();
+    if (window.APC.netescape && typeof window.APC.netescape.connect === 'function') {
+      window.APC.netescape.connect();
     }
   }
 
   function openResumeExe() {
     // Open IE (or focus it if already open) and navigate to guestbook?resume=1.
-    // ie.js open(targetUrl) handles both cases: new window and already-open window.
-    if (window.APC.ie && typeof window.APC.ie.open === 'function') {
-      window.APC.ie.open('ahisaka.com/guestbook?resume=1');
+    // netescape.js open(targetUrl) handles both cases: new window and already-open window.
+    if (window.APC.netescape && typeof window.APC.netescape.open === 'function') {
+      window.APC.netescape.open('ahisaka.com/guestbook?resume=1');
     }
   }
 
@@ -319,14 +319,14 @@ window.APC.desktop = (function () {
     }
   }
 
-  function openIE() {
-    // Delegate to ie.js if loaded; otherwise open a stub window
-    if (window.APC.ie && typeof window.APC.ie.open === 'function') {
-      window.APC.ie.open();
+  function openNetEscape() {
+    // Delegate to netescape.js if loaded; otherwise open a stub window
+    if (window.APC.netescape && typeof window.APC.netescape.open === 'function') {
+      window.APC.netescape.open();
       return;
     }
 
-    const existing = findWindowByApp('ie');
+    const existing = findWindowByApp('netescape');
     if (existing) {
       if (existing.minimized) { restoreWindow(existing); }
       else { bringToFront(existing.el); }
@@ -334,8 +334,8 @@ window.APC.desktop = (function () {
     }
 
     const state = createWindow({
-      title: 'Internet Explorer',
-      app: 'ie',
+      title: 'NetEscape',
+      app: 'netescape',
       width: 640,
       height: 480,
       x: 80,

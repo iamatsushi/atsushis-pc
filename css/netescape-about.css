@@ -1,11 +1,11 @@
 /* ============================================================
-   ie-about.css — About Me page content styles
+   netescape-about.css — About Me page content styles
    GeoCities-era feel: neon pink #FF69B4 headers, tiled bg,
    float sidebar. Verdana 11px per CLAUDE.md spec. Max 4 GIFs.
    CSS custom properties for IE page content theming only.
    ============================================================ */
 
-.ie-about {
+.netescape-about {
   --about-bg:       #FFFFEE;
   --about-header:   #FF69B4;
   --about-text:     #000000;
@@ -14,7 +14,7 @@
   --about-divider:  #FF69B4;
 }
 
-.ie-about {
+.netescape-about {
   background-color: var(--about-bg);
   /* Placeholder tiled background — replace in Phase 9 with:
      background-image: url('../assets/gifs/tile-bg.gif') repeat;
@@ -38,14 +38,14 @@
    Top header
 --------------------------------------------------------------- */
 
-.ie-about__top-header {
+.netescape-about__top-header {
   text-align: center;
   border-bottom: 2px solid var(--about-header);
   padding-bottom: 8px;
   margin-bottom: 10px;
 }
 
-.ie-about__top-title {
+.netescape-about__top-title {
   font-family: Verdana, sans-serif;
   font-size: 18px;
   font-weight: bold;
@@ -55,7 +55,7 @@
   text-shadow: 2px 2px 0 #FF00FF, -1px -1px 0 #FF0000;
 }
 
-.ie-about__under-construction {
+.netescape-about__under-construction {
   font-family: Verdana, sans-serif;
   font-size: 11px;
   color: #FF0000;
@@ -72,7 +72,7 @@
    Two-column float layout
 --------------------------------------------------------------- */
 
-.ie-about__sidebar {
+.netescape-about__sidebar {
   float: left;
   width: 34%;
   border-right: 2px dashed var(--about-header);
@@ -82,11 +82,11 @@
 }
 
 /* overflow: hidden creates a BFC that fills remaining width */
-.ie-about__main {
+.netescape-about__main {
   overflow: hidden;
 }
 
-.ie-about__clear {
+.netescape-about__clear {
   clear: both;
 }
 
@@ -94,7 +94,7 @@
    Section title — neon pink, underline
 --------------------------------------------------------------- */
 
-.ie-about__section-title {
+.netescape-about__section-title {
   font-family: Verdana, sans-serif;
   font-size: 12px;
   font-weight: bold;
@@ -107,9 +107,9 @@
    Body copy
 --------------------------------------------------------------- */
 
-.ie-about__bio,
-.ie-about__welcome,
-.ie-about__interests {
+.netescape-about__bio,
+.netescape-about__welcome,
+.netescape-about__interests {
   font-size: 11px;
   line-height: 1.6;
   margin: 0 0 8px;
@@ -121,7 +121,7 @@
    replace with: <img src="assets/gifs/name.gif" alt="..." />
 --------------------------------------------------------------- */
 
-.ie-about__gif-placeholder {
+.netescape-about__gif-placeholder {
   display: block;
   width: 88px;
   height: 31px;
@@ -138,7 +138,7 @@
    Hit counter
 --------------------------------------------------------------- */
 
-.ie-about__counter {
+.netescape-about__counter {
   display: inline-block;
   font-family: 'Courier New', Courier, monospace;
   font-size: 10px;
@@ -153,7 +153,7 @@
    Horizontal divider
 --------------------------------------------------------------- */
 
-.ie-about__divider {
+.netescape-about__divider {
   border: none;
   border-top: 1px dashed var(--about-divider);
   margin: 8px 0;
@@ -163,5 +163,5 @@
    Links
 --------------------------------------------------------------- */
 
-.ie-about a         { color: var(--about-link);    }
-.ie-about a:visited { color: var(--about-visited); }
+.netescape-about a         { color: var(--about-link);    }
+.netescape-about a:visited { color: var(--about-visited); }
