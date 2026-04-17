@@ -24,6 +24,7 @@ window.APC.desktop = (function () {
   let activeWindowId = null;
   const windows = {};             // id → window state object
   const iconLastClick = {};       // app → timestamp of last click
+  const appLaunching = {};        // app → true while launch delay is in-progress (prevents double-launch)
 
   // Clock easter egg state
   let clockClickCount = 0;
@@ -234,6 +235,21 @@ window.APC.desktop = (function () {
       return;
     }
 
+    // Texture Zone launch delay: 1000–2200ms, hourglass cursor, no failure state.
+    // Guard reuses appLaunching to prevent double-open during delay.
+    if (appLaunching['my-computer']) { return; }
+    appLaunching['my-computer'] = true;
+    document.body.style.cursor = 'wait';
+
+    var t = window.APC.timing;
+    setTimeout(function () {
+      appLaunching['my-computer'] = false;
+      document.body.style.cursor = '';
+      buildMyComputerWindow();
+    }, t.rand(t.APP_MYCOMPUTER_MIN_MS, t.APP_MYCOMPUTER_MAX_MS));
+  }
+
+  function buildMyComputerWindow() {
     const state = createWindow({
       title: 'My Computer',
       app: 'my-computer',
@@ -312,11 +328,88 @@ window.APC.desktop = (function () {
     state.show();
   }
 
-  // Dispatch to mini-app open() via window.APC.apps namespace
+  // Dispatch to mini-app open() via window.APC.apps namespace.
+  // Applies Texture Zone launch delay + failure behavior from win98-timing.js tokens.
   function launchApp(app) {
-    if (window.APC.apps && window.APC.apps[app] && typeof window.APC.apps[app].open === 'function') {
+    if (!window.APC.apps || !window.APC.apps[app] ||
+        typeof window.APC.apps[app].open !== 'function') { return; }
+
+    // Prevent double-launch: if a delay timer is already running for this app, ignore.
+    if (appLaunching[app]) { return; }
+
+    var t = window.APC.timing;
+
+    // Per-app delay range and failure config keyed by app name.
+    var cfg = {
+      winamp:      { min: t.APP_WINAMP_MIN_MS,     max: t.APP_WINAMP_MAX_MS,
+                     failChance: t.APP_WINAMP_FAIL_CHANCE,     failType: 'not-responding' },
+      calculator:  { min: t.APP_CALC_MIN_MS,        max: t.APP_CALC_MAX_MS,
+                     failChance: t.APP_CALC_FAIL_CHANCE,        failType: 'flicker' },
+      notepad:     { min: t.APP_NOTEPAD_MIN_MS,     max: t.APP_NOTEPAD_MAX_MS,
+                     failChance: t.APP_NOTEPAD_FAIL_CHANCE,     failType: 'flicker' },
+      minesweeper: { min: t.APP_MINESWEEPER_MIN_MS, max: t.APP_MINESWEEPER_MAX_MS,
+                     failChance: t.APP_MINESWEEPER_FAIL_CHANCE, failType: 'flicker' }
+    }[app];
+
+    if (!cfg) {
+      // Unknown app — open immediately with no delay.
       window.APC.apps[app].open();
+      return;
     }
+
+    var delay    = t.rand(cfg.min, cfg.max);
+    var willFail = Math.random() < cfg.failChance;
+
+    appLaunching[app] = true;
+    document.body.style.cursor = 'wait';
+
+    setTimeout(function () {
+      appLaunching[app] = false;
+      document.body.style.cursor = '';
+      window.APC.apps[app].open();
+      if (willFail) {
+        if (cfg.failType === 'not-responding') { applyNotResponding(app); }
+        else if (cfg.failType === 'flicker')   { applyFlicker(app); }
+      }
+    }, delay);
+  }
+
+  // applyNotResponding — temporarily marks the window titlebar + taskbar button as
+  // "(Not Responding)" for APP_NOT_RESPONDING_MS, then reverts.
+  function applyNotResponding(app) {
+    var state = findWindowByApp(app);
+    if (!state) { return; }
+    var t = window.APC.timing;
+    var titleEl = state.el.querySelector('.win98-window__title');
+    var originalTitle = titleEl ? titleEl.textContent : state.title;
+
+    if (titleEl) { titleEl.textContent = originalTitle + ' (Not Responding)'; }
+    if (state.taskbarBtn) { state.taskbarBtn.textContent = originalTitle + ' (Not Responding)'; }
+
+    setTimeout(function () {
+      if (titleEl) { titleEl.textContent = originalTitle; }
+      if (state.taskbarBtn) { state.taskbarBtn.textContent = originalTitle; }
+    }, t.APP_NOT_RESPONDING_MS);
+  }
+
+  // applyFlicker — two-phase rendering glitch on the window content area:
+  //   Phase 1 (APP_FLICKER_MS):     white flash — content hidden, background #FFF
+  //   Phase 2 (APP_FLICKER_GAP_MS): blank gap   — content invisible before remount
+  function applyFlicker(app) {
+    var state = findWindowByApp(app);
+    if (!state) { return; }
+    var t = window.APC.timing;
+
+    state.el.classList.add('win98-window--flicker-flash');
+
+    setTimeout(function () {
+      state.el.classList.remove('win98-window--flicker-flash');
+      state.el.classList.add('win98-window--flicker-gap');
+
+      setTimeout(function () {
+        state.el.classList.remove('win98-window--flicker-gap');
+      }, t.APP_FLICKER_GAP_MS);
+    }, t.APP_FLICKER_MS);
   }
 
   function openNetEscape() {
