@@ -63,6 +63,13 @@ Proxies requests to `api.openweathermap.org/data/2.5/weather`. Accepts optional
 no params are supplied. Returns the raw OpenWeatherMap JSON to the client.
 Units are imperial (°F).
 
+**First-time deploy (new Pi setup):**
+```bash
+scp config/weather-server.py atsushispc:~/weather-server.py
+scp config/weather-server.service atsushispc:/tmp/weather-server.service
+ssh atsushispc 'sudo mv /tmp/weather-server.service /etc/systemd/system/weather-server.service && sudo systemctl daemon-reload && sudo systemctl enable weather-server && sudo systemctl start weather-server'
+```
+
 **Restart after update:**
 ```bash
 sudo systemctl restart weather-server
