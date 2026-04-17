@@ -13,7 +13,6 @@ window.APC.desktop = (function () {
   const TASKBAR_HEIGHT = 28;
   const WIN_MIN_WIDTH = 200;
   const WIN_MIN_HEIGHT = 80;
-  const CLOCK_INTERVAL_MS = 1000;
   const TITLEBAR_H = 22;    // titlebar height (18) + padding top (2) + padding bottom (2)
   const DBLCLICK_MS = 400;  // manual double-click detection window in ms
 
@@ -57,8 +56,18 @@ window.APC.desktop = (function () {
 
   function startClock() {
     renderClock();
-    setInterval(renderClock, CLOCK_INTERVAL_MS);
+    scheduleClock();
     bindClockEasterEgg();
+  }
+
+  // Self-rescheduling clock tick — fires every CLOCK_INTERVAL_MS (60s) plus a random
+  // 0–CLOCK_OFFSET_MAX_MS (0–2s) drift per tick, matching the Texture Zone clock spec.
+  function scheduleClock() {
+    var t = window.APC.timing;
+    setTimeout(function () {
+      renderClock();
+      scheduleClock();
+    }, t.CLOCK_INTERVAL_MS + t.rand(0, t.CLOCK_OFFSET_MAX_MS));
   }
 
   function renderClock() {

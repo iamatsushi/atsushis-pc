@@ -831,3 +831,60 @@
 .win98-window--flicker-gap .win98-window__content {
   visibility: hidden;
 }
+
+/* ---------------------------------------------------------------
+   System tray pop-up balloon  —  TEXTURE ZONE
+   Appears above the system tray at random intervals (90–300s).
+   Dismisses automatically after 4–6s or on close button click.
+   Positioned fixed bottom-right, above the taskbar (28px height).
+--------------------------------------------------------------- */
+
+.win98-tray-popup {
+  position: fixed;
+  bottom: 32px;
+  right: 8px;
+  width: 220px;
+  background: #C0C0C0;
+  border: 2px solid;
+  border-color: #FFFFFF #808080 #808080 #FFFFFF;
+  outline: 1px solid #000000;
+  padding: 6px 24px 6px 8px;
+  z-index: 4000;
+  overflow: hidden;
+}
+
+.win98-tray-popup__msg {
+  display: block;
+  font-family: 'MS Sans Serif', Tahoma, sans-serif;
+  font-size: 11px;
+  color: #000000;
+  line-height: 1.4;
+}
+
+.win98-tray-popup__close {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 14px;
+  height: 14px;
+  background: #C0C0C0;
+  border: 1px solid;
+  border-color: #FFFFFF #808080 #808080 #FFFFFF;
+  font-family: 'MS Sans Serif', Tahoma, sans-serif;
+  font-size: 9px;
+  line-height: 12px;
+  text-align: center;
+  padding: 0;
+  cursor: pointer;
+}
+
+.win98-tray-popup__close:active {
+  border-color: #808080 #FFFFFF #FFFFFF #808080;
+  padding-top: 1px;
+  padding-left: 1px;
+}
+
+.win98-tray-popup__close:focus {
+  outline: 1px dotted #000000;
+  outline-offset: -2px;
+}
