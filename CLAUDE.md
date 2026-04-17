@@ -482,9 +482,9 @@ This was the fastest consumer PC money could buy.
 You are browsing the internet exactly as fast as the best hardware of 1998 allowed.
 ```
 
-**Chrome:** Purple gradient titlebar (`#7A5ACD` to `#4B2E83`). Title: `System Properties`. Not resizable. Width ~400px. **Tabs: General | Device Manager | Hardware Profiles | Performance.** Default: General. File System and Virtual Memory tabs are explicitly deferred — do not implement until there is meaningful content or an easter egg for them.
+**Chrome:** Purple gradient titlebar (`#7A5ACD` to `#4B2E83`). Title: `System Properties`. Not resizable. Width ~480px. **Tabs: General | Device Manager | Hardware Profiles | Performance.** Default: General. File System and Virtual Memory tabs are explicitly deferred — do not implement until there is meaningful content or an easter egg for them.
 
-**Performance tab:** "Your system is configured for optimal performance." (OK/Cancel at bottom; Texture Zone delay 200–400ms.)
+**Performance tab:** "Your system is configured for optimal performance." Two stub buttons at bottom of content area: `File System...` and `Virtual Memory...` — both non-functional (no action, no tab opens). OK/Cancel at bottom of dialog; OK closes with Texture Zone delay 200–400ms.
 
 **Hardware Profiles tab:** Visual stub — single item "Original Configuration", standard Win98 list chrome.
 
@@ -511,7 +511,38 @@ You are browsing the internet exactly as fast as the best hardware of 1998 allow
 
 Single right-aligned OK button. On OK: closes modal, shows brief non-destructive toast "Removal requested — operation simulated". Device tree is unchanged — nodes are never actually removed.
 
-**Properties behavior (any PM device):** Opens a nested Win98 Properties dialog per the full SYSDM.CPL easter egg spec. Exact tab contents and copy are defined in the implementation file (`js/apps/system-properties.js`) — refer there for the full dialog copy; do not duplicate it here.
+**Properties behavior (any PM device):** Opens a nested Win98 Properties dialog. All six dialogs follow canonical Win98 nested properties chrome: title bar with device name, square tabs, content pane, OK (default focus) / Cancel at lower right. Do not paraphrase any status copy below — use exact strings.
+
+**Backlog Manager Pro Properties**
+- Tabs: General | Settings
+- General — Device type: `Storage Controller` / Manufacturer: `Unknown` / Status: `"This device is functioning but operating at critical capacity. Items are being added to the queue faster than they can be processed. No resolution date available."`
+- Settings — Queue depth: `[FULL]` (grayed, non-editable); Enable auto-prioritization checkbox (checked, grayed); **Clear Queue** button → confirmation dialog `"Are you sure? This action cannot be undone and will require re-grooming."` (OK / Cancel). If OK: show progress bar filling to 97% then freezing indefinitely.
+
+**Confidence.dll Properties**
+- Tabs: General | Driver
+- General — Device type: `System File` / Manufacturer: `Unknown` / Status: `"This device is working properly. Note: Device performance may vary significantly depending on environment. Optimal performance observed in: demo settings, low-stakes environments, and casual Fridays."`
+- Driver — Driver version: `1.0.0 (stable in theory)` / Driver date: `Varies` / **Update Driver** button (enabled) → dialog: `"Windows was unable to find a better driver for Confidence.dll. Your current driver is the best available. You're doing great."` (OK only)
+
+**Imposter Syndrome Controller Properties**
+- Tabs: General only (single tab — no Driver or Resources; restraint is the joke)
+- General — Device type: `Unknown` / Manufacturer: `Unknown` / Status: `"This device is working properly. (Probably.)"`
+
+**Sprint Velocity Controller Properties**
+- Tabs: General | Driver | Resources
+- General — Device type: `Performance Controller` / Manufacturer: `Agile Systems Inc.` / Status: `"Windows has detected a critical failure. An unexpected dependency was introduced on Friday at 4:58 PM. This device has been disabled to prevent further damage to the sprint. Code: SCOPE_CREEP_DETECTED (0x0000002A)"`
+- Driver — Driver version: `2.0 (downgraded from 3.0 after Sprint 12 incident)` / Driver date: `Friday` / **Update Driver** button grayed out, tooltip: `"Cannot update driver mid-sprint."`
+- Resources — IRQ: `14 (conflicting with Stakeholder Alignment Service)` / I/O Range: `Negotiable, pending retro` / DMA Channel: `Not yet assigned. Added to backlog.`
+
+**Stakeholder Alignment Service Properties**
+- Tabs: General | Driver
+- General — Device type: `Unknown` / Manufacturer: `Unknown` / Status: `"Windows cannot load the device driver. There are 23 conflicting devices requesting the same resources."`
+- Driver — Driver version: `v0.9 BETA (has been v0.9 BETA since 2019)` / **Update Driver** button grayed out, tooltip: `"Driver update requires sign-off from 23 stakeholders."`
+
+**Story Point Estimator Properties**
+- Tabs: General | Driver | Resources
+- General — Device description: `Fibonacci Sequence Engine v1.0` / Status: `"Last known output: 3. Actual recorded output: 13. Root cause under investigation since Sprint 4."`
+- Driver — Driver version: `∞`
+- Resources — IRQ: `∞` / I/O Range: `"To be determined in next sprint"`
 
 **Device Manager buttons:** Properties and Remove active when device selected; Refresh and Print always active.
 
