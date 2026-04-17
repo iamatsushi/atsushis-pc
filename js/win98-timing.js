@@ -162,13 +162,20 @@
     RAM_RENDER_MIN_MS:          200, // delay between fetch and display update
     RAM_RENDER_MAX_MS:          400,
 
-    TRAY_POPUP_MIN_MS:        90000, // min interval between tray pop-up appearances
-    TRAY_POPUP_MAX_MS:       300000, // max interval
-    TRAY_POPUP_DISPLAY_MIN_MS: 4000, // how long each pop-up stays visible
-    TRAY_POPUP_DISPLAY_MAX_MS: 6000,
+    TRAY_POPUP_MIN_MS:           90000, // min interval between balloon appearances
+    TRAY_POPUP_MAX_MS:          300000, // max interval
+    TRAY_POPUP_DISPLAY_MS:       10000, // balloon visible duration (XP spec: ~10s)
 
-    TRAY_CLICK_MIN_MS:          100, // response delay on tray icon click
-    TRAY_CLICK_MAX_MS:          200,
+    TRAY_CLICK_MIN_MS:             100, // response delay on balloon body/icon click
+    TRAY_CLICK_MAX_MS:             200,
+
+    TRAY_BALLOON_ENTRY_MS:         150, // CSS transition: translateY + opacity in
+    TRAY_BALLOON_EXIT_MS:          100, // CSS transition: opacity out
+    TRAY_BALLOON_GLITCH_CHANCE:   1/20, // probability balloon renders behind taskbar
+    TRAY_BALLOON_GLITCH_MIN_MS:    400, // how long glitch persists before self-correcting
+    TRAY_BALLOON_GLITCH_MAX_MS:    600,
+    TRAY_BALLOON_Z_INDEX:         4000, // normal balloon z-index (above taskbar at 999)
+    TRAY_BALLOON_GLITCH_Z_INDEX:   998, // glitch z-index (below taskbar)
 
     // -------------------------------------------------------------------------
     // System Properties Dialog  —  TEXTURE ZONE

@@ -1096,3 +1096,128 @@
   outline: 1px dotted #000000;
   outline-offset: -2px;
 }
+
+/* ----------------------------------------------------------------
+   XP-style Tray Balloon
+   Exception to no-border-radius rule: balloon is XP chrome, not
+   Win98 chrome. Positioned fixed bottom-right, above taskbar.
+   CSS transition drives entry (translateY + opacity) and exit
+   (opacity only). Triangle tail is a pure-CSS pseudo-element.
+   Z-index 4000 normally; 998 during behind-taskbar glitch.
+---------------------------------------------------------------- */
+
+.tray-balloon {
+  position: fixed;
+  bottom: 40px;
+  right: 8px;
+  width: 248px;
+  background: #FFFFCC;
+  border: 1px solid #000000;
+  border-radius: 6px;
+  z-index: 4000;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 150ms ease, transform 150ms ease;
+  font-family: 'MS Sans Serif', Tahoma, sans-serif;
+  font-size: 11px;
+  color: #000000;
+}
+
+.tray-balloon--visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.tray-balloon--exit {
+  opacity: 0;
+  transition: opacity 100ms ease;
+}
+
+/* Triangle tail pointing down toward taskbar */
+.tray-balloon::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  right: 16px;
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 8px solid #000000;
+}
+
+.tray-balloon::before {
+  content: '';
+  position: absolute;
+  bottom: -7px;
+  right: 17px;
+  width: 0;
+  height: 0;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-top: 7px solid #FFFFCC;
+  z-index: 1;
+}
+
+.tray-balloon__header {
+  background: linear-gradient(to right, #0A246A, #A6CAF0);
+  border-radius: 5px 5px 0 0;
+  padding: 3px 6px;
+  display: block;
+  overflow: hidden;
+}
+
+.tray-balloon__icon {
+  float: left;
+  margin-right: 4px;
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.tray-balloon__title {
+  float: left;
+  color: #FFFFFF;
+  font-weight: bold;
+  font-size: 11px;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tray-balloon__close {
+  float: right;
+  width: 14px;
+  height: 14px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: #FFFFFF;
+  font-size: 10px;
+  line-height: 12px;
+  text-align: center;
+  cursor: pointer;
+  padding: 0;
+  font-family: 'MS Sans Serif', Tahoma, sans-serif;
+}
+
+.tray-balloon__close:hover {
+  border-color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.tray-balloon__close:focus {
+  outline: 1px dotted #FFFFFF;
+  outline-offset: -2px;
+}
+
+.tray-balloon__body {
+  display: block;
+  padding: 6px 8px 8px;
+  cursor: pointer;
+  line-height: 1.4;
+  clear: both;
+}
+
+.tray-balloon__body:hover {
+  text-decoration: underline;
+}

@@ -104,13 +104,51 @@ window.APC.widgets = (function () {
       });
   }
 
-  // --- Tray pop-up state ----------------------------------------------
+  // --- Tray balloon state ---------------------------------------------
+  // XP-style balloon notifications. Two types alternate (never random) —
+  // Low Disk Space and Security Risk. Suppressed while a balloon is visible
+  // or while Protected Path is active (window.APC.session.protectedPathActive).
 
-  var trayPopupTimer = null;
-  // Persistent ARIA live region — appended once on init, mutated per popup.
-  // Appending an already-populated element does not reliably trigger screen
-  // readers; mutating a pre-existing region does.
+  var isBalloonVisible = false;    // prevents overlapping balloons
+  var balloonTypeIndex = 0;        // alternates through BALLOON_TYPES
+  var currentBalloon = null;       // live DOM element (or null)
+  var trayPopupTimer = null;       // inter-balloon schedule timer
+  var autoTimerId = null;          // auto-dismiss timer for live balloon
+  var glitchTimerId = null;        // self-correct timer for behind-taskbar glitch
+  // Persistent ARIA live region — appended once on init, mutated per balloon.
   var liveRegion = null;
+
+  // Disk Cleanup body click handler — stubbed until spec 24c49bfe arrives
+  function handleLowDiskClick() {
+    // TODO: Disk Cleanup click path
+    // Spec: Disk Cleanup Feature Spec (document 24c49bfe)
+    // On body click: apply TRAY_CLICK_MIN/MAX_MS delay → isBalloonVisible = false → open Disk Cleanup modal
+    // Do not implement until spec is provided. Do not stub with a placeholder modal.
+  }
+
+  function handleSecurityRiskClick() {
+    showWidgetModal('Security Center', 'No threats detected. Atsushi\u2019s code is clean.');
+    if (window.umami) {
+      window.umami.track('tray_balloon_action', { balloon_type: 'security_risk' });
+    }
+  }
+
+  var BALLOON_TYPES = [
+    {
+      type: 'low_disk_space',
+      icon: '\u26A0\uFE0F',
+      title: 'Low Disk Space',
+      body: 'You are running low on disk space on Local Disk (C:). Click here to see if you can free space on this drive.',
+      onBodyClick: handleLowDiskClick
+    },
+    {
+      type: 'security_risk',
+      icon: '\uD83D\uDEE1\uFE0F',
+      title: 'Your computer may be at risk',
+      body: 'Antivirus software might not be installed. Click this balloon to fix this problem.',
+      onBodyClick: handleSecurityRiskClick
+    }
+  ];
 
   // --- RAM widget -----------------------------------------------------
 
@@ -180,14 +218,17 @@ window.APC.widgets = (function () {
     });
   }
 
-  // --- Tray pop-ups  (Texture Zone) -----------------------------------
-  // Simulates Win98 security/system notifications from the notification area.
-  // Fires every TRAY_POPUP_MIN–MAX ms; each balloon stays for TRAY_POPUP_DISPLAY ms.
-  // Close button has TRAY_CLICK ms response delay per the timing spec.
+  // --- Tray balloons  (Texture Zone) ----------------------------------
+  // XP-style balloon notifications from the notification area.
+  // Types alternate: Low Disk Space → Security Risk → repeat.
+  // Suppressed while balloon is visible or Protected Path is active.
+  // Behind-taskbar glitch fires 1-in-20: renders at z-index 998 (below
+  // taskbar at 999) then self-corrects after TRAY_BALLOON_GLITCH_MIN/MAX ms.
 
   function initTrayPopups() {
-    // Create a single persistent live region so screen readers reliably
-    // announce tray notifications. Must be in the DOM before text is set.
+    // Persistent ARIA live region — must exist before text is set.
+    // Mutating a pre-existing region is reliable; appending a new
+    // populated aria-live element is not.
     liveRegion = document.createElement('div');
     liveRegion.setAttribute('role', 'status');
     liveRegion.setAttribute('aria-live', 'polite');
@@ -205,53 +246,124 @@ window.APC.widgets = (function () {
   function scheduleTrayPopup() {
     var t = window.APC.timing;
     trayPopupTimer = setTimeout(function () {
-      var messages = [
-        'Your computer may be at risk.',
-        'Low disk space on C:'
-      ];
-      showTrayPopup(messages[Math.floor(Math.random() * messages.length)]);
+      var session = window.APC && window.APC.session;
+      // Skip if a balloon is already up or Protected Path is active
+      if (!isBalloonVisible && !(session && session.protectedPathActive)) {
+        showTrayBalloon(BALLOON_TYPES[balloonTypeIndex % BALLOON_TYPES.length]);
+        balloonTypeIndex++;
+      }
       scheduleTrayPopup();
     }, t.rand(t.TRAY_POPUP_MIN_MS, t.TRAY_POPUP_MAX_MS));
   }
 
-  function showTrayPopup(message) {
+  function showTrayBalloon(spec) {
     var t = window.APC.timing;
+    isBalloonVisible = true;
 
-    var popup = document.createElement('div');
-    popup.className = 'win98-tray-popup';
+    // Build XP balloon DOM
+    var balloon = document.createElement('div');
+    balloon.className = 'tray-balloon';
+    balloon.setAttribute('role', 'alert');
+    balloon.setAttribute('aria-label', spec.title + ': ' + spec.body);
 
-    var msgEl = document.createElement('span');
-    msgEl.className = 'win98-tray-popup__msg';
-    msgEl.textContent = message;
+    var header = document.createElement('div');
+    header.className = 'tray-balloon__header';
+
+    var iconEl = document.createElement('span');
+    iconEl.className = 'tray-balloon__icon';
+    iconEl.setAttribute('aria-hidden', 'true');
+    iconEl.textContent = spec.icon;
+
+    var titleEl = document.createElement('span');
+    titleEl.className = 'tray-balloon__title';
+    titleEl.textContent = spec.title;
 
     var closeBtn = document.createElement('button');
-    closeBtn.className = 'win98-tray-popup__close';
+    closeBtn.className = 'tray-balloon__close';
     closeBtn.textContent = '\u00D7';
-    closeBtn.setAttribute('aria-label', 'Dismiss notification');
+    closeBtn.setAttribute('aria-label', 'Dismiss');
 
-    popup.appendChild(msgEl);
-    popup.appendChild(closeBtn);
-    document.body.appendChild(popup);
+    header.appendChild(iconEl);
+    header.appendChild(titleEl);
+    header.appendChild(closeBtn);
 
-    // Announce via the persistent live region (mutating pre-existing region
-    // is reliable; appending a populated element with aria-live is not).
-    if (liveRegion) { liveRegion.textContent = message; }
+    var bodyEl = document.createElement('div');
+    bodyEl.className = 'tray-balloon__body';
+    bodyEl.textContent = spec.body;
 
-    var dismissed = false;
-    var autoTimer = setTimeout(dismiss, t.rand(t.TRAY_POPUP_DISPLAY_MIN_MS, t.TRAY_POPUP_DISPLAY_MAX_MS));
+    balloon.appendChild(header);
+    balloon.appendChild(bodyEl);
+    document.body.appendChild(balloon);
+    currentBalloon = balloon;
 
-    function dismiss() {
-      if (dismissed) { return; }
-      dismissed = true;
-      clearTimeout(autoTimer);
-      if (popup.parentNode) { popup.parentNode.removeChild(popup); }
-      if (liveRegion) { liveRegion.textContent = ''; }
+    // Behind-taskbar glitch: 1-in-20 chance renders below taskbar (z-index 998)
+    // Self-corrects after TRAY_BALLOON_GLITCH_MIN/MAX ms
+    if (Math.random() < t.TRAY_BALLOON_GLITCH_CHANCE) {
+      balloon.style.zIndex = t.TRAY_BALLOON_GLITCH_Z_INDEX;
+      glitchTimerId = setTimeout(function () {
+        if (balloon.parentNode) { balloon.style.zIndex = t.TRAY_BALLOON_Z_INDEX; }
+        glitchTimerId = null;
+      }, t.rand(t.TRAY_BALLOON_GLITCH_MIN_MS, t.TRAY_BALLOON_GLITCH_MAX_MS));
     }
 
-    // TRAY_CLICK_MIN/MAX delay on close button response (Texture Zone tray click latency)
-    closeBtn.addEventListener('click', function () {
-      setTimeout(dismiss, t.rand(t.TRAY_CLICK_MIN_MS, t.TRAY_CLICK_MAX_MS));
+    // Double-rAF: browser must lay out the element before the --visible class
+    // triggers the CSS transition; single rAF is not reliable across all engines.
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        balloon.classList.add('tray-balloon--visible');
+      });
     });
+
+    // Announce via persistent live region
+    if (liveRegion) { liveRegion.textContent = spec.title + ': ' + spec.body; }
+
+    if (window.umami) {
+      window.umami.track('tray_balloon_shown', { balloon_type: spec.type });
+    }
+
+    // Auto-dismiss after 10s (fixed per XP spec)
+    autoTimerId = setTimeout(function () {
+      dismissBalloon(balloon, 'auto');
+    }, t.TRAY_POPUP_DISPLAY_MS);
+
+    // Close button — delayed response per timing spec (Texture Zone click latency)
+    closeBtn.addEventListener('click', function () {
+      setTimeout(function () {
+        dismissBalloon(balloon, 'close');
+      }, t.rand(t.TRAY_CLICK_MIN_MS, t.TRAY_CLICK_MAX_MS));
+    });
+
+    // Body click — delayed response → action handler
+    bodyEl.addEventListener('click', function () {
+      setTimeout(function () {
+        dismissBalloon(balloon, 'body');
+        spec.onBodyClick();
+      }, t.rand(t.TRAY_CLICK_MIN_MS, t.TRAY_CLICK_MAX_MS));
+    });
+  }
+
+  function dismissBalloon(balloon, source) {
+    if (!balloon || !balloon.parentNode) { return; }
+    var t = window.APC.timing;
+
+    clearTimeout(autoTimerId);
+    autoTimerId = null;
+    clearTimeout(glitchTimerId);
+    glitchTimerId = null;
+
+    // body-click fires its own analytics event via the action handler
+    if (window.umami && source !== 'body') {
+      window.umami.track('tray_balloon_dismissed', { source: source });
+    }
+
+    // Exit transition: add --exit, then remove element after TRAY_BALLOON_EXIT_MS
+    balloon.classList.add('tray-balloon--exit');
+    setTimeout(function () {
+      if (balloon.parentNode) { balloon.parentNode.removeChild(balloon); }
+      if (currentBalloon === balloon) { currentBalloon = null; }
+      isBalloonVisible = false;
+      if (liveRegion) { liveRegion.textContent = ''; }
+    }, t.TRAY_BALLOON_EXIT_MS);
   }
 
   // --- Shared modal helper --------------------------------------------
@@ -319,11 +431,21 @@ window.APC.widgets = (function () {
     initTrayPopups();
   }
 
-  // Called by boot.restart() to cancel any in-flight popup timer so soft
-  // restarts don't accumulate parallel popup chains.
+  // Called by boot.restart() to cancel all in-flight timers and clear any
+  // live balloon so soft restarts don't accumulate parallel popup chains.
   function reset() {
     clearTimeout(trayPopupTimer);
     trayPopupTimer = null;
+    clearTimeout(autoTimerId);
+    autoTimerId = null;
+    clearTimeout(glitchTimerId);
+    glitchTimerId = null;
+    if (currentBalloon && currentBalloon.parentNode) {
+      currentBalloon.parentNode.removeChild(currentBalloon);
+      currentBalloon = null;
+    }
+    isBalloonVisible = false;
+    balloonTypeIndex = 0;
     if (liveRegion) { liveRegion.textContent = ''; }
   }
 
