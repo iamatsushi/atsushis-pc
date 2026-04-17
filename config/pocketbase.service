@@ -8,6 +8,7 @@ WorkingDirectory=/home/atsushi/pocketbase
 ExecStart=/home/atsushi/pocketbase/pocketbase serve --http=127.0.0.1:8090
 Restart=always
 RestartSec=5
+EnvironmentFile=/home/atsushi/.env
 
 [Install]
 WantedBy=multi-user.target
