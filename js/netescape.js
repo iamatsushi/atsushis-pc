@@ -75,6 +75,10 @@ window.APC.netescape = (function () {
   let fwdBtn = null;          // reference to Forward <button>
   let currentParams = {};     // parsed query params for the current page
 
+  // Partial-load freeze timer — fires after NE_FREEZE_DELAY_MS to show the "too busy"
+  // dialog. Cancelled whenever the user navigates to a known URL.
+  let freezeTimer = null;
+
   // --- Public API ------------------------------------------------------
 
   // connect(onComplete) — plays the dial-up sequence and sets isConnected.
@@ -379,8 +383,11 @@ window.APC.netescape = (function () {
     navIndex = navHistory.length - 1;
     updateNavButtons();
 
-    // Resolve to page key; unknown URLs fall back silently to homepage.
-    const pageKey = PAGE_ROUTES[normalized] || 'home';
+    // Cancel any in-flight partial-load freeze (user navigated away before dialog showed).
+    if (freezeTimer) { clearTimeout(freezeTimer); freezeTimer = null; }
+
+    // Resolve to page key; undefined = unknown / external URL.
+    const pageKey = PAGE_ROUTES[normalized];
 
     // Track manual URL bar entries for analytics.
     if (fromUserInput && window.umami) {
@@ -391,9 +398,17 @@ window.APC.netescape = (function () {
     // Once isConnected is true for the session, all navigations go direct.
     if (!window.APC.session.isConnected) {
       renderNoConnection();
-    } else {
-      renderPage(pageKey);
+      return;
     }
+
+    // Unknown / external URL → partial-load freeze flow.
+    // Never navigate to a real external URL or show a real 404.
+    if (!pageKey) {
+      renderPartialLoad(normalized);
+      return;
+    }
+
+    renderPage(pageKey);
   }
 
   // --- Page renderer ---------------------------------------------------
@@ -1216,6 +1231,143 @@ window.APC.netescape = (function () {
     } catch (e) {
       return false;
     }
+  }
+
+  // --- Partial-load freeze flow ----------------------------------------
+
+  // renderPartialLoad — renders a stub "partial page" for unknown/external URLs,
+  // then after NE_FREEZE_DELAY_MS shows the Win98 "too busy" dialog.
+  // Mimics the authentic experience of a 30kbps modem failing to load a page.
+  function renderPartialLoad(url) {
+    if (!pageEl) { return; }
+    if (statusEl) { statusEl.textContent = 'Connecting...'; }
+
+    // Stub: grey title bar + broken image boxes + partial text lines.
+    pageEl.innerHTML = '';
+    const stub = document.createElement('div');
+    stub.className = 'netescape-stub';
+
+    const titleBar = document.createElement('div');
+    titleBar.className = 'netescape-stub__bar';
+    stub.appendChild(titleBar);
+
+    const imgRow = document.createElement('div');
+    imgRow.className = 'netescape-stub__imgs';
+    for (var i = 0; i < 3; i++) {
+      const box = document.createElement('div');
+      box.className = 'netescape-stub__img-box';
+      box.setAttribute('aria-hidden', 'true');
+      imgRow.appendChild(box);
+    }
+    stub.appendChild(imgRow);
+
+    // Partial text lines of varying width — BEM modifiers for each width, no inline styles.
+    var lineClasses = [
+      'netescape-stub__line netescape-stub__line--w60',
+      'netescape-stub__line',
+      'netescape-stub__line netescape-stub__line--w80',
+      'netescape-stub__line netescape-stub__line--w45'
+    ];
+    lineClasses.forEach(function (cls) {
+      const line = document.createElement('div');
+      line.className = cls;
+      stub.appendChild(line);
+    });
+
+    pageEl.appendChild(stub);
+
+    // Freeze: after NE_FREEZE_DELAY_MS, status bar stalls and dialog appears.
+    freezeTimer = setTimeout(function () {
+      freezeTimer = null;
+      if (statusEl) { statusEl.textContent = 'Error'; }
+      showFreezeDialog(url);
+    }, window.APC.timing.NE_FREEZE_DELAY_MS);
+  }
+
+  // showFreezeDialog — Win98-style dialog: "Dial-up is too busy. Go to ahisaka.com?"
+  // OK → navigate to homepage; Cancel → leave stub visible.
+  function showFreezeDialog(url) {
+    const overlay = document.createElement('div');
+    overlay.className = 'netescape-freeze-dialog';
+    overlay.setAttribute('role', 'alertdialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-labelledby', 'freeze-dialog-msg');
+
+    const win = document.createElement('div');
+    win.className = 'netescape-freeze-dialog__win';
+
+    const titlebar = document.createElement('div');
+    titlebar.className = 'netescape-freeze-dialog__titlebar';
+    const titleSpan = document.createElement('span');
+    titleSpan.className = 'netescape-freeze-dialog__title';
+    titleSpan.textContent = 'NetEscape';
+    titlebar.appendChild(titleSpan);
+    win.appendChild(titlebar);
+
+    const body = document.createElement('div');
+    body.className = 'netescape-freeze-dialog__body';
+
+    const icon = document.createElement('span');
+    icon.className = 'netescape-freeze-dialog__icon';
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = '⚠';
+
+    const msg = document.createElement('p');
+    msg.className = 'netescape-freeze-dialog__msg';
+    msg.id = 'freeze-dialog-msg';
+    msg.textContent = 'Dial-up is too busy. Go to ahisaka.com?';
+
+    body.appendChild(icon);
+    body.appendChild(msg);
+    win.appendChild(body);
+
+    const footer = document.createElement('div');
+    footer.className = 'netescape-freeze-dialog__footer';
+
+    const okBtn = document.createElement('button');
+    okBtn.className = 'win98-button netescape-freeze-dialog__btn';
+    okBtn.textContent = 'OK';
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'win98-button netescape-freeze-dialog__btn';
+    cancelBtn.textContent = 'Cancel';
+
+    footer.appendChild(okBtn);
+    footer.appendChild(cancelBtn);
+    win.appendChild(footer);
+    overlay.appendChild(win);
+    document.body.appendChild(overlay);
+
+    // Focus OK button for keyboard accessibility.
+    okBtn.focus();
+
+    function close() {
+      if (overlay.parentNode) { overlay.parentNode.removeChild(overlay); }
+    }
+
+    // OK: dismiss dialog and navigate to homepage.
+    okBtn.addEventListener('click', function () {
+      close();
+      navigate(DEFAULT_URL, false);
+    });
+
+    // Cancel: dismiss dialog, leave stub page visible.
+    cancelBtn.addEventListener('click', close);
+
+    // Trap focus within the dialog (only two buttons — cycle between them).
+    overlay.addEventListener('keydown', function (e) {
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        if (document.activeElement === okBtn) {
+          cancelBtn.focus();
+        } else {
+          okBtn.focus();
+        }
+      }
+      if (e.key === 'Escape') {
+        close();
+      }
+    });
   }
 
   // --- No-connection page ----------------------------------------------
