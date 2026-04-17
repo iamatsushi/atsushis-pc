@@ -1,11 +1,10 @@
 [Unit]
-Description=Pocketbase
+Description=Weather Proxy Server
 After=network.target
 
 [Service]
 User=atsushi
-WorkingDirectory=/home/atsushi/pocketbase
-ExecStart=/home/atsushi/pocketbase/pocketbase serve --http=127.0.0.1:8090
+ExecStart=/usr/bin/python3 /home/atsushi/weather-server.py
 Restart=always
 RestartSec=5
 EnvironmentFile=/home/atsushi/.env

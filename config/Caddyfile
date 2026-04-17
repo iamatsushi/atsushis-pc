@@ -20,8 +20,10 @@
         reverse_proxy 127.0.0.1:8091
     }
 
-    handle_errors {
-        rewrite * /404.html
-        file_server
-    }
+handle /weather {
+    reverse_proxy 127.0.0.1:8092
+}
+handle_errors {
+    rewrite * /404.html
+    file_server
 }
