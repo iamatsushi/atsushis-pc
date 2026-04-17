@@ -66,6 +66,12 @@
   animation: cursor-blink 530ms step-end infinite;
 }
 
+/* --- Hidden until identity line sequence completes --------- */
+
+#gate-prompt.gate-prompt--hidden {
+  visibility: hidden;
+}
+
 /* --- Fade-out transition triggered by JS ------------------- */
 
 #gate-screen.gate-screen--fade {
