@@ -177,6 +177,16 @@ window.APC.desktop = (function () {
         e.stopPropagation();
         onIconClick(icon);
       });
+
+      // My Computer: right-click shows icon context menu with Properties
+      // Intercepted at the icon level so it doesn't bubble to the desktop context menu handler
+      if (icon.dataset.app === 'my-computer') {
+        icon.addEventListener('contextmenu', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          showIconContextMenu(e.clientX, e.clientY, icon);
+        });
+      }
     });
 
     // Click on desktop (outside icons) clears selection
@@ -985,6 +995,64 @@ window.APC.desktop = (function () {
     if (first) { first.focus(); }
   }
 
+  // Context menu for a specific icon (My Computer → Open / Properties)
+  function showIconContextMenu(x, y, icon) {
+    hideContextMenu();
+    const menu = document.createElement('div');
+    menu.className = 'desktop-context-menu';
+
+    const items = [
+      { label: 'Open',       action: function () { openIconApp(icon.dataset.app); } },
+      { sep: true },
+      { label: 'Properties', action: openSystemProperties }
+    ];
+
+    items.forEach(function (item) {
+      if (item.sep) {
+        const sep = document.createElement('div');
+        sep.className = 'desktop-context-menu__sep';
+        menu.appendChild(sep);
+        return;
+      }
+      const btn = document.createElement('button');
+      btn.className = 'desktop-context-menu__item';
+      btn.textContent = item.label;
+      (function (action) {
+        btn.addEventListener('click', function () { hideContextMenu(); action(); });
+      }(item.action));
+      menu.appendChild(btn);
+    });
+
+    menu.style.left = x + 'px';
+    menu.style.top  = y + 'px';
+    document.body.appendChild(menu);
+    contextMenuEl = menu;
+
+    const rect = menu.getBoundingClientRect();
+    const vw = document.documentElement.clientWidth;
+    const vh = document.documentElement.clientHeight;
+    if (x + rect.width  > vw) { x = vw - rect.width  - 4; }
+    if (y + rect.height > vh) { y = vh - rect.height - 4; }
+    if (x < 0) { x = 0; }
+    if (y < 0) { y = 0; }
+    menu.style.left = x + 'px';
+    menu.style.top  = y + 'px';
+
+    const onDocClick = function (e) {
+      if (contextMenuEl && !contextMenuEl.contains(e.target)) { hideContextMenu(); }
+    };
+    const onDocKey = function (e) { if (e.key === 'Escape') { hideContextMenu(); } };
+    setTimeout(function () {
+      document.addEventListener('click', onDocClick);
+      document.addEventListener('keydown', onDocKey);
+    }, 0);
+    menu._dismissClick = onDocClick;
+    menu._dismissKey   = onDocKey;
+
+    const first = menu.querySelector('.desktop-context-menu__item');
+    if (first) { first.focus(); }
+  }
+
   function hideContextMenu() {
     if (!contextMenuEl) { return; }
     if (contextMenuEl._dismissClick) {
@@ -1078,111 +1146,33 @@ window.APC.desktop = (function () {
 
   function openSystemProperties() {
     if (syspropsState) {
-      // Already open — restore or focus
       if (syspropsState.minimized) { restoreWindow(syspropsState); }
       else { bringToFront(syspropsState.el); }
       return;
     }
     const state = createWindow({
       title: 'System Properties',
-      width: 340,
-      height: 370
+      width: 480,
+      height: 420
     });
+    // Purple gradient titlebar + hidden resize handles (not resizable per spec)
+    state.el.classList.add('win98-window--sysprops');
     syspropsState = state;
-    // Clear singleton reference when window is closed
+
     const closeBtn = state.el.querySelector('[data-action="close"]');
     if (closeBtn) {
       closeBtn.addEventListener('click', function () { syspropsState = null; });
     }
-    buildSyspropsContent(state.contentEl);
-    state.show();
-  }
 
-  function buildSyspropsContent(contentEl) {
-    contentEl.className += ' sysprops-content-area';
-
-    const wrap = document.createElement('div');
-    wrap.className = 'sysprops-wrap';
-
-    // Tab bar — General is active; others disabled
-    const tabBar = document.createElement('div');
-    tabBar.className = 'sysprops-tab-bar';
-    ['General', 'Device Manager', 'Hardware Profiles', 'Performance'].forEach(function (name, i) {
-      const tab = document.createElement('button');
-      tab.className = 'sysprops-tab' + (i === 0 ? ' sysprops-tab--active' : ' sysprops-tab--inactive');
-      tab.textContent = name;
-      if (i !== 0) { tab.setAttribute('disabled', 'disabled'); }
-      tabBar.appendChild(tab);
-    });
-    // Clearfix for floated tabs
-    const tabClear = document.createElement('div');
-    tabClear.style.clear = 'both';
-    tabBar.appendChild(tabClear);
-
-    // Panel
-    const panel = document.createElement('div');
-    panel.className = 'sysprops-panel';
-
-    // General tab: computer icon on left, OS info on right
-    const tbl = document.createElement('table');
-    tbl.className = 'sysprops-general';
-    tbl.setAttribute('cellpadding', '0');
-    tbl.setAttribute('cellspacing', '0');
-    const tbody = document.createElement('tbody');
-    const tr = document.createElement('tr');
-
-    const tdL = document.createElement('td');
-    tdL.className = 'sysprops-general__icon';
-    const iconSpan = document.createElement('span');
-    iconSpan.textContent = '\uD83D\uDCBB';  // 💻
-    iconSpan.setAttribute('aria-hidden', 'true');
-    tdL.appendChild(iconSpan);
-
-    const tdR = document.createElement('td');
-    tdR.className = 'sysprops-general__info';
-    [
-      { bold: true,  text: 'Microsoft Windows 98' },
-      { bold: false, text: '4.10.1998' },
-      { bold: false, text: '\u00A0' },
-      { bold: false, text: 'This product is licensed to:' },
-      { bold: true,  text: 'Atsushi Hisaka' },
-      { bold: false, text: 'Product ID: 24796-OEM-0014736-66386' },
-      { bold: false, text: '\u00A0' },
-      { bold: false, text: 'AMD Athlon 300MHz' },
-      { bold: false, text: '64.0MB RAM' }
-    ].forEach(function (line) {
-      const p = document.createElement('p');
-      p.className = 'sysprops-general__line' + (line.bold ? ' sysprops-general__line--bold' : '');
-      p.textContent = line.text;
-      tdR.appendChild(p);
-    });
-
-    tr.appendChild(tdL);
-    tr.appendChild(tdR);
-    tbody.appendChild(tr);
-    tbl.appendChild(tbody);
-    panel.appendChild(tbl);
-
-    // OK / Cancel buttons
-    const btnRow = document.createElement('div');
-    btnRow.className = 'sysprops-btnrow';
-    ['OK', 'Cancel'].forEach(function (label) {
-      const btn = document.createElement('button');
-      btn.className = 'sysprops-btn';
-      btn.textContent = label;
-      btn.addEventListener('click', function () {
-        if (syspropsState) {
-          const cb = syspropsState.el.querySelector('[data-action="close"]');
-          if (cb) { cb.click(); }
-        }
+    // Delegate all content building to system-properties.js
+    if (window.APC.systemProperties && window.APC.systemProperties.buildContent) {
+      state.contentEl.classList.add('sysprops-content-area');
+      window.APC.systemProperties.buildContent(state.contentEl, function () {
+        closeWindow(state);
+        syspropsState = null;
       });
-      btnRow.appendChild(btn);
-    });
-
-    wrap.appendChild(tabBar);
-    wrap.appendChild(panel);
-    wrap.appendChild(btnRow);
-    contentEl.appendChild(wrap);
+    }
+    state.show();
   }
 
   // --- Close all windows -----------------------------------------------
