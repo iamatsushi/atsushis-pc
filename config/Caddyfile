@@ -7,7 +7,7 @@
     root * /home/atsushi/site
     file_server
 
-    header Content-Security-Policy "script-src 'self' https://cloud.umami.is https://cdn.jsdelivr.net"
+    header Content-Security-Policy "script-src 'self' 'unsafe-inline' https://cloud.umami.is https://cdn.jsdelivr.net"
 
     header /js/* Cache-Control "no-cache, must-revalidate"
     header /css/* Cache-Control "no-cache, must-revalidate"
