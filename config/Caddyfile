@@ -1,6 +1,13 @@
+# REFERENCE COPY — live file is /etc/caddy/Caddyfile on the Pi.
+# Sync manually after any edit:
+#   scp config/Caddyfile atsushispc:/etc/caddy/Caddyfile
+#   ssh atsushispc 'sudo systemctl reload caddy'
+
 :80 {
     root * /home/atsushi/site
     file_server
+
+    header Content-Security-Policy "script-src 'self' https://cloud.umami.is https://cdn.jsdelivr.net"
 
     header /js/* Cache-Control "no-cache, must-revalidate"
     header /css/* Cache-Control "no-cache, must-revalidate"
