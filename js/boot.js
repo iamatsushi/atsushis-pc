@@ -42,9 +42,12 @@ window.APC.boot = (function () {
   // --- Mobile detection ----------------------------------------------------
 
   function isMobileOrTouch() {
-    return window.innerWidth < 1024 ||
-      'ontouchstart' in window ||
-      navigator.maxTouchPoints > 0;
+    // Both conditions must be true: genuine touch hardware (maxTouchPoints > 1)
+    // AND a physically small screen (screen.width, not window.innerWidth).
+    // Using screen.width prevents false positives on laptops with small windows.
+    // maxTouchPoints > 1 (not > 0) excludes laptops that report a single
+    // touch point for Force Touch / precision touchpad on macOS.
+    return navigator.maxTouchPoints > 1 && screen.width < 1024;
   }
 
   function showMobileInterstitial() {
