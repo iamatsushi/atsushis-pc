@@ -11,7 +11,8 @@ window.APC.boot = (function () {
 
   const MATRIX_COLOR = '#00FF41';
   const FONT_SIZE = 14;
-  const MATRIX_EMOJI_FREQUENCY = 0.065; // 6.5% — midpoint of spec range 5–8%
+  const MATRIX_EMOJI_FREQUENCY_MIN = 0.01; // emoji appears in 1–5% of characters,
+  const MATRIX_EMOJI_FREQUENCY_MAX = 0.05; // re-rolled per draw call
   const FADE_DURATION_MS = 600;
 
   const BOOT_BLOCK_COUNT = 20;
@@ -27,13 +28,11 @@ window.APC.boot = (function () {
     '@#$%*+-=:<>/\\|'
   ];
 
-  // Exact emoji list from CLAUDE.md spec — do not modify.
+  // Curated emoji set — interests and themes personal to Atsushi's PC.
   const MATRIX_EMOJIS = [
-    '🤣', '🤔', '😍', '😂', '🥰', '😘', '😊', '😎', '🙏', '💪',
-    '👍', '✨', '🔥', '🤗', '🥲', '🙈', '🙉', '🙊', '💯', '🎉',
-    '💩', '🤪', '😳', '🥴', '🧐', '😮', '🫡', '🫠', '😌', '😏',
-    '😶', '😅', '😁', '🥸', '😒', '😜', '😝', '🤭', '🤐', '🫢',
-    '🫣', '🤫', '🤥', '💤'
+    '🎾', '⛳', '🎣', '🍜', '🍕', '🎮', '✈️', '🌍', '🌱',
+    '💾', '🖥️', '🔌', '🛠️', '🎭', '🧩', '🧠', '⚙️', '🔍',
+    '♟️', '🌉', '📦', '🧨', '📊', '🧭'
   ];
 
   // --- Module state ----------------------------------------------------
@@ -119,7 +118,10 @@ window.APC.boot = (function () {
 
     for (let i = 0; i < columns.length; i++) {
       const col = columns[i];
-      const isEmoji = Math.random() < MATRIX_EMOJI_FREQUENCY;
+      // Frequency re-rolled per character: random threshold between 1–5%.
+      const emojiThreshold = MATRIX_EMOJI_FREQUENCY_MIN +
+        Math.random() * (MATRIX_EMOJI_FREQUENCY_MAX - MATRIX_EMOJI_FREQUENCY_MIN);
+      const isEmoji = Math.random() < emojiThreshold;
 
       if (isEmoji) {
         // CSS emoji color filter hack: collapses emoji's native colors to black
