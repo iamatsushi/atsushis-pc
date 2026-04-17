@@ -633,7 +633,7 @@ window.APC.taskbar = (function () {
 
     // Buttons
     var btnRow = document.createElement('div');
-    btnRow.className = 'win98-msgbox__body win98-msgbox__btnrow';
+    btnRow.className = 'win98-msgbox__btnrow';
 
     var okBtn     = buildDialogBtn('OK');
     var cancelBtn = buildDialogBtn('Cancel');
@@ -682,7 +682,11 @@ window.APC.taskbar = (function () {
     if (window.umami) { window.umami.track('shutdown_trigger', { action: 'restart' }); }
     // ~100ms tick lets the Umami call dispatch before state is cleared.
     setTimeout(function () {
-      sessionStorage.clear();
+      // Remove only the keys this restart flow owns. sessionStorage.clear()
+      // would wipe unrelated state (audio unlock, resume gate) and conflicts
+      // with boot.restart() which also removes these keys explicitly.
+      sessionStorage.removeItem('boot_complete');
+      sessionStorage.removeItem('ne_history');
       if (window.APC.boot && typeof window.APC.boot.restart === 'function') {
         window.APC.boot.restart();
       }
