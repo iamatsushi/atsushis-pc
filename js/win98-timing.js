@@ -49,6 +49,31 @@
     MATRIX_IDENTITY_LINE_GAP_MS:     600,  // pause between line 1 and line 2
     MATRIX_IDENTITY_PROMPT_GAP_MS:  1000,  // pause after line 2 before prompt appears
 
+    // Rain column typing pace — per-column typing reveal model.
+    // Columns advance one character at a time at a randomised speed.
+    MATRIX_RAIN_CHAR_MIN_MS:          40,  // fastest column (programmer typing speed)
+    MATRIX_RAIN_CHAR_MAX_MS:         180,  // slowest column
+    MATRIX_RAIN_RESET_MIN_MS:        800,  // pause after column fills before reset to top
+    MATRIX_RAIN_RESET_MAX_MS:       2500,
+    MATRIX_RAIN_STAGGER_MAX_MS:     2000,  // max random start delay per column on init
+
+    // -------------------------------------------------------------------------
+    // Boot Screen sequence
+    // Fixed choreography — not latency simulation.
+    // -------------------------------------------------------------------------
+
+    GATE_FADE_MS:                    600,  // gate screen CSS fade-out before boot begins
+    BOOT_SETTLE_MS:                  200,  // pause before progress bar starts animating
+    BOOT_BLOCK_COUNT:                 20,  // number of blocks in the Win98 progress bar
+    BOOT_BLOCK_NORMAL_MIN_MS:        200,  // normal block fill delay (85% of blocks)
+    BOOT_BLOCK_NORMAL_MAX_MS:        600,
+    BOOT_BLOCK_STALL_MIN_MS:         800,  // occasional stall delay (15% of blocks)
+    BOOT_BLOCK_STALL_MAX_MS:        1200,
+    BOOT_BLOCK_STALL_CHANCE:        0.15,  // probability of stall vs normal delay
+    BOOT_HOLD_MS:                    500,  // full bar visible before fade begins
+    BOOT_SCREEN_FADE_MS:             600,  // boot screen CSS fade-out duration
+    BOOT_DESKTOP_PAUSE_MS:          1500,  // teal desktop visible before icons populate
+
     // -------------------------------------------------------------------------
     // NetEscape Browser  —  PROTECTED PATH
     // Max 1000ms per navigation. No failures. Always show status bar feedback.

@@ -1,6 +1,7 @@
 // boot.js — Gate screen: Matrix rain, Click to Start, audio unlock
-// Handles: Matrix → (future) terminal prompt → loading bar → desktop
+// Handles: Matrix → Win98 boot screen → desktop
 // Namespaced under window.APC per project conventions.
+// All timing values sourced from window.APC.timing (js/win98-timing.js).
 
 window.APC = window.APC || {};
 
@@ -13,11 +14,6 @@ window.APC.boot = (function () {
   const FONT_SIZE = 14;
   const MATRIX_EMOJI_FREQUENCY_MIN = 0.01; // emoji appears in 1–5% of characters,
   const MATRIX_EMOJI_FREQUENCY_MAX = 0.05; // re-rolled per draw call
-  const FADE_DURATION_MS = 600;
-
-  const BOOT_BLOCK_COUNT = 20;
-  const BOOT_FADE_DURATION_MS = 600;
-  const BOOT_DESKTOP_PAUSE_MS = 1500;  // teal desktop visible before icons populate
 
   // Exact character set from CLAUDE.md spec — half-width katakana + ASCII + symbols.
   // Spread operator used for correct Unicode code-point splitting.
@@ -40,7 +36,6 @@ window.APC.boot = (function () {
   let canvas, ctx, columns, animFrame;
   let startupAudio;
   let hasStarted = false;
-  let lastFrameTime = 0;
 
   // --- Public API ------------------------------------------------------
 
@@ -231,36 +226,56 @@ window.APC.boot = (function () {
   }
 
   function initColumns() {
+    const t = window.APC.timing;
     const count = Math.floor(canvas.width / FONT_SIZE);
+    const rows = Math.floor(canvas.height / FONT_SIZE);
     columns = [];
     for (let i = 0; i < count; i++) {
       columns.push({
         x: i * FONT_SIZE,
-        // Stagger columns randomly off the top to avoid simultaneous rain start.
-        y: Math.random() * -canvas.height,
-        speed: 0.5 + Math.random() * 2.5
+        // Stagger starting row so columns don't all begin at the top simultaneously.
+        currentRow: Math.floor(Math.random() * rows),
+        // Stagger initial start time so columns begin typing at different moments.
+        nextCharTime: Date.now() + Math.floor(Math.random() * t.MATRIX_RAIN_STAGGER_MAX_MS),
+        charDelay: t.rand(t.MATRIX_RAIN_CHAR_MIN_MS, t.MATRIX_RAIN_CHAR_MAX_MS),
+        pauseUntil: 0
       });
     }
   }
 
   // --- Matrix rain render loop -----------------------------------------
+  //
+  // Per-column typing reveal: each column advances one character at a time,
+  // top to bottom, at a randomised 40–180ms cadence. No smooth y-drop,
+  // no frame throttle — rAF runs at native speed; columns self-pace via
+  // nextCharTime. After filling to the bottom, each column pauses 800–2500ms
+  // before resetting to row 0 with a new random char delay.
 
   function drawFrame() {
     animFrame = requestAnimationFrame(drawFrame);
 
-    // Throttle to ~20fps — skip render if less than 50ms has elapsed.
     const now = Date.now();
-    if (now - lastFrameTime < 50) { return; }
-    lastFrameTime = now;
+    const rows = Math.floor(canvas.height / FONT_SIZE);
+    const t = window.APC.timing;
 
-    // Semi-transparent black overlay fades trailing characters each frame.
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+    // Fade-to-black trail — dims older characters naturally each frame.
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     ctx.font = FONT_SIZE + 'px "Courier New", monospace';
 
     for (let i = 0; i < columns.length; i++) {
       const col = columns[i];
+
+      // Column is in post-fill pause — skip until pause expires.
+      if (now < col.pauseUntil) { continue; }
+
+      // Not yet time to type the next character.
+      if (now < col.nextCharTime) { continue; }
+
+      // Draw one character at the current row position.
+      const y = (col.currentRow + 1) * FONT_SIZE;  // +1 offsets for font baseline
+
       // Frequency re-rolled per character: random threshold between 1–5%.
       const emojiThreshold = MATRIX_EMOJI_FREQUENCY_MIN +
         Math.random() * (MATRIX_EMOJI_FREQUENCY_MAX - MATRIX_EMOJI_FREQUENCY_MIN);
@@ -277,7 +292,7 @@ window.APC.boot = (function () {
         ctx.fillText(
           MATRIX_EMOJIS[Math.floor(Math.random() * MATRIX_EMOJIS.length)],
           col.x,
-          col.y
+          y
         );
         ctx.filter = 'none';
       } else {
@@ -285,18 +300,20 @@ window.APC.boot = (function () {
         ctx.fillText(
           MATRIX_CHARS[Math.floor(Math.random() * MATRIX_CHARS.length)],
           col.x,
-          col.y
+          y
         );
       }
 
-      col.y += FONT_SIZE * col.speed;
+      col.currentRow++;
 
-      // When a column exits the bottom, reset it to a random position above
-      // the top edge so columns re-enter at different times.
-      if (col.y > canvas.height + FONT_SIZE) {
-        col.y = Math.random() * -canvas.height;
-        col.speed = 0.5 + Math.random() * 2.5;
+      if (col.currentRow >= rows) {
+        // Column has filled to bottom — pause before resetting to row 0.
+        col.pauseUntil = now + t.rand(t.MATRIX_RAIN_RESET_MIN_MS, t.MATRIX_RAIN_RESET_MAX_MS);
+        col.currentRow = 0;
+        col.charDelay = t.rand(t.MATRIX_RAIN_CHAR_MIN_MS, t.MATRIX_RAIN_CHAR_MAX_MS);
       }
+
+      col.nextCharTime = now + col.charDelay;
     }
   }
 
@@ -333,7 +350,7 @@ window.APC.boot = (function () {
       cancelAnimationFrame(animFrame);
       hideGate();
       complete();
-    }, FADE_DURATION_MS);
+    }, window.APC.timing.GATE_FADE_MS);
   }
 
   // --- Teardown --------------------------------------------------------
@@ -353,26 +370,27 @@ window.APC.boot = (function () {
     const bootScreen = document.getElementById('boot-screen');
     bootScreen.classList.remove('boot-screen--hidden');
     // Brief settle delay before progress bar begins — mirrors real Win98 timing.
-    setTimeout(animateProgressBar, 200);
+    setTimeout(animateProgressBar, window.APC.timing.BOOT_SETTLE_MS);
   }
 
   function animateProgressBar() {
+    const t = window.APC.timing;
     const track = document.getElementById('boot-progress-track');
     let blocksFilled = 0;
 
-    // Simulate Win98 uneven disk loading: 85% normal (200–600ms), 15% stall (800–1200ms).
-    // Expected avg ~490ms × 20 blocks ≈ 8–10s total fill time per session.
+    // Simulate Win98 uneven disk loading — occasional stalls mirror real HDD seek
+    // behavior on the IBM Aptiva SE7's 5400 RPM Deskstar.
     function randomBlockDelay() {
-      if (Math.random() < 0.15) {
-        return 800 + Math.floor(Math.random() * 400);   // occasional stall
+      if (Math.random() < t.BOOT_BLOCK_STALL_CHANCE) {
+        return t.rand(t.BOOT_BLOCK_STALL_MIN_MS, t.BOOT_BLOCK_STALL_MAX_MS);
       }
-      return 200 + Math.floor(Math.random() * 400);     // normal uneven load
+      return t.rand(t.BOOT_BLOCK_NORMAL_MIN_MS, t.BOOT_BLOCK_NORMAL_MAX_MS);
     }
 
     function addBlock() {
-      if (blocksFilled >= BOOT_BLOCK_COUNT) {
+      if (blocksFilled >= t.BOOT_BLOCK_COUNT) {
         // Bar is full — hold briefly so it's visible, then complete boot.
-        setTimeout(completeBootScreen, 500);
+        setTimeout(completeBootScreen, t.BOOT_HOLD_MS);
         return;
       }
 
@@ -383,7 +401,7 @@ window.APC.boot = (function () {
       blocksFilled++;
 
       // Update ARIA progress value as a percentage for screen readers.
-      const pct = Math.round((blocksFilled / BOOT_BLOCK_COUNT) * 100);
+      const pct = Math.round((blocksFilled / t.BOOT_BLOCK_COUNT) * 100);
       track.setAttribute('aria-valuenow', pct);
 
       setTimeout(addBlock, randomBlockDelay());
@@ -409,7 +427,7 @@ window.APC.boot = (function () {
       bootScreen.classList.add('boot-screen--hidden');
       bootScreen.classList.remove('boot-screen--fade');
       goToDesktop();
-    }, BOOT_FADE_DURATION_MS);
+    }, window.APC.timing.BOOT_SCREEN_FADE_MS);
   }
 
   // --- Desktop handoff -------------------------------------------------
@@ -436,7 +454,7 @@ window.APC.boot = (function () {
       if (window.APC.desktop && typeof window.APC.desktop.init === 'function') {
         window.APC.desktop.init();
       }
-    }, skipDelay ? 0 : BOOT_DESKTOP_PAUSE_MS);
+    }, skipDelay ? 0 : window.APC.timing.BOOT_DESKTOP_PAUSE_MS);
   }
 
   return { init };
