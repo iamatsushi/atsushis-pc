@@ -395,7 +395,7 @@
 --------------------------------------------------------------- */
 
 .netescape-freeze-dialog {
-  position: fixed;
+  position: absolute;  /* relative to .netescape-chrome (position:relative) */
   top: 0;
   left: 0;
   right: 0;
