@@ -19,4 +19,8 @@
     handle /ram {
         reverse_proxy 127.0.0.1:8091
     }
+
+    handle /weather {
+        reverse_proxy 127.0.0.1:8092
+    }
 }
