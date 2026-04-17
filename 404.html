@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WinDoors 98 — Fatal Exception</title>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <script defer src="https://cloud.umami.is/script.js"
+    data-website-id="d26f2f30-ead0-4092-b7c5-99afac8eda72"></script>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: #000080;
+      color: #FFFFFF;
+      font-family: 'MS Sans Serif', Tahoma, sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+      cursor: default;
+    }
+
+    .bsod {
+      max-width: 640px;
+      margin: 0 auto;
+      padding: 60px 20px 40px;
+    }
+
+    /* Title bar — reverse-video strip */
+    .bsod__bar {
+      background: #AAAAAA;
+      color: #000080;
+      font-weight: bold;
+      text-align: center;
+      padding: 1px 8px;
+      margin-bottom: 32px;
+    }
+
+    .bsod__section {
+      margin-bottom: 24px;
+    }
+
+    /* Bullet list with Win98 asterisk style */
+    .bsod__list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    .bsod__list li {
+      padding-left: 20px;
+      text-indent: -20px;
+      margin-bottom: 4px;
+    }
+
+    .bsod__list li::before {
+      content: '*  ';
+    }
+
+    .bsod__prompt {
+      margin-top: 32px;
+    }
+  </style>
+</head>
+<body>
+  <main class="bsod" aria-label="WinDoors 98 fatal error — page not found">
+
+    <div class="bsod__bar" role="heading" aria-level="1">WinDoors</div>
+
+    <p class="bsod__section">
+      A fatal exception 0E has occurred at 0028:C0011E36 in VXD VMM(01) +
+      00010E36. The current application will be terminated.
+    </p>
+
+    <ul class="bsod__list bsod__section" aria-label="Recovery options">
+      <li>Press any key to return to ahisaka.com.</li>
+      <li>Press CTRL+ALT+DEL again to restart your computer. You will
+          lose any unsaved information in all applications.</li>
+    </ul>
+
+    <p class="bsod__prompt">Press any key to continue _</p>
+
+  </main>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      // Fire Umami event — defer ensures window.umami is set before DOMContentLoaded
+      if (window.umami) { window.umami.track('error_404'); }
+
+      // Any keypress or click returns to the desktop
+      document.addEventListener('keydown', function () { window.location.href = '/'; });
+      document.addEventListener('click',   function () { window.location.href = '/'; });
+    });
+  </script>
+</body>
+</html>
