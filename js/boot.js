@@ -37,6 +37,17 @@ window.APC.boot = (function () {
   let startupAudio;
   let hasStarted = false;
 
+  // Identity lines state — typed portions redrawn each frame at full brightness.
+  const IDENTITY_LINE_1 = '> initializing experience on IBM Aptiva SE7';
+  const IDENTITY_LINE_2 = '> $3,299 in 1998. the fastest consumer PC money could buy.';
+
+  let identityPhase = 'waiting'; // waiting | line1 | gap | line2 | pause | done
+  let identityTyped1 = '';
+  let identityTyped2 = '';
+  let identityX = 0;
+  let identityY1 = 0;
+  let identityY2 = 0;
+
   // --- Public API ------------------------------------------------------
 
   // --- Mobile detection ----------------------------------------------------
@@ -206,6 +217,10 @@ window.APC.boot = (function () {
     resizeCanvas();
     animFrame = requestAnimationFrame(drawFrame);
 
+    // Schedule identity lines to begin after rain has established itself.
+    // Prompt stays hidden until the full sequence completes.
+    setTimeout(startIdentityLines, window.APC.timing.MATRIX_IDENTITY_START_MS);
+
     // Gate screen catches all clicks anywhere on screen.
     const gate = document.getElementById('gate-screen');
     gate.addEventListener('click', onGateInteract);
@@ -218,6 +233,64 @@ window.APC.boot = (function () {
 
     // Auto-focus the prompt so keyboard users can interact immediately.
     document.getElementById('gate-prompt').focus();
+  }
+
+  // --- Identity lines --------------------------------------------------
+  //
+  // Two lines type character-by-character onto the canvas at 40–60ms/char,
+  // appearing as part of the rain. Both are redrawn at full brightness every
+  // frame so the 0.15 fade overlay doesn't dim them while they're typing.
+  // All timeouts abort immediately if the user has already interacted.
+
+  function startIdentityLines() {
+    if (hasStarted) { return; }
+    const rows = Math.floor(canvas.height / FONT_SIZE);
+    // Anchor roughly 42% down the screen — prompt at 50% will sit below.
+    const anchorRow = Math.floor(rows * 0.42);
+    identityX  = 2 * FONT_SIZE;
+    identityY1 = (anchorRow + 1) * FONT_SIZE;
+    identityY2 = (anchorRow + 2) * FONT_SIZE;
+    identityPhase = 'line1';
+    typeNextChar();
+  }
+
+  function typeNextChar() {
+    if (hasStarted) { return; }
+    const t = window.APC.timing;
+
+    if (identityPhase === 'line1') {
+      const idx = identityTyped1.length;
+      if (idx < IDENTITY_LINE_1.length) {
+        identityTyped1 += IDENTITY_LINE_1[idx];
+        setTimeout(typeNextChar, t.rand(t.MATRIX_IDENTITY_CHAR_MIN_MS, t.MATRIX_IDENTITY_CHAR_MAX_MS));
+      } else {
+        // Line 1 complete — pause before line 2.
+        identityPhase = 'gap';
+        setTimeout(function () {
+          if (hasStarted) { return; }
+          identityPhase = 'line2';
+          typeNextChar();
+        }, t.MATRIX_IDENTITY_LINE_GAP_MS);
+      }
+
+    } else if (identityPhase === 'line2') {
+      const idx = identityTyped2.length;
+      if (idx < IDENTITY_LINE_2.length) {
+        identityTyped2 += IDENTITY_LINE_2[idx];
+        setTimeout(typeNextChar, t.rand(t.MATRIX_IDENTITY_CHAR_MIN_MS, t.MATRIX_IDENTITY_CHAR_MAX_MS));
+      } else {
+        // Line 2 complete — pause then reveal prompt.
+        identityPhase = 'pause';
+        setTimeout(revealPrompt, t.MATRIX_IDENTITY_PROMPT_GAP_MS);
+      }
+    }
+  }
+
+  function revealPrompt() {
+    if (hasStarted) { return; }
+    identityPhase = 'done';
+    const prompt = document.getElementById('gate-prompt');
+    if (prompt) { prompt.classList.remove('gate-prompt--hidden'); }
   }
 
   // --- Canvas setup ----------------------------------------------------
@@ -317,6 +390,19 @@ window.APC.boot = (function () {
       }
 
       col.nextCharTime = now + col.charDelay;
+    }
+
+    // Redraw typed identity lines at full brightness each frame so the fade
+    // overlay doesn't dim them while they're still being typed.
+    if (identityPhase !== 'waiting') {
+      ctx.font = FONT_SIZE + 'px "Courier New", monospace';
+      ctx.fillStyle = MATRIX_COLOR;
+      if (identityTyped1) {
+        ctx.fillText(identityTyped1, identityX, identityY1);
+      }
+      if (identityTyped2) {
+        ctx.fillText(identityTyped2, identityX, identityY2);
+      }
     }
   }
 
