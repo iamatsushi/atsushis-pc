@@ -1,0 +1,13 @@
+[Unit]
+Description=Weather Proxy Server
+After=network.target
+
+[Service]
+User=atsushi
+ExecStart=/usr/bin/python3 /home/atsushi/weather-server.py
+Restart=always
+RestartSec=5
+EnvironmentFile=/home/atsushi/.env
+
+[Install]
+WantedBy=multi-user.target
