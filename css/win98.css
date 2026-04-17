@@ -812,3 +812,22 @@
 .calc-real__btn--eq {
   font-weight: bold;
 }
+
+/* ---------------------------------------------------------------
+   App launch flicker failure states  —  TEXTURE ZONE
+   Applied by desktop.js applyFlicker() after a window opens.
+   Two-phase: white flash (APP_FLICKER_MS) then blank gap (APP_FLICKER_GAP_MS).
+--------------------------------------------------------------- */
+
+/* Phase 1 — white flash: hide all app content, show white background */
+.win98-window--flicker-flash .win98-window__content {
+  background: #FFFFFF;
+}
+.win98-window--flicker-flash .win98-window__content > * {
+  visibility: hidden;
+}
+
+/* Phase 2 — blank gap: content invisible before window remounts */
+.win98-window--flicker-gap .win98-window__content {
+  visibility: hidden;
+}
