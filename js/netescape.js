@@ -79,6 +79,10 @@ window.APC.netescape = (function () {
   // dialog. Cancelled whenever the user navigates to a known URL.
   let freezeTimer = null;
 
+  // Page-load delay timers — cancelled whenever a new navigation begins.
+  let pageLoadTimer    = null;  // full delay before renderPage fires
+  let pageLoadMidTimer = null;  // mid-point timer for "Transferring data..." status
+
   // --- Public API ------------------------------------------------------
 
   // connect(onComplete) — plays the dial-up sequence and sets isConnected.
@@ -309,21 +313,23 @@ window.APC.netescape = (function () {
   function goBack() {
     if (navIndex <= 0) { return; }
     navIndex--;
-    const url = navHistory[navIndex];
+    var url = navHistory[navIndex];
     currentUrl = url;
     if (addressInput) { addressInput.value = url; }
-    renderPage(PAGE_ROUTES[url] || 'home');
     updateNavButtons();
+    var t = window.APC.timing;
+    startPageLoad(url, PAGE_ROUTES[url] || 'home', t.rand(t.NE_BACK_FWD_MIN_MS, t.NE_BACK_FWD_MAX_MS));
   }
 
   function goForward() {
     if (navIndex >= navHistory.length - 1) { return; }
     navIndex++;
-    const url = navHistory[navIndex];
+    var url = navHistory[navIndex];
     currentUrl = url;
     if (addressInput) { addressInput.value = url; }
-    renderPage(PAGE_ROUTES[url] || 'home');
     updateNavButtons();
+    var t = window.APC.timing;
+    startPageLoad(url, PAGE_ROUTES[url] || 'home', t.rand(t.NE_BACK_FWD_MIN_MS, t.NE_BACK_FWD_MAX_MS));
   }
 
   function updateNavButtons() {
@@ -408,7 +414,48 @@ window.APC.netescape = (function () {
       return;
     }
 
-    renderPage(pageKey);
+    // Protected Path latency: typed URL → initial-load delay (300–900ms);
+    // link click / refresh → in-session nav delay (150–500ms).
+    var t = window.APC.timing;
+    var delay = fromUserInput
+      ? t.rand(t.NE_INITIAL_LOAD_MIN_MS, t.NE_INITIAL_LOAD_MAX_MS)
+      : t.rand(t.NE_NAV_MIN_MS, t.NE_NAV_MAX_MS);
+    startPageLoad(normalized, pageKey, delay);
+  }
+
+  // --- Protected Path page load ----------------------------------------
+
+  // Cancel any in-flight page-load delay and reset cursor.
+  function cancelPageLoad() {
+    if (pageLoadTimer)    { clearTimeout(pageLoadTimer);    pageLoadTimer = null;    }
+    if (pageLoadMidTimer) { clearTimeout(pageLoadMidTimer); pageLoadMidTimer = null; }
+    document.body.style.cursor = '';
+  }
+
+  // startPageLoad — runs the Protected Path status bar sequence then renders the page.
+  // delay is capped at 1000ms (Protected Path rule: max 1s, no failures).
+  function startPageLoad(url, pageKey, delay) {
+    cancelPageLoad();
+    var capped = Math.min(delay, 1000);
+
+    // Hourglass cursor for any delay that will exceed 300ms.
+    if (capped > 300) { document.body.style.cursor = 'wait'; }
+
+    // Status sequence: "" → "Opening page [url]..." → "Transferring data from [url]..."
+    // Final "Done" is set by renderPage().
+    if (statusEl) { statusEl.textContent = ''; }
+    if (statusEl) { statusEl.textContent = 'Opening page ' + url + '...'; }
+
+    pageLoadMidTimer = setTimeout(function () {
+      if (statusEl) { statusEl.textContent = 'Transferring data from ' + url + '...'; }
+    }, Math.floor(capped / 2));
+
+    pageLoadTimer = setTimeout(function () {
+      pageLoadTimer = null;
+      pageLoadMidTimer = null;
+      document.body.style.cursor = '';
+      renderPage(pageKey);
+    }, capped);
   }
 
   // --- Page renderer ---------------------------------------------------
