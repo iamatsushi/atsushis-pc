@@ -447,9 +447,11 @@ window.APC.netescape = (function () {
     if (statusEl) { statusEl.textContent = ''; }
     if (statusEl) { statusEl.textContent = 'Opening page ' + url + '...'; }
 
+    // 50ms floor ensures "Transferring data..." is perceivable even when delay
+    // underflows to 0ms; without it, both timers fire on the same tick (#59).
     pageLoadMidTimer = setTimeout(function () {
       if (statusEl) { statusEl.textContent = 'Transferring data from ' + url + '...'; }
-    }, Math.floor(capped / 2));
+    }, Math.max(50, Math.floor(capped / 2)));
 
     pageLoadTimer = setTimeout(function () {
       pageLoadTimer = null;
