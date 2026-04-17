@@ -1096,9 +1096,14 @@ window.APC.netescape = (function () {
         approved: false
       };
       if (website) { payload.website = website; }
-      // Include Altcha PoW proof for future server-side HMAC verification.
-      var altchaValue = altchaWidget.value;
+      // Altcha injects a hidden input[name="altcha"] into the form after verification.
+      // Reading altchaWidget.value returns empty; the hidden input is the correct source.
+      var altchaHidden = form.querySelector('input[name="altcha"]');
+      var altchaValue = altchaHidden ? altchaHidden.value : '';
       if (altchaValue) { payload.altcha = altchaValue; }
+
+      console.log('[guestbook] submit payload:', JSON.stringify(payload));
+      console.log('[guestbook] altchaValue:', altchaValue);
 
       fetch(GUESTBOOK_API_URL, {
         method: 'POST',
