@@ -250,12 +250,11 @@ window.APC.desktop = (function () {
     // Texture Zone launch delay: 1000–2200ms, hourglass cursor, no failure state.
     // Guard reuses appLaunching to prevent double-open during delay.
     if (appLaunching['my-computer']) { return; }
-    appLaunching['my-computer'] = true;
     document.body.style.cursor = 'wait';
 
     var t = window.APC.timing;
-    setTimeout(function () {
-      appLaunching['my-computer'] = false;
+    appLaunching['my-computer'] = setTimeout(function () {
+      delete appLaunching['my-computer'];
       document.body.style.cursor = '';
       buildMyComputerWindow();
     }, t.rand(t.APP_MYCOMPUTER_MIN_MS, t.APP_MYCOMPUTER_MAX_MS));
@@ -372,16 +371,20 @@ window.APC.desktop = (function () {
     var delay    = t.rand(cfg.min, cfg.max);
     var willFail = Math.random() < cfg.failChance;
 
-    appLaunching[app] = true;
     document.body.style.cursor = 'wait';
 
-    setTimeout(function () {
-      appLaunching[app] = false;
+    // Store timer ID so reset() can cancel in-flight launches.
+    appLaunching[app] = setTimeout(function () {
+      delete appLaunching[app];
       document.body.style.cursor = '';
       window.APC.apps[app].open();
       if (willFail) {
-        if (cfg.failType === 'not-responding') { applyNotResponding(app); }
-        else if (cfg.failType === 'flicker')   { applyFlicker(app); }
+        // Defer by one tick so open()'s DOM work completes before
+        // findWindowByApp() runs inside applyNotResponding/applyFlicker.
+        setTimeout(function () {
+          if (cfg.failType === 'not-responding') { applyNotResponding(app); }
+          else if (cfg.failType === 'flicker')   { applyFlicker(app); }
+        }, 0);
       }
     }, delay);
   }
@@ -1201,7 +1204,12 @@ window.APC.desktop = (function () {
   function reset() {
     Object.keys(windows).forEach(function (id) { delete windows[id]; });
     Object.keys(iconLastClick).forEach(function (k) { delete iconLastClick[k]; });
-    Object.keys(appLaunching).forEach(function (k) { delete appLaunching[k]; });
+    // Cancel any in-flight launch timers before clearing — prevents queued
+    // open() callbacks from creating windows against a freshly reset desktop.
+    Object.keys(appLaunching).forEach(function (k) {
+      clearTimeout(appLaunching[k]);
+      delete appLaunching[k];
+    });
     zCounter = 100;
     winIdCounter = 0;
     activeWindowId = null;
