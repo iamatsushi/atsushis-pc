@@ -30,12 +30,11 @@ atsushis-pc/
 ├── CLAUDE.md
 ├── .gitignore
 ├── .env.example
-├── index.html                  ← IE Homepage
-├── about.html                  ← IE About Me
-├── thoughts.html               ← IE My Thoughts
-├── projects.html               ← IE Work/Projects
-├── guestbook.html              ← IE Guestbook
-├── resume.html                 ← IE Resume (gated)
+├── index.html                  ← NetEscape Homepage
+├── about.html                  ← NetEscape About Me
+├── thoughts.html               ← NetEscape My Thoughts
+├── projects.html               ← NetEscape Work/Projects
+├── guestbook.html              ← NetEscape Guestbook
 ├── js/
 │   ├── boot.js
 │   ├── desktop.js
@@ -44,8 +43,10 @@ atsushis-pc/
 │   └── apps/
 │       ├── winamp.js
 │       ├── calculator.js
-│       ├── screensaver.js
+│       ├── screensaver.js          ← Signal Drift (pending — issue #2)
+│       ├── notepad.js
 │       └── minesweeper.js
+├── pb_hooks/                   ← Pocketbase JS hooks (server-side, deployed to Pi)
 ├── css/
 │   ├── win98.css
 │   ├── ie-base.css
@@ -140,7 +141,7 @@ atsushis-pc/
   * Boot sequence steps/timings
 * CSS:
   * Never use CSS variables for Win98 chrome/base colors.
-  * Only use CSS custom properties (e.g., `--page-bg`) to theme *IE page content* when per-page style is required.
+  * Only use CSS custom properties (e.g., `--page-bg`) to theme *NetEscape page content* when per-page style is required.
   * Never introduce CSS resets or normalization that would break pixel-authentic Win98 style.
 
 ---
@@ -165,8 +166,9 @@ atsushis-pc/
 * Core shells:
   * `js/desktop.js`: Desktop/window management
   * `js/boot.js`: Handles Matrix → terminal prompt → loading bar → desktop fade-in
-  * `js/ie.js`: IE window (routing, dial-up logic, navigation)
+  * `js/ie.js`: NetEscape browser window (routing, dial-up logic, navigation) — **pending rename to `netescape.js` as part of brand pivot**
   * `js/widgets.js`: Taskbar widgets (weather, RAM, clock)
+  * `js/win98-timing.js`: Centralised timing token file — all delay values live here, never hardcoded elsewhere
 
 ### Matrix Rain Spec
 
@@ -179,11 +181,20 @@ The Click to Start gate screen uses a canvas-based Matrix rain effect. All value
 * Digits: 0–9
 * Symbols: @ # $ % \* + - = : < > / \\ |
 
-**Emoji list (drawn with CSS filter applied, 5–8% frequency):**
+**Emoji list (drawn with CSS filter applied, 1–5% frequency):**
 
-🤣 🤔 😍 😂 🥰 😘 😊 😎 🙏 💪 👍 ✨ 🔥 🤗 🥲 🙈 🙉 🙊 💯 🎉 💩 🤪 😳 🥴 🧐 😮 🫡 🫠 😌 😏 😶 😅 😁 🥸 😒 😜 😝 🤭 🤐 🫢 🫣 🤫 🤥 💤
+🎾 ⛳ 🎣 🍜 🍕 🎮 ✈️ 🌍 🌱 💾 🖥️ 🔌 🛠️ 🎭 🧩 🧠 ⚙️ 🔍 ♟️ 🌉 📦 🧨 📊 🧭
 
-**Emoji frequency constant:** `MATRIX_EMOJI_FREQUENCY = 0.065` (6.5% — midpoint of 5–8% range)
+**Emoji frequency:** Re-rolled per character draw call — random between 1% and 5%. Do not use a single fixed constant.
+
+```js
+const MATRIX_EMOJI_FREQUENCY_MIN = 0.01;
+const MATRIX_EMOJI_FREQUENCY_MAX = 0.05;
+// Per draw call:
+const emojiThreshold = MATRIX_EMOJI_FREQUENCY_MIN +
+  Math.random() * (MATRIX_EMOJI_FREQUENCY_MAX - MATRIX_EMOJI_FREQUENCY_MIN);
+const isEmoji = Math.random() < emojiThreshold;
+```
 
 **Emoji CSS filter (apply to ctx.filter before drawing each emoji, reset to 'none' immediately after):**
 
@@ -193,9 +204,42 @@ ctx.filter = 'brightness(0) saturate(100%) invert(57%) sepia(99%) saturate(400%)
 ctx.filter = 'none';
 ```
 
+**Animation model — per-column typing reveal (not falling streams):**
+
+Each column reveals characters one at a time, top to bottom, at a randomised typing pace. No smooth y-position drop. No 20fps throttle — use native `requestAnimationFrame`.
+
+```js
+// Column object shape:
+{ x, currentRow, nextCharTime, charDelay }
+
+// Character delay per column (randomised on init and reset):
+// 40–180ms — programmer typing speed range
+function randomCharDelay() { return 40 + Math.random() * 140; }
+
+// After column fills to bottom: pause 800–2500ms before reset
+```
+
+Fade-to-black trail: draw `rgba(0,0,0,0.15)` overlay each frame (unchanged — naturally dims older characters).
+
 **Rain color:** `#00FF41` — used exclusively for Matrix rain and the My Thoughts page. Never bleed into Win98 chrome.
 
+**IBM Aptiva identity lines — appear during Matrix rain:**
+
+At the 2-second mark of the rain (after it has established itself), two lines type in character by character at **40–60ms per character**, in `#00FF41`, same Courier New font, same size as rain. No highlight, no special treatment — must feel typed by the rain itself, not injected as a separate UI element.
+
+```
+> initializing experience on IBM Aptiva SE7
+```
+600ms pause, then:
+```
+> $3,299 in 1998. the fastest consumer PC money could buy.
+```
+
+Do not alter punctuation or capitalisation. Line 1 completes by the 3.5-second mark. After both lines render, a **1000ms pause**, then the standard prompt appears below:
+
 **Terminal prompt text (exact):** `C:\> press any key to continue_` — blinking block cursor at end (\~530ms blink interval). This is the exact string. Do not paraphrase or substitute.
+
+On any keypress or click: cut to black, begin boot sequence. The identity lines do not persist past this screen.
 
 ### Data Fetching
 
@@ -210,9 +254,11 @@ ctx.filter = 'none';
   * POST new entries to `/api/collections/guestbook/records`
   * GET all approved entries on page load; cache for 24h.
   * Errors always degrade to a fallback UI message; never leave the UI broken.
-* IE navigation is client-side routed via a URL-to-page-object map.
-  * Unknown URLs always redirect to homepage.
-  * Never show 404s or error pages in IE.
+* NetEscape navigation is client-side routed via a URL-to-page-object map.
+  * Known internal routes (`ahisaka.com/*`) navigate normally.
+  * Unknown or external URLs trigger the **partial-load freeze flow**: status bar shows "Connecting…" → stub page renders (grey bar + broken image boxes) → freezes at ~2.5s → WinDoors 98 dialog: "Dial-up is too busy. Go to ahisaka.com?" → OK redirects to homepage.
+  * Never navigate to a real external URL. Never show a real 404.
+  * A future favourites allowlist will let specific classic sites bypass the freeze flow and load as museum pages.
 
 ### State Management
 
@@ -222,6 +268,155 @@ ctx.filter = 'none';
 * Audio state (unlocked): Boolean in `boot.js`.
 * Z-index: Simple incrementing counter in `desktop.js`.
 * Screensaver idle timer: Single timer in `desktop.js`, reset on user input.
+
+---
+
+## Win98 Behavioral Fidelity
+
+### Machine Identity — IBM Aptiva SE7
+
+This simulation is grounded in a real, specific machine. All timing, latency, and failure behavior derives from it. When validating a delay, ask: *"Would this be noticeable on an IBM Aptiva SE7 running WinDoors 98 on a 30 kbps connection?"*
+
+| Property | Value |
+| --- | --- |
+| Model | IBM Aptiva SE7 (S Series) |
+| CPU | Intel Pentium II, 450 MHz, 512 KB L2 cache |
+| RAM | 128 MB SDRAM |
+| Storage | 16.8 GB IBM Deskstar HDD, 5400 RPM |
+| Modem | 56K V.90 — advertised 56 kbps, actual throughput ~30 kbps |
+| Graphics | 4 MB SyncGraphics AGP |
+| OS | WinDoors 98 (pre-installed) |
+| Retail price | $3,299 (1998) ≈ $6,200 (2024) |
+
+Modem reality: V.90 was limited by telephone infrastructure optimised for voice. Real throughput was 28–30 kbps (source: Wired, 1999). This is the speed used to calibrate all dial-up simulation timing.
+
+### Branding
+
+| Real name | Simulation name |
+| --- | --- |
+| Windows 98 | WinDoors 98 |
+| Microsoft | Microblob |
+| Internet Explorer | NetEscape |
+
+CSS files and JS modules currently named `ie-*.css` / `ie.js` are pending rename to `netescape-*.css` / `netescape.js` as part of the brand pivot. Do not create new files using the `ie-` prefix.
+
+### Matrix Gate Screen — Load Immediately
+
+The Matrix rain gate screen is exempt from all behavioral fidelity timing rules. It must render as fast as the browser allows — no artificial delay, no loading state, no spinner before the canvas starts. It is the first thing the visitor sees and must be instant.
+
+The timing values within the Matrix sequence (2s mark for identity lines, 40–60ms character cadence, 1000ms pause before prompt) are part of the animation choreography, not latency simulation. They are fixed creative timing, not IBMAptiva dial-up modeling.
+
+The behavioral fidelity timing rules below apply only after the visitor clicks through the gate and the boot sequence begins.
+
+### Protected Path vs Texture Zone
+
+Every feature must be classified as Protected or Texture before timing or failures are assigned.
+
+**Protected Path** — recruiter-facing workflows:
+* Max delay: 1 second
+* No failures, no error states
+* Always show visible progress feedback (status bar, progress indicator)
+* Surfaces: all NetEscape page loads, Guestbook submission, `resume_FINAL_v3.exe` flow
+
+**Texture Zone** — ambient/system UI:
+* Max delay: 6 seconds
+* Minor, recoverable failures permitted — never block or degrade Protected Path
+* Always show UI feedback during delays > 300ms (hourglass cursor, status bar)
+* Surfaces: desktop app launches, Start Menu, File Explorer / My Computer, System Tray
+
+### Timing System
+
+All timing values live in `js/win98-timing.js`. **Never hardcode delay values anywhere else.**
+
+* All delays are variable — use randomised ranges, never fixed values
+* Compound actions (e.g. dial-up + page load) sum their delays with distinct feedback at each stage
+* Hourglass cursor (`cursor: wait`) appears within 50ms of any delay > 300ms; reverts on completion
+
+### Component Timing Reference
+
+#### NetEscape Browser (Protected Path)
+
+| Action | Delay |
+| --- | --- |
+| Initial page load after dial-up | 300–900ms; progressive status bar fill |
+| In-session link navigation | 150–500ms |
+| Manual URL entry | Dial-up simulation 1000–4000ms + initial load delay |
+| Back / Forward | 100–400ms |
+
+Status bar sequence: `""` → `"Opening page [url]..."` → `"Transferring data from [url]..."` → `"Done"`
+
+#### Start Menu (Texture Zone)
+
+| Action | Delay |
+| --- | --- |
+| Open | 80–180ms |
+| Submenu expand | 200–400ms |
+| Item → action | 100–250ms |
+
+Failure: 1-in-12 chance menu flickers closed on open (requires second click).
+
+#### Desktop App Launches (Texture Zone)
+
+| App | Launch delay | Failure |
+| --- | --- | --- |
+| Winamp | 2000–4000ms | 1-in-10: "Not Responding" (1200ms) |
+| Calculator | 800–1500ms | 1-in-15: window flicker (80ms white flash) |
+| Notepad | 600–1200ms | 1-in-15: window flicker |
+| Minesweeper | 1500–3000ms | 1-in-15: window flicker |
+| My Computer | 1000–2200ms | None |
+| Recycle Bin | 400–800ms | None |
+| resume_FINAL_v3.exe | 0ms (instant) | None — Protected Path; Access Denied dialog always fires immediately |
+
+#### File Explorer / My Computer (Texture Zone)
+
+| Action | Delay |
+| --- | --- |
+| Open folder | 800–1800ms |
+| Expand subfolder | 400–900ms |
+| Icon render | 50–150ms per icon, sequential |
+| Access drive root | 1200–2500ms |
+
+Failure: 1-in-8 chance of extra 2000–3000ms delay before folder shows. Never delays `resume_FINAL_v3.exe` access.
+
+#### System Tray & Taskbar (Texture Zone)
+
+| Element | Behavior |
+| --- | --- |
+| Clock | Updates every 60s + random 0–2000ms offset |
+| Weather widget | 1500–3000ms to load; shows `'--°F'` while loading |
+| RAM widget | Updates every 30s; 200–400ms render delay |
+| Tray pop-ups | Appear every 90–300s (random); display for 4–6s. Copy: "Your computer may be at risk", "Low disk space on C:" |
+| Tray icon click | 100–200ms |
+
+### System Properties Dialog
+
+Access: Right-click My Computer → Properties. Also Start Menu → Settings → Control Panel → System.
+
+**General tab — exact field values:**
+
+* OS name: `Microblob WinDoors 98`
+* Version: `4.10.1998`
+* Copyright: `© Copyright Microblob Corp 1981-1998.`
+* Registered to: `Atsushi Hisaka` / org blank / Product ID: `24796-OEM-0014736-00000`
+* Computer line 1: `IBM`
+* Computer line 2: `Intel Pentium II Processor Intel MMX(TM) Technology`
+* Computer line 3: `450MHz, 128.0MB RAM`
+
+**About This Machine** (recessed sunken inset box at bottom of General tab, `#808080` border, bold header):
+
+```
+IBM Aptiva SE7 — Retail price: $3,299 (1998)
+Equivalent to approximately $6,200 in 2024.
+This was the fastest consumer PC money could buy.
+56K modem advertised at 56 kbps. Actual speed: ~30 kbps.
+You are browsing the internet exactly as fast as the best hardware of 1998 allowed.
+```
+
+**Chrome:** Purple gradient titlebar (`#7A5ACD` to `#4B2E83`). Title: `System Properties`. Not resizable. Width ~400px. Tabs: General | Device Manager | Hardware Profiles | Performance. Default: General.
+
+**Other tabs:** Visual stubs. Device Manager shows standard hardware tree with IBM Aptiva SE7-accurate entries. Performance tab: "Your system is configured for optimal performance."
+
+**Close:** OK/Cancel at bottom. OK closes with 200–400ms delay (Texture Zone).
 
 ---
 
@@ -237,8 +432,8 @@ ctx.filter = 'none';
 
   `filter: brightness(0) saturate(100%) invert(57%) sepia(99%) saturate(400%) hue-rotate(85deg) brightness(110%);`
 * DO use `MS Sans Serif` (with `Tahoma` fallback) for Win98 UI chrome.
-* DO use `Verdana` for IE Homepage, About, and Guestbook; `Courier New` for My Thoughts; `Tahoma` for Work/Projects and Resume.
-* DO gate Resume page (`resume.html` at root) behind successful guestbook submission (`sessionStorage` flag).
+* DO use `Verdana` for NetEscape Homepage, About, and Guestbook; `Courier New` for My Thoughts; `Tahoma` for Work/Projects and Resume.
+* DO treat `resume_FINAL_v3.exe` as a lead capture flow — not a file download. Double-clicking shows a WinDoors 98 desktop dialog → triggers dial-up if not connected → opens NetEscape → spinning logo pause → guestbook page loads with "I'd like a copy of your resume" pre-checked. No `resume.html` page exists; the guestbook IS the resume request mechanism.
 * DO always sanitize and escape user-submitted guestbook content before rendering.
 * DO keep all secrets in Pi environment variables.
 * DO document every asset in `assets/CREDITS.md` before use.
@@ -261,7 +456,8 @@ ctx.filter = 'none';
 * DON'T hardcode API keys, credentials, or access tokens in any file.
 * DON'T use `useEffect` (not applicable) or `setInterval` for fetches—manual cache+fetch only.
 * DON'T render raw, unsanitized guestbook data in the DOM.
-* DON'T trigger dial-up on every IE navigation event—run *only* on first IE launch or manual URL entry.
+* DON'T trigger dial-up on every NetEscape navigation event—run *only* on first NetEscape launch, manual URL entry, or `resume_FINAL_v3.exe` flow (when not already connected).
+* DON'T allow the NetEscape address bar to navigate to external URLs — all non-allowlisted input triggers the partial-load freeze flow.
 * DON'T serve Rick Astley’s song/video from the Pi—link to official YouTube only.
 * DON'T add more than 2 GIFs per page (max 4 on About Me).
 * DON'T use modern CSS (gap, grid, animations) for Win98 chrome—use tables/absolutes.
@@ -282,8 +478,8 @@ Before each milestone:
 
 * Boot sequence full playthrough; **no console errors** on Chrome/Firefox desktop.
 * Matrix rain emoji appear in `#00FF41` green with correct filter.
-* Dial-up audio triggers *only* on first IE launch/manual URL; never repeats in-session.
-* Resume page is fully *inaccessible* without the guestbook session flag; redirects work as specified.
+* Dial-up audio triggers *only* on first NetEscape launch/manual URL; never repeats in-session.
+* `resume_FINAL_v3.exe` double-click flow works end-to-end: dialog → dial-up (if not connected) → NetEscape opens → spinning logo → guestbook loads with resume checkbox pre-checked.
 * Guestbook POST works, Altcha resolves, and "success" message is shown.
 * Guestbook entries render safely (no XSS/HTML inject).
 * All 5 mini-apps open and close without errors.
@@ -295,7 +491,7 @@ Before each milestone:
   * Accessibility: WAVE and axe run, **zero critical errors required**
   * No console errors in browser devtools (Chrome, Firefox)
   * Desktop browsers: Chrome, Firefox, Safari covered
-  * No mobile UI—show "Best viewed on desktop" interstitial
+  * Mobile/tablet (width < 1024px or touch device) shows "WinDoors 98" interstitial — hard gate, no dismiss path, boot sequence never initialises
   * Lighthouse initial load <2s
   * All Umami Cloud events fire and log as expected
 
@@ -306,35 +502,36 @@ Before each milestone:
 * **Pitfall**: Adding `border-radius` to Win98 chrome  
 
   **Correct**: All chrome corners are sharp. Set `border-radius: 0` if needed.
-* **Pitfall**: Dial-up runs on every IE navigation  
-
-  **Correct**: Dial-up *only* on (1) first IE session and (2) manual URL entry.  
-
-  Track `hasDialedUp` boolean in `ie.js`.
+* **Pitfall**: Dial-up runs on every NetEscape navigation
+  **Correct**: Dial-up *only* on (1) first NetEscape session and (2) manual URL entry. Track `hasDialedUp` boolean in `ie.js` (pending rename to `netescape.js`).
 * **Pitfall**: Rendering guestbook entries with unsanitized HTML  
 
   **Correct**: Always set text with `textContent`; validate URLs before rendering `<a>`.
 * **Pitfall**: Storing OpenWeatherMap API keys in client JS  
 
   **Correct**: API key *must* only live in Pi env. All fetches proxied or secured.
-* **Pitfall**: Direct Resume.html access without proper gating  
-
-  **Correct**: On load, check `sessionStorage` for guestbook flag; redirect if absent.
+* **Pitfall**: Building a resume page or gating resume.html behind a sessionStorage flag
+  **Correct**: There is no resume.html. The `resume_FINAL_v3.exe` icon triggers a dial-up lead capture flow that lands on the guestbook. Atsushi follows up personally via email.
 * **Pitfall**: Audio played before user gesture (blocked as "autoplay" in browsers)  
 
   **Correct**: Create Audio on init, but call `.play()` ONLY after the gate UX interaction.
 * **Pitfall**: Using Flexbox, Grid, or modern CSS in legacy UI chrome  
 
-  **Correct**: Stick to tables, absolutes, floats for Win98 shell. Modern CSS allowed only in (content) IE page layouts.
+  **Correct**: Stick to tables, absolutes, floats for WinDoors 98 shell. Modern CSS allowed only in NetEscape page content layouts.
 * **Pitfall**: Fetching Pocketbase guestbook entries every time the guestbook page loads  
 
   **Correct**: Fetch and cache results once, refetch *only* after 24h (track timestamp in `sessionStorage`).
 * **Pitfall**: Using external font/icon libraries  
 
   **Correct**: Only use system fonts (as described above) and self-hosted icons/Unicode.
-* **Pitfall**: Boot sequence repeats on refresh/new tab  
-
+* **Pitfall**: Boot sequence repeats on refresh/new tab
   **Correct**: On load, check `sessionStorage` for `boot_complete`, skip boot sequence if true.
+* **Pitfall**: Hardcoding a delay value (e.g. `setTimeout(fn, 800)`) anywhere in the codebase
+  **Correct**: All delay values live in `js/win98-timing.js`. Import the token. Never hardcode.
+* **Pitfall**: Creating a new file with the `ie-` prefix (e.g. `ie-newfeature.css`)
+  **Correct**: The `ie-` prefix is deprecated. Use `netescape-` for new NetEscape browser files. Existing `ie-*.css` files are pending rename.
+* **Pitfall**: Classifying a new feature as Texture Zone when it touches a recruiter workflow
+  **Correct**: Any path that leads to the Guestbook, resume flow, or NetEscape page loads is Protected Path — max 1 second delay, no failures.
 
 ---
 
@@ -393,7 +590,7 @@ This section documents the live server environment. Use it when writing code tha
 
   `/api/*` → 127.0.0.1:8090 (Pocketbase)  
 
-  `/altcha/*` → 127.0.0.1:3000 (reserved, currently unused)  
+  `/altcha/*` → 127.0.0.1:8093 (Altcha challenge server)
 
   `/ram` → 127.0.0.1:8091 (RAM server)  
 
@@ -423,10 +620,12 @@ This section documents the live server environment. Use it when writing code tha
 
 ### CAPTCHA – Altcha
 
-* **Implementation**: Browser-side proof-of-work widget (frontend only for now)
-* **Server-side verification**: Pocketbase hook (to be implemented Week 2)
+* **Implementation**: Browser-side proof-of-work widget + self-hosted challenge server on Pi
+* **Challenge server**: `~/altcha-server.py` — listens on `127.0.0.1:8093`, generates HMAC-signed challenges using `ALTCHA_HMAC_SECRET`. Live and enabled via systemd (`altcha-server` service).
+* **Caddy route**: `/altcha/*` → `127.0.0.1:8093`
+* **Server-side verification**: Pocketbase `pb_hooks/guestbook_verify.pb.js` — pending (issue #8). Until deployed, the client solves proof-of-work but Pocketbase does not verify the submitted payload.
 * **HMAC secret env var**: `ALTCHA_HMAC_SECRET`
-* **Note**: The `~/altcha` directory on the Pi is unused and can be ignored
+* **Note**: The `~/altcha` directory on the Pi is unused and can be ignored — the live server is `~/altcha-server.py`
 
 ### Analytics – Umami Cloud
 
@@ -439,7 +638,7 @@ This section documents the live server environment. Use it when writing code tha
   <script defer src="https://cloud.umami.is/script.js" data-website-id="d26f2f30-ead0-4092-b7c5-99afac8eda72"></script>
   
 ```
-* **Required custom events**: `click_to_start`, `boot_complete`, `ie_homepage_load`, `app_open` (with `app_name` param), `guestbook_submit` (with `success`/`failure` param), `resume_click`, `easteregg_trigger`, `dialup_trigger`, `dialup_url_entry`
+* **Required custom events**: `click_to_start`, `boot_complete`, `netescape_homepage_load`, `app_open` (with `app_name` param), `guestbook_submit` (with `success`/`failure` param), `resume_click`, `easteregg_trigger`, `dialup_trigger`, `dialup_url_entry`
 * **Dashboard**: app.umami.is
 
 ### Weather API – OpenWeatherMap
@@ -510,6 +709,7 @@ This section documents the live server environment. Use it when writing code tha
 | /home/atsushi/site/.env.example | Env var template (safe to commit) |
 | /home/atsushi/pocketbase/pocketbase | Pocketbase binary |
 | /home/atsushi/pocketbase/pb_data/ | Pocketbase data (gitignored, backed up daily) |
+| /home/atsushi/pocketbase/pb_hooks/ | Pocketbase JS hooks — deploy from repo `pb_hooks/` |
 | /home/atsushi/backups/ | Pocketbase DB staging (30-day retention) |
 | /home/atsushi/backup-repo/ | Clone of backup GitHub repo |
 | \~/deploy.sh | Live deploy script (reference copy: config/deploy.sh) |
@@ -534,6 +734,7 @@ This section documents the live server environment. Use it when writing code tha
 | caddy | /usr/bin/caddy | 80 | enabled |
 | pocketbase | /home/atsushi/pocketbase/pocketbase | 8090 (localhost) | enabled |
 | ram-server | \~/ram-server.py | 8091 (localhost) | enabled |
+| altcha-server | ~/altcha-server.py | 8093 (localhost) | enabled |
 | cloudflared | /usr/bin/cloudflared | outbound tunnel | enabled |
 
 Status check: `sudo systemctl status caddy pocketbase ram-server cloudflared`
