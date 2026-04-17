@@ -87,6 +87,7 @@
     NE_BACK_FWD_MAX_MS:       400,
     NE_MANUAL_URL_MIN_MS:    1000,  // manual URL entry (dial-up simulation delay)
     NE_MANUAL_URL_MAX_MS:    4000,
+    NE_FREEZE_DELAY_MS:      2500,  // unknown URL: stub renders then freezes before dialog
 
     // -------------------------------------------------------------------------
     // Start Menu  —  TEXTURE ZONE
