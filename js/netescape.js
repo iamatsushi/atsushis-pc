@@ -962,7 +962,7 @@ window.APC.netescape = (function () {
 
     // Error message — hidden by default, shown via class removal
     const errorEl = document.createElement('p');
-    errorEl.className = 'netescape-guestbook__error ie-guestbook__message--hidden';
+    errorEl.className = 'netescape-guestbook__error netescape-guestbook__message--hidden';
     errorEl.setAttribute('role', 'alert');
     formArea.appendChild(errorEl);
 
@@ -1020,7 +1020,7 @@ window.APC.netescape = (function () {
 
     // Resume request checkbox — auto-checked when ?resume=1 param is present
     const resumeRow = document.createElement('div');
-    resumeRow.className = 'netescape-guestbook__field ie-guestbook__field--checkbox';
+    resumeRow.className = 'netescape-guestbook__field netescape-guestbook__field--checkbox';
 
     const resumeCheckbox = document.createElement('input');
     resumeCheckbox.type = 'checkbox';
@@ -1030,7 +1030,7 @@ window.APC.netescape = (function () {
     if (currentParams.resume === '1') { resumeCheckbox.checked = true; }
 
     const resumeLabel = document.createElement('label');
-    resumeLabel.className = 'netescape-guestbook__label ie-guestbook__label--checkbox';
+    resumeLabel.className = 'netescape-guestbook__label netescape-guestbook__label--checkbox';
     resumeLabel.setAttribute('for', 'gb-resume');
     resumeLabel.textContent = 'I\'d like a copy of your resume';
 
@@ -1042,7 +1042,7 @@ window.APC.netescape = (function () {
     // No hmackey attribute → widget skips signature validation (client-side only).
     // Server-side HMAC verification via ALTCHA_HMAC_SECRET to be added later.
     const altchaRow = document.createElement('div');
-    altchaRow.className = 'netescape-guestbook__field ie-guestbook__field--altcha';
+    altchaRow.className = 'netescape-guestbook__field netescape-guestbook__field--altcha';
     const altchaWidget = document.createElement('altcha-widget');
     altchaWidget.setAttribute('challengeurl', '/altcha/challenge');
     altchaWidget.setAttribute('name', 'altcha');
@@ -1283,7 +1283,7 @@ window.APC.netescape = (function () {
   function injectAltchaScript() {
     if (document.querySelector('script[data-altcha-widget]')) { return; }
     const s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/npm/altcha/dist/altcha.js';
+    s.src = 'https://cdn.jsdelivr.net/npm/altcha@0.7.3/dist/altcha.js';
     s.type = 'module';
     s.setAttribute('data-altcha-widget', '1');
     document.head.appendChild(s);
