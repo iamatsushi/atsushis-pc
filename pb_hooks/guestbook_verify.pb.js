@@ -21,9 +21,17 @@
 // Required: 'altcha' text field in guestbook collection (stores the encoded payload).
 // Required: ALTCHA_HMAC_SECRET env var — loaded via EnvironmentFile in pocketbase.service.
 //
-// Deploy:
-//   cp pb_hooks/guestbook_verify.pb.js /home/atsushi/pocketbase/pb_hooks/
-//   sudo systemctl restart pocketbase
+// Deploy (run ALL steps in order — skipping any step can silently break submissions):
+//   1. Copy hook to Pi:
+//        cp pb_hooks/guestbook_verify.pb.js /home/atsushi/pocketbase/pb_hooks/
+//   2. Sync systemd service (required for ALTCHA_HMAC_SECRET to be loaded):
+//        scp config/pocketbase.service atsushispc:/etc/systemd/system/pocketbase.service
+//   3. Reload and restart PocketBase:
+//        ssh atsushispc 'sudo systemctl daemon-reload && sudo systemctl restart pocketbase'
+//
+// If step 2 is skipped and the Pi is still running the old service config,
+// $os.getenv('ALTCHA_HMAC_SECRET') returns undefined and every submission
+// returns 500, regardless of whether the hook JS is correct.
 
 // ---------------------------------------------------------------------------
 // Pure-JS base64 decoder — atob() is not available in PocketBase's JS runtime
@@ -32,7 +40,11 @@
 function base64Decode(str) {
   var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
   var out = '';
-  // Strip any characters that are not valid base64
+  // Normalise URL-safe base64 (Altcha uses - and _ instead of + and /)
+  // before stripping, otherwise hyphens and underscores are deleted and
+  // the decoded output is silently corrupted.
+  str = str.replace(/-/g, '+').replace(/_/g, '/');
+  // Strip any characters that are not valid standard base64
   str = str.replace(/[^A-Za-z0-9+/=]/g, '');
   var i = 0;
   while (i < str.length) {
