@@ -45,7 +45,150 @@ window.APC.boot = (function () {
 
   // --- Public API ------------------------------------------------------
 
+  // --- Mobile detection ----------------------------------------------------
+
+  function isMobileOrTouch() {
+    return window.innerWidth < 1024 ||
+      'ontouchstart' in window ||
+      navigator.maxTouchPoints > 0;
+  }
+
+  function showMobileInterstitial() {
+    var w = window.innerWidth;
+    var h = window.innerHeight;
+
+    // Full-screen overlay — classic WinDoors 98 teal desktop behind the dialog.
+    var overlay = document.createElement('div');
+    overlay.setAttribute('role', 'alertdialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-labelledby', 'mobile-gate-title');
+    overlay.setAttribute('aria-describedby', 'mobile-gate-body');
+    overlay.style.cssText = [
+      'position:fixed;top:0;left:0;width:100%;height:100%;',
+      'background:#008080;',
+      'display:flex;align-items:center;justify-content:center;',
+      'z-index:99999;',
+      'font-family:"MS Sans Serif",Tahoma,sans-serif;',
+      'font-size:11px;'
+    ].join('');
+
+    // Win98 dialog box.
+    var dialog = document.createElement('div');
+    dialog.style.cssText = [
+      'background:#c0c0c0;',
+      'width:320px;',
+      'border-top:2px solid #fff;border-left:2px solid #fff;',
+      'border-right:2px solid #404040;border-bottom:2px solid #404040;',
+      'box-shadow:1px 1px 0 #000;'
+    ].join('');
+
+    // Title bar.
+    var titlebar = document.createElement('div');
+    titlebar.id = 'mobile-gate-title';
+    titlebar.style.cssText = [
+      'background:linear-gradient(to right,#000080,#1084d0);',
+      'color:#fff;padding:3px 4px 3px 6px;',
+      'display:flex;align-items:center;justify-content:space-between;',
+      'font-weight:bold;font-size:11px;',
+      'user-select:none;'
+    ].join('');
+
+    var titleText = document.createElement('span');
+    titleText.textContent = 'WinDoors 98';
+
+    // Decorative close button — no action (hard gate).
+    var closeBtn = document.createElement('button');
+    closeBtn.textContent = '✕';
+    closeBtn.setAttribute('aria-label', 'Close (unavailable)');
+    closeBtn.style.cssText = [
+      'width:16px;height:14px;',
+      'background:#c0c0c0;color:#000;',
+      'border-top:1px solid #fff;border-left:1px solid #fff;',
+      'border-right:1px solid #404040;border-bottom:1px solid #404040;',
+      'font-size:9px;cursor:default;padding:0;line-height:1;'
+    ].join('');
+    closeBtn.addEventListener('click', function () { /* hard gate — no dismiss */ });
+
+    titlebar.appendChild(titleText);
+    titlebar.appendChild(closeBtn);
+
+    // Body — icon + message.
+    var body = document.createElement('div');
+    body.id = 'mobile-gate-body';
+    body.style.cssText = 'padding:16px 12px 8px 12px;display:flex;gap:12px;align-items:flex-start;';
+
+    var icon = document.createElement('div');
+    icon.setAttribute('aria-hidden', 'true');
+    icon.style.cssText = 'font-size:32px;line-height:1;flex-shrink:0;';
+    icon.textContent = '🖥️';
+
+    var text = document.createElement('div');
+    text.style.cssText = 'line-height:1.5;color:#000;';
+    text.innerHTML = [
+      '<p style="margin:0 0 8px;font-weight:bold;">',
+      'This program cannot run on a mobile or touch device.',
+      '</p>',
+      '<p style="margin:0 0 6px;">',
+      'WinDoors 98 requires a minimum screen resolution of 800\u00d7600.',
+      '</p>',
+      '<p style="margin:0 0 6px;">',
+      'Detected resolution: <strong>' + w + '\u00d7' + h + 'px</strong>',
+      '</p>',
+      '<p style="margin:0;">',
+      'Please switch to a desktop or laptop computer.',
+      '</p>'
+    ].join('');
+
+    body.appendChild(icon);
+    body.appendChild(text);
+
+    // Separator.
+    var sep = document.createElement('div');
+    sep.style.cssText = [
+      'margin:0 8px;height:2px;',
+      'border-top:1px solid #808080;border-bottom:1px solid #fff;'
+    ].join('');
+
+    // Footer — OK button.
+    var footer = document.createElement('div');
+    footer.style.cssText = 'padding:8px;text-align:center;';
+
+    var okBtn = document.createElement('button');
+    okBtn.textContent = 'OK';
+    okBtn.setAttribute('aria-label', 'OK');
+    okBtn.style.cssText = [
+      'width:72px;height:23px;',
+      'background:#c0c0c0;color:#000;',
+      'border-top:2px solid #fff;border-left:2px solid #fff;',
+      'border-right:2px solid #404040;border-bottom:2px solid #404040;',
+      'font-family:"MS Sans Serif",Tahoma,sans-serif;font-size:11px;',
+      'cursor:pointer;'
+    ].join('');
+    okBtn.addEventListener('click', function () { window.location.reload(); });
+
+    footer.appendChild(okBtn);
+
+    dialog.appendChild(titlebar);
+    dialog.appendChild(body);
+    dialog.appendChild(sep);
+    dialog.appendChild(footer);
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+
+    // Focus OK button for keyboard accessibility.
+    okBtn.focus();
+  }
+
+  // --- Boot init -----------------------------------------------------------
+
   function init() {
+    // Hard gate: WinDoors 98 does not run on mobile or touch devices.
+    // Boot sequence never initialises — interstitial is shown and we return.
+    if (isMobileOrTouch()) {
+      showMobileInterstitial();
+      return;
+    }
+
     // Skip both gate and boot screens if already completed this session.
     if (sessionStorage.getItem('boot_complete')) {
       hideGate();
