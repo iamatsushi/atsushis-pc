@@ -361,14 +361,22 @@ Failure: 1-in-12 chance menu flickers closed on open (requires second click).
 
 **Menu items:** Programs ► | Documents ► | Settings (disabled) | Find (disabled) | Help | Run… | — | Shut Down…
 
-**Programs submenu:** Winamp, Minesweeper, Calculator, Notepad — dispatches to `desktop.launchApp()`.
+**Programs submenu:** Cascades through an Accessories sub-menu: Programs ► → Accessories ► → Winamp | Calculator | Minesweeper | Notepad. Each item dispatches to `desktop.launchApp()`. Do not add apps directly under Programs — Accessories is the only child.
 
-**Documents submenu:** Populated just-in-time from `sessionStorage['ne_history']` (up to 10 recent NetEscape URLs). `netescape.js` writes to this key at the end of `renderPage()`.
+**Documents submenu:** Populated just-in-time (read fresh on every open, never cached) from `sessionStorage['ne_history']` — last 5 unique pages, sorted most-recent-first, using friendly names ("Homepage", "About Me", "My Thoughts", "Work/Projects", "Guestbook"). If empty: single disabled item "No recent documents" in Win98 gray. Click: launch NetEscape if not open, then navigate. `netescape.js` writes to this key at the end of `renderPage()` via `recordNavHistory(url)`.
 
-**Shut Down modal — three radio options:**
-1. **Shut Down** — shows a non-dismissable black "It is now safe to turn off your computer." overlay.
-2. **Restart the computer** — fires Umami `shutdown_trigger`, 100ms tick, then `sessionStorage.clear()` + `boot.restart()` (soft restart, no page reload).
-3. **Close all programs and log off as Atsushi** — closes all open windows via `desktop.closeAll()`, then shows: `"Thanks for visiting. Close the tab whenever you're ready."` ← **intentional deviation from the original "Restart in MS-DOS mode" spec slot.** Log Off was chosen because it provides a genuine recruiter-facing goodbye moment. Do not revert to MS-DOS mode.
+**Help item:** Opens an About dialog (single instance). Contents: 32×32 favicon icon; bold title "Atsushi's PC"; version "Version 98.4.17"; body "Made with too much nostalgia and not enough sleep." OK button and Esc both close. Focus trap active.
+
+**Run… item:** Opens a Run dialog. Label "Open:", single text input. OK logs input to console (`// TODO: execution not implemented`). Cancel closes. Focus trap active. No border-radius.
+
+**Settings / Find:** Grayed out, non-clickable, no hover, no dialog. Win98 disabled treatment only.
+
+**Shut Down modal — prompt:** "What do you want the computer to do?" Three radio options (default: Shut down). Buttons: OK, Cancel, Help (Help is a no-op stub).
+
+**Radio options and OK behavior:**
+1. **Shut down** — fires Umami `shutdown_trigger { source: 'start_menu', option: 'shut_down' }`. Fade in full-screen black overlay (~500ms). Two lines of centered text: "It's now safe to turn off your computer." and "Thanks for visiting. Close the tab whenever you're ready." Overlay persists permanently — no redirect. Highest z-index. No border-radius.
+2. **Restart** — fires Umami `shutdown_trigger { source: 'start_menu', option: 'restart' }`, 100ms tick for analytics POST, then `sessionStorage.removeItem('boot_complete')` + `sessionStorage.removeItem('ne_history')` + `boot.restart()` (soft restart, no page reload). Full gate → boot → desktop sequence replays.
+3. **Log Off** ← **intentional deviation from "Restart in MS-DOS mode"** — fires Umami `shutdown_trigger { source: 'start_menu', option: 'log_off' }`. Calls `desktop.closeAll()`, then shows Win98-style sign-off dialog: "Thanks for visiting. Close the tab whenever you're ready." with OK button. No session wipe, no reload. Do not revert to MS-DOS mode.
 
 **`beforeunload` Umami event:** Registered as best-effort via `navigator.sendBeacon()`. Umami CDN does not expose a sendBeacon API, so this is currently a documented no-op. **QA note: mark as "expected to be unreliable / not tracked" — do not treat missing beforeunload events as a bug.**
 
@@ -402,8 +410,53 @@ Failure: 1-in-8 chance of extra 2000–3000ms delay before folder shows. Never d
 | Clock | Updates every 60s + random 0–2000ms offset |
 | Weather widget | 1500–3000ms to load; shows `'--°F'` while loading |
 | RAM widget | Updates every 30s; 200–400ms render delay |
-| Tray pop-ups | Appear every 90–300s (random); display for 4–6s. Copy: "Your computer may be at risk", "Low disk space on C:" |
+| Tray balloons | XP-style balloon notifications — see full spec below |
 | Tray icon click | 100–200ms |
+
+#### Tray Balloon Spec (Texture Zone)
+
+XP-style speech-bubble balloon anchored above the system tray, bottom-right. One balloon at a time — no stacking, no queuing.
+
+**Visual anatomy:** ~280px wide. White background, 1px solid `#000` border, subtle drop shadow. Rounded corners (XP balloon style — this is the one exception to the no-border-radius rule, because the balloon is XP chrome not Win98 chrome). Downward-pointing tail toward tray. Top-left: 16×16 icon. Beside icon: bold title (Tahoma 11px, `#000000`). Below: body text (Tahoma 11px, `#333333`). Top-right: ❌ close button.
+
+**Entry animation:** Slides up from taskbar over 150ms (`translateY` +20px → 0, opacity 0 → 1).
+**Exit animation:** Fades out over 100ms (opacity 1 → 0). Applied on dismiss (any method) and auto-dismiss.
+
+**Two balloon types — alternating per interval:**
+
+| Type | Icon | Title | Body |
+|---|---|---|---|
+| Low Disk Space | ⚠ (yellow warning) | "Low Disk Space" | "You are running low on disk space on Local Disk (C:). Click here to see if you can free space on this drive." |
+| Security Risk | 🛡 (red shield) | "Your computer may be at risk" | "Antivirus software might not be installed. Click this balloon to fix this problem." |
+
+**Click behaviors:**
+* **Low Disk Space — body click:** Apply `TRAY_CLICK_MIN/MAX_MS` delay, dismiss balloon (`isBalloonVisible = false`), open Disk Cleanup modal. Interval timer paused while Disk Cleanup modal is open; resumes with fresh random interval on modal close. *(Disk Cleanup modal spec: see Feature Spec 24c49bfe — must be fully implemented, no stub.)*
+* **Security Risk — body click:** Apply `TRAY_CLICK_MIN/MAX_MS` delay, dismiss balloon, then open a Win98-chrome dialog: title "Security Center", message "No threats detected. Atsushi's code is clean." — single OK button.
+* **❌ click (either type):** Apply `TRAY_CLICK_MIN/MAX_MS` delay, dismiss only. No secondary action.
+
+**Suppression rules:**
+* Track visibility with `isBalloonVisible` boolean (true on show, false on any dismiss).
+* Track Protected Path state with `protectedPathActive` boolean (set by NetEscape page loads, Guestbook, Resume, Disk Cleanup modal).
+* If `isBalloonVisible` is true when interval fires: suppress, fire `tray_balloon_suppressed { reason: 'already_visible' }`, reset interval.
+* If `protectedPathActive` is true when interval fires: suppress, fire `tray_balloon_suppressed { reason: 'protected_path_active' }`, reset interval.
+* No replacement, no queuing. Suppressed balloon type is discarded — next interval picks fresh from alternating sequence.
+
+**Behind-taskbar glitch (1-in-20 balloons):** On glitch roll, set balloon z-index to taskbar z-index minus 1 on render. After random 400–600ms timeout, correct to proper z-index above taskbar. No animation on correction — silent pop. Glitch applies to initial render only. Fire `tray_balloon_shown` with `glitch_triggered: true`.
+
+**Timing tokens** (all in `win98-timing.js`):
+* `TRAY_POPUP_MIN_MS` = 90000 — minimum interval between balloons
+* `TRAY_POPUP_MAX_MS` = 300000 — maximum interval between balloons
+* `TRAY_POPUP_DISPLAY_MIN_MS` = 10000 — auto-dismiss after 10s if not interacted with
+* `TRAY_POPUP_DISPLAY_MAX_MS` = 10000 — (same as min; display is a fixed 10s)
+* `TRAY_CLICK_MIN_MS` = 100 — minimum click-action delay
+* `TRAY_CLICK_MAX_MS` = 200 — maximum click-action delay
+
+**Analytics events:**
+* `tray_balloon_shown` — fires on every render. Properties: `type` ('low_disk_space' | 'security_risk'), `glitch_triggered` (boolean).
+* `tray_balloon_dismissed` — fires on any dismiss. Properties: `type`, `dismiss_method` ('body_click' | 'close_click' | 'auto_dismiss').
+* `tray_balloon_suppressed` — fires when suppressed. Properties: `reason` ('already_visible' | 'protected_path_active').
+
+---
 
 ### System Properties Dialog
 
@@ -429,11 +482,46 @@ This was the fastest consumer PC money could buy.
 You are browsing the internet exactly as fast as the best hardware of 1998 allowed.
 ```
 
-**Chrome:** Purple gradient titlebar (`#7A5ACD` to `#4B2E83`). Title: `System Properties`. Not resizable. Width ~400px. Tabs: General | Device Manager | Hardware Profiles | Performance. Default: General.
+**Chrome:** Purple gradient titlebar (`#7A5ACD` to `#4B2E83`). Title: `System Properties`. Not resizable. Width ~400px. **Tabs: General | Device Manager | Hardware Profiles | Performance.** Default: General. File System and Virtual Memory tabs are explicitly deferred — do not implement until there is meaningful content or an easter egg for them.
 
-**Other tabs:** Visual stubs. Device Manager shows standard hardware tree with IBM Aptiva SE7-accurate entries. Performance tab: "Your system is configured for optimal performance."
+**Performance tab:** "Your system is configured for optimal performance." (OK/Cancel at bottom; Texture Zone delay 200–400ms.)
 
-**Close:** OK/Cancel at bottom. OK closes with 200–400ms delay (Texture Zone).
+**Hardware Profiles tab:** Visual stub — single item "Original Configuration", standard Win98 list chrome.
+
+**Device Manager tab (interactive):** Full expandable/collapsible device tree. "View devices by type" radio selected by default. Standard Win98 device class nodes (Computer, Disk drives, Display adapters, Hard disk controllers, Keyboard, Mice and other pointing devices, Network adapters, Ports (COM & LPT), Sound video and game controllers, System devices, Universal Serial Bus controllers) plus the **Product Management** easter egg node embedded mid-list with no visual distinction from real nodes.
+
+**Product Management easter egg — six devices:**
+
+| Device | Status | Tooltip |
+|---|---|---|
+| Backlog Manager Pro | ⚠ yellow `!` | "Queue full. Items added faster than removed." |
+| Confidence.dll | ⚠ yellow `!` | "Works fine in demo environments only." |
+| Imposter Syndrome Controller | ⚠ yellow `!` | "Intermittent signal detected." |
+| Sprint Velocity Controller | ✕ red `X` | "Unexpected dependency detected on Friday at 4:58 PM." |
+| Stakeholder Alignment Service | ✕ red `X` | "Device disabled. Conflict with 23 other devices." |
+| Story Point Estimator | ⚠ yellow `!` | "Returned value: 3. Actual value: 13." |
+
+**Remove behavior (any PM device):** Win98 confirm modal titled "[Device Name] — Remove Device". Device-specific body copy (exact strings — do not paraphrase):
+* Backlog Manager Pro: "Removing this device will not delete existing items. They will remain, ungroomed, in system memory indefinitely."
+* Confidence.dll: "Warning: Removing Confidence.dll may affect the performance of other system processes. Proceed only in environments where this will not be noticed."
+* Imposter Syndrome Controller: "This device cannot be fully removed. Imposter Syndrome will always be in the back of the mind."
+* Sprint Velocity Controller: "Device removal has been added to the backlog. Expected completion: next sprint."
+* Stakeholder Alignment Service: "Removal requires approval from 23 stakeholders. Request has been submitted. You will be notified."
+* Story Point Estimator: "Estimated time to remove: 2 minutes. Actual time to remove: unknown."
+
+Single right-aligned OK button. On OK: closes modal, shows brief non-destructive toast "Removal requested — operation simulated". Device tree is unchanged — nodes are never actually removed.
+
+**Properties behavior (any PM device):** Opens a nested Win98 Properties dialog per the full SYSDM.CPL easter egg spec. Exact tab contents and copy are defined in the implementation file (`js/apps/system-properties.js`) — refer there for the full dialog copy; do not duplicate it here.
+
+**Device Manager buttons:** Properties and Remove active when device selected; Refresh and Print always active.
+
+**Close:** OK/Cancel at bottom of main dialog. OK closes with 200–400ms delay (Texture Zone). Fire Umami `easteregg_trigger` if any PM device interaction occurred during the session.
+
+---
+
+### Boot Flow Figma Spec
+
+The "Atsushi's PC – Windows 98 Boot Flow: Figma-Ready Spec" document is a **design-side artifact only** — swimlane diagram, node components, color system, and connector spec for visualizing the boot state machine in Figma. There is nothing to implement in code from this spec. If a GitHub issue is filed for it, label it `design` / `figma` and do not include it in engineering sprints.
 
 ---
 
