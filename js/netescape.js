@@ -1,5 +1,5 @@
-// ie.js — Internet Explorer 4 window with dial-up simulation
-// Handles: IE chrome, address bar navigation, client-side routing,
+// netescape.js — NetEscape 4 window with dial-up simulation
+// Handles: NetEscape chrome, address bar navigation, client-side routing,
 //          dial-up modal (first launch + manual URL entry)
 // Namespaced under window.APC per project conventions.
 
@@ -10,7 +10,7 @@ window.APC = window.APC || {};
 window.APC.session = window.APC.session || {};
 window.APC.session.isConnected = window.APC.session.isConnected || false;
 
-window.APC.ie = (function () {
+window.APC.netescape = (function () {
   'use strict';
 
   // --- Constants -------------------------------------------------------
@@ -111,8 +111,8 @@ window.APC.ie = (function () {
 
     // Create the Win98 window shell via desktop.js.
     ieWindowState = window.APC.desktop.createWindow({
-      title: 'Internet Explorer',
-      app: 'ie',
+      title: 'NetEscape',
+      app: 'netescape',
       width: 680,
       height: 520,
       x: 80,
@@ -141,7 +141,7 @@ window.APC.ie = (function () {
     ieWindowState.show();
 
     if (window.umami) {
-      window.umami.track('app_open', { app_name: 'ie' });
+      window.umami.track('app_open', { app_name: 'netescape' });
     }
 
     // Navigate to target URL (or homepage). navigate() checks isConnected —
@@ -153,14 +153,14 @@ window.APC.ie = (function () {
 
   function buildIEChrome(contentEl) {
     const chrome = document.createElement('div');
-    chrome.className = 'ie-chrome';
+    chrome.className = 'netescape-chrome';
 
     chrome.appendChild(buildMenubar());
     chrome.appendChild(buildToolbar());
 
     // Page viewport — scrollable, fills space between toolbar and statusbar.
     const page = document.createElement('div');
-    page.className = 'ie-chrome__page';
+    page.className = 'netescape-chrome__page';
     page.setAttribute('role', 'main');
     page.setAttribute('aria-label', 'Page content');
     pageEl = page;
@@ -168,9 +168,9 @@ window.APC.ie = (function () {
 
     // Status bar
     const statusbar = document.createElement('div');
-    statusbar.className = 'ie-chrome__statusbar';
+    statusbar.className = 'netescape-chrome__statusbar';
     const statusSpan = document.createElement('span');
-    statusSpan.className = 'ie-chrome__status-text';
+    statusSpan.className = 'netescape-chrome__status-text';
     statusSpan.textContent = 'Done';
     statusbar.appendChild(statusSpan);
     statusEl = statusSpan;
@@ -181,14 +181,14 @@ window.APC.ie = (function () {
 
   function buildMenubar() {
     const menubar = document.createElement('div');
-    menubar.className = 'ie-chrome__menubar';
+    menubar.className = 'netescape-chrome__menubar';
     menubar.setAttribute('role', 'menubar');
     menubar.setAttribute('aria-label', 'Menu bar');
 
     // Stub menu items — no dropdowns in MVP.
     ['File', 'Edit', 'View', 'Go', 'Favorites', 'Help'].forEach(function (label) {
       const btn = document.createElement('button');
-      btn.className = 'ie-chrome__menu-item';
+      btn.className = 'netescape-chrome__menu-item';
       btn.textContent = label;
       btn.setAttribute('role', 'menuitem');
       menubar.appendChild(btn);
@@ -199,13 +199,13 @@ window.APC.ie = (function () {
 
   function buildToolbar() {
     const toolbar = document.createElement('div');
-    toolbar.className = 'ie-chrome__toolbar';
+    toolbar.className = 'netescape-chrome__toolbar';
     toolbar.setAttribute('role', 'toolbar');
     toolbar.setAttribute('aria-label', 'Navigation toolbar');
 
     // Table-based chrome layout — float/absolute/tables only per CLAUDE.md.
     const table = document.createElement('table');
-    table.className = 'ie-chrome__toolbar-table';
+    table.className = 'netescape-chrome__toolbar-table';
     table.setAttribute('cellpadding', '0');
     table.setAttribute('cellspacing', '0');
     const tbody = document.createElement('tbody');
@@ -228,26 +228,26 @@ window.APC.ie = (function () {
 
     // Vertical separator
     const tdSep = document.createElement('td');
-    tdSep.className = 'ie-chrome__toolbar-cell ie-chrome__toolbar-sep';
+    tdSep.className = 'netescape-chrome__toolbar-cell ie-chrome__toolbar-sep';
     tr.appendChild(tdSep);
 
     // "Address" label
     const tdLabel = document.createElement('td');
-    tdLabel.className = 'ie-chrome__toolbar-cell ie-chrome__toolbar-cell--addr-label';
+    tdLabel.className = 'netescape-chrome__toolbar-cell ie-chrome__toolbar-cell--addr-label';
     const addrLabel = document.createElement('label');
-    addrLabel.className = 'ie-chrome__addr-label';
-    addrLabel.setAttribute('for', 'ie-address-bar');
+    addrLabel.className = 'netescape-chrome__addr-label';
+    addrLabel.setAttribute('for', 'netescape-address-bar');
     addrLabel.textContent = 'Address';
     tdLabel.appendChild(addrLabel);
     tr.appendChild(tdLabel);
 
     // Address bar input — expands to fill remaining table width.
     const tdAddr = document.createElement('td');
-    tdAddr.className = 'ie-chrome__toolbar-cell ie-chrome__toolbar-cell--addr';
+    tdAddr.className = 'netescape-chrome__toolbar-cell ie-chrome__toolbar-cell--addr';
     const input = document.createElement('input');
     input.type = 'text';
-    input.id = 'ie-address-bar';
-    input.className = 'ie-chrome__address-input';
+    input.id = 'netescape-address-bar';
+    input.className = 'netescape-chrome__address-input';
     input.value = DEFAULT_URL;
     input.setAttribute('aria-label', 'Address bar');
     input.setAttribute('spellcheck', 'false');
@@ -264,9 +264,9 @@ window.APC.ie = (function () {
 
     // Go button — manual URL entry triggers dial-up (same as pressing Enter).
     const tdGo = document.createElement('td');
-    tdGo.className = 'ie-chrome__toolbar-cell ie-chrome__toolbar-cell--btn';
+    tdGo.className = 'netescape-chrome__toolbar-cell ie-chrome__toolbar-cell--btn';
     const goBtn = document.createElement('button');
-    goBtn.className = 'ie-chrome__go-btn';
+    goBtn.className = 'netescape-chrome__go-btn';
     goBtn.setAttribute('aria-label', 'Go to address');
     goBtn.textContent = 'Go';
     goBtn.addEventListener('click', function () {
@@ -285,15 +285,15 @@ window.APC.ie = (function () {
   // isDisabled: true = start with --disabled class and aria-disabled="true"
   function makeNavBtnCell(symbol, label, onClick, isDisabled) {
     const td = document.createElement('td');
-    td.className = 'ie-chrome__toolbar-cell ie-chrome__toolbar-cell--btn';
+    td.className = 'netescape-chrome__toolbar-cell ie-chrome__toolbar-cell--btn';
     const btn = document.createElement('button');
-    btn.className = 'ie-chrome__nav-btn';
+    btn.className = 'netescape-chrome__nav-btn';
     btn.setAttribute('aria-label', label);
     btn.title = label;
     btn.textContent = symbol;
     btn.addEventListener('click', onClick);
     if (isDisabled) {
-      btn.classList.add('ie-chrome__nav-btn--disabled');
+      btn.classList.add('netescape-chrome__nav-btn--disabled');
       btn.setAttribute('aria-disabled', 'true');
     }
     td.appendChild(btn);
@@ -329,18 +329,18 @@ window.APC.ie = (function () {
     if (backBtn) {
       backBtn.setAttribute('aria-disabled', canBack ? 'false' : 'true');
       if (canBack) {
-        backBtn.classList.remove('ie-chrome__nav-btn--disabled');
+        backBtn.classList.remove('netescape-chrome__nav-btn--disabled');
       } else {
-        backBtn.classList.add('ie-chrome__nav-btn--disabled');
+        backBtn.classList.add('netescape-chrome__nav-btn--disabled');
       }
     }
 
     if (fwdBtn) {
       fwdBtn.setAttribute('aria-disabled', canFwd ? 'false' : 'true');
       if (canFwd) {
-        fwdBtn.classList.remove('ie-chrome__nav-btn--disabled');
+        fwdBtn.classList.remove('netescape-chrome__nav-btn--disabled');
       } else {
-        fwdBtn.classList.add('ie-chrome__nav-btn--disabled');
+        fwdBtn.classList.add('netescape-chrome__nav-btn--disabled');
       }
     }
   }
@@ -414,25 +414,25 @@ window.APC.ie = (function () {
   }
 
   function renderHome() {
-    if (window.umami) { window.umami.track('ie_homepage_load'); }
+    if (window.umami) { window.umami.track('netescape_homepage_load'); }
 
     const page = document.createElement('div');
-    page.className = 'ie-home';
+    page.className = 'netescape-home';
 
     // --- Header ---
     const header = document.createElement('div');
-    header.className = 'ie-home__header';
+    header.className = 'netescape-home__header';
 
     const siteTitle = document.createElement('h1');
-    siteTitle.className = 'ie-home__title';
+    siteTitle.className = 'netescape-home__title';
     siteTitle.textContent = 'ATSUSHI HISAKA';
 
     const tagline = document.createElement('p');
-    tagline.className = 'ie-home__tagline';
+    tagline.className = 'netescape-home__tagline';
     tagline.textContent = 'Product Manager · Portland, OR';
 
     const divider = document.createElement('hr');
-    divider.className = 'ie-home__divider';
+    divider.className = 'netescape-home__divider';
     divider.setAttribute('aria-hidden', 'true');
 
     header.appendChild(siteTitle);
@@ -442,19 +442,19 @@ window.APC.ie = (function () {
 
     // --- Two-column layout ---
     const cols = document.createElement('div');
-    cols.className = 'ie-home__cols';
+    cols.className = 'netescape-home__cols';
 
     // Left column: navigation links
     const leftCol = document.createElement('div');
-    leftCol.className = 'ie-home__col ie-home__col--left';
+    leftCol.className = 'netescape-home__col ie-home__col--left';
 
     const navTitle = document.createElement('p');
-    navTitle.className = 'ie-home__section-title';
+    navTitle.className = 'netescape-home__section-title';
     navTitle.textContent = '[ NAVIGATE ]';
     leftCol.appendChild(navTitle);
 
     const nav = document.createElement('nav');
-    nav.className = 'ie-home__nav';
+    nav.className = 'netescape-home__nav';
     nav.setAttribute('aria-label', 'Site navigation');
 
     const navLinks = [
@@ -466,7 +466,7 @@ window.APC.ie = (function () {
 
     navLinks.forEach(function (link) {
       const a = document.createElement('a');
-      a.className = 'ie-home__nav-link';
+      a.className = 'netescape-home__nav-link';
       a.href = '#';
       a.textContent = link.label;
       a.addEventListener('click', function (e) {
@@ -482,15 +482,15 @@ window.APC.ie = (function () {
 
     // Right column: intro blurb
     const rightCol = document.createElement('div');
-    rightCol.className = 'ie-home__col ie-home__col--right';
+    rightCol.className = 'netescape-home__col ie-home__col--right';
 
     const welcomeTitle = document.createElement('p');
-    welcomeTitle.className = 'ie-home__section-title';
+    welcomeTitle.className = 'netescape-home__section-title';
     welcomeTitle.textContent = '[ WELCOME ]';
     rightCol.appendChild(welcomeTitle);
 
     const intro1 = document.createElement('p');
-    intro1.className = 'ie-home__intro';
+    intro1.className = 'netescape-home__intro';
     intro1.textContent =
       'Welcome to my little corner of the internet. ' +
       "I'm a product manager based in Portland, OR. " +
@@ -499,7 +499,7 @@ window.APC.ie = (function () {
     rightCol.appendChild(intro1);
 
     const intro2 = document.createElement('p');
-    intro2.className = 'ie-home__intro';
+    intro2.className = 'netescape-home__intro';
     intro2.textContent =
       'Sign the guestbook and say hello. ' +
       'Click around — there are a few surprises.';
@@ -509,22 +509,22 @@ window.APC.ie = (function () {
 
     // Clearfix div ends the float context
     const clear = document.createElement('div');
-    clear.className = 'ie-home__clear';
+    clear.className = 'netescape-home__clear';
     cols.appendChild(clear);
 
     page.appendChild(cols);
 
     // --- Footer ---
     const footer = document.createElement('div');
-    footer.className = 'ie-home__footer';
+    footer.className = 'netescape-home__footer';
     footer.setAttribute('aria-label', 'Page footer');
 
     const counter = document.createElement('p');
-    counter.className = 'ie-home__counter';
+    counter.className = 'netescape-home__counter';
     counter.textContent = 'Visitors: 1,337';
 
     const updated = document.createElement('p');
-    updated.className = 'ie-home__updated';
+    updated.className = 'netescape-home__updated';
     updated.textContent = 'Last updated: April 2026';
 
     footer.appendChild(counter);
@@ -538,18 +538,18 @@ window.APC.ie = (function () {
 
   function renderAbout() {
     const page = document.createElement('div');
-    page.className = 'ie-about';
+    page.className = 'netescape-about';
 
     // Top header
     const topHeader = document.createElement('div');
-    topHeader.className = 'ie-about__top-header';
+    topHeader.className = 'netescape-about__top-header';
 
     const h1 = document.createElement('h1');
-    h1.className = 'ie-about__top-title';
+    h1.className = 'netescape-about__top-title';
     h1.textContent = '~*~ ATSUSHI\'S PAGE ~*~';
 
     const underConst = document.createElement('p');
-    underConst.className = 'ie-about__under-construction';
+    underConst.className = 'netescape-about__under-construction';
     underConst.textContent = '🚧 UNDER CONSTRUCTION 🚧';
 
     topHeader.appendChild(h1);
@@ -558,15 +558,15 @@ window.APC.ie = (function () {
 
     // Left sidebar
     const sidebar = document.createElement('div');
-    sidebar.className = 'ie-about__sidebar';
+    sidebar.className = 'netescape-about__sidebar';
 
     const sideTitle = document.createElement('p');
-    sideTitle.className = 'ie-about__section-title';
+    sideTitle.className = 'netescape-about__section-title';
     sideTitle.textContent = '[ ABOUT ME ]';
     sidebar.appendChild(sideTitle);
 
     const bio = document.createElement('p');
-    bio.className = 'ie-about__bio';
+    bio.className = 'netescape-about__bio';
     bio.textContent = 'Hi!! I\'m Atsushi, a PM based in Portland, OR. ' +
       'I like building products, playing video games, and making things ' +
       'with my hands. Placeholder — real bio in Phase 9.';
@@ -575,7 +575,7 @@ window.APC.ie = (function () {
     // GIF placeholders in sidebar (2 of 4 max per page) — replaced in Phase 9
     ['Animated banner placeholder', 'Animated badge placeholder'].forEach(function (alt) {
       const box = document.createElement('div');
-      box.className = 'ie-about__gif-placeholder';
+      box.className = 'netescape-about__gif-placeholder';
       box.setAttribute('role', 'img');
       box.setAttribute('aria-label', alt);
       box.textContent = '[ GIF ]';
@@ -583,7 +583,7 @@ window.APC.ie = (function () {
     });
 
     const counter = document.createElement('p');
-    counter.className = 'ie-about__counter';
+    counter.className = 'netescape-about__counter';
     counter.textContent = 'You are visitor #001,337';
     sidebar.appendChild(counter);
 
@@ -591,15 +591,15 @@ window.APC.ie = (function () {
 
     // Right main content (overflow: hidden BFC fills remaining width)
     const main = document.createElement('div');
-    main.className = 'ie-about__main';
+    main.className = 'netescape-about__main';
 
     const mainTitle = document.createElement('p');
-    mainTitle.className = 'ie-about__section-title';
+    mainTitle.className = 'netescape-about__section-title';
     mainTitle.textContent = '[ WELCOME TO MY PAGE!! ]';
     main.appendChild(mainTitle);
 
     const welcome = document.createElement('p');
-    welcome.className = 'ie-about__welcome';
+    welcome.className = 'netescape-about__welcome';
     welcome.textContent = 'Welcome!! This page is my little corner of the internet. ' +
       'Feel free to look around and sign my guestbook. ' +
       'Placeholder — real content in Phase 9.';
@@ -608,7 +608,7 @@ window.APC.ie = (function () {
     // GIF placeholders in main (2 of 4 max) — replaced in Phase 9
     ['Decorative GIF placeholder 3', 'Decorative GIF placeholder 4'].forEach(function (alt) {
       const box = document.createElement('div');
-      box.className = 'ie-about__gif-placeholder';
+      box.className = 'netescape-about__gif-placeholder';
       box.setAttribute('role', 'img');
       box.setAttribute('aria-label', alt);
       box.textContent = '[ GIF ]';
@@ -616,17 +616,17 @@ window.APC.ie = (function () {
     });
 
     const hr = document.createElement('hr');
-    hr.className = 'ie-about__divider';
+    hr.className = 'netescape-about__divider';
     hr.setAttribute('aria-hidden', 'true');
     main.appendChild(hr);
 
     const interestsTitle = document.createElement('p');
-    interestsTitle.className = 'ie-about__section-title';
+    interestsTitle.className = 'netescape-about__section-title';
     interestsTitle.textContent = '[ INTERESTS ]';
     main.appendChild(interestsTitle);
 
     const interests = document.createElement('p');
-    interests.className = 'ie-about__interests';
+    interests.className = 'netescape-about__interests';
     interests.textContent =
       'Product Management ★ Video Games ★ Cooking ★ Cycling ★ Raspberry Pi';
     main.appendChild(interests);
@@ -634,7 +634,7 @@ window.APC.ie = (function () {
     page.appendChild(main);
 
     const clear = document.createElement('div');
-    clear.className = 'ie-about__clear';
+    clear.className = 'netescape-about__clear';
     page.appendChild(clear);
 
     pageEl.appendChild(page);
@@ -644,21 +644,21 @@ window.APC.ie = (function () {
 
   function renderThoughts() {
     const page = document.createElement('div');
-    page.className = 'ie-thoughts';
+    page.className = 'netescape-thoughts';
 
     const header = document.createElement('div');
-    header.className = 'ie-thoughts__header';
+    header.className = 'netescape-thoughts__header';
 
     const h1 = document.createElement('h1');
-    h1.className = 'ie-thoughts__title';
+    h1.className = 'netescape-thoughts__title';
     h1.textContent = 'MY THOUGHTS';
 
     const sub = document.createElement('p');
-    sub.className = 'ie-thoughts__subtitle';
+    sub.className = 'netescape-thoughts__subtitle';
     sub.textContent = '// a log of things on my mind';
 
     const divider = document.createElement('hr');
-    divider.className = 'ie-thoughts__divider';
+    divider.className = 'netescape-thoughts__divider';
     divider.setAttribute('aria-hidden', 'true');
 
     header.appendChild(h1);
@@ -693,22 +693,22 @@ window.APC.ie = (function () {
 
     posts.forEach(function (post) {
       const article = document.createElement('article');
-      article.className = 'ie-thoughts__post';
+      article.className = 'netescape-thoughts__post';
 
       const meta = document.createElement('p');
-      meta.className = 'ie-thoughts__meta';
+      meta.className = 'netescape-thoughts__meta';
       meta.textContent = '> ' + post.date;
 
       const title = document.createElement('h2');
-      title.className = 'ie-thoughts__post-title';
+      title.className = 'netescape-thoughts__post-title';
       title.textContent = post.title;
 
       const body = document.createElement('p');
-      body.className = 'ie-thoughts__body';
+      body.className = 'netescape-thoughts__body';
       body.textContent = post.body;
 
       const hr = document.createElement('hr');
-      hr.className = 'ie-thoughts__divider';
+      hr.className = 'netescape-thoughts__divider';
       hr.setAttribute('aria-hidden', 'true');
 
       article.appendChild(meta);
@@ -725,21 +725,21 @@ window.APC.ie = (function () {
 
   function renderProjects() {
     const page = document.createElement('div');
-    page.className = 'ie-projects';
+    page.className = 'netescape-projects';
 
     const header = document.createElement('div');
-    header.className = 'ie-projects__header';
+    header.className = 'netescape-projects__header';
 
     const h1 = document.createElement('h1');
-    h1.className = 'ie-projects__title';
+    h1.className = 'netescape-projects__title';
     h1.textContent = 'Work & Projects';
 
     const sub = document.createElement('p');
-    sub.className = 'ie-projects__subtitle';
+    sub.className = 'netescape-projects__subtitle';
     sub.textContent = 'A selection of things I\'ve built and shipped.';
 
     const divider = document.createElement('hr');
-    divider.className = 'ie-projects__divider';
+    divider.className = 'netescape-projects__divider';
     divider.setAttribute('aria-hidden', 'true');
 
     header.appendChild(h1);
@@ -782,46 +782,46 @@ window.APC.ie = (function () {
     ];
 
     const grid = document.createElement('div');
-    grid.className = 'ie-projects__grid';
+    grid.className = 'netescape-projects__grid';
 
     projects.forEach(function (proj) {
       const card = document.createElement('div');
-      card.className = 'ie-projects__card';
+      card.className = 'netescape-projects__card';
 
       const cardTitle = document.createElement('h2');
-      cardTitle.className = 'ie-projects__card-title';
+      cardTitle.className = 'netescape-projects__card-title';
       cardTitle.textContent = proj.title;
 
       const cardMeta = document.createElement('p');
-      cardMeta.className = 'ie-projects__card-meta';
+      cardMeta.className = 'netescape-projects__card-meta';
       cardMeta.textContent = proj.role + ' · ' + proj.company + ' · ' + proj.years;
 
       const impactSection = document.createElement('div');
-      impactSection.className = 'ie-projects__card-section';
+      impactSection.className = 'netescape-projects__card-section';
 
       const impactLabel = document.createElement('p');
-      impactLabel.className = 'ie-projects__card-label';
+      impactLabel.className = 'netescape-projects__card-label';
       impactLabel.textContent = 'IMPACT';
 
       const cardImpact = document.createElement('p');
-      cardImpact.className = 'ie-projects__card-impact';
+      cardImpact.className = 'netescape-projects__card-impact';
       cardImpact.textContent = proj.impact;
 
       impactSection.appendChild(impactLabel);
       impactSection.appendChild(cardImpact);
 
       const skillsSection = document.createElement('div');
-      skillsSection.className = 'ie-projects__card-section';
+      skillsSection.className = 'netescape-projects__card-section';
 
       const skillsLabel = document.createElement('p');
-      skillsLabel.className = 'ie-projects__card-label';
+      skillsLabel.className = 'netescape-projects__card-label';
       skillsLabel.textContent = 'SKILLS';
 
       const tagsEl = document.createElement('p');
-      tagsEl.className = 'ie-projects__card-tags';
+      tagsEl.className = 'netescape-projects__card-tags';
       proj.skills.forEach(function (tag) {
         const badge = document.createElement('span');
-        badge.className = 'ie-projects__tag';
+        badge.className = 'netescape-projects__tag';
         badge.textContent = tag;
         tagsEl.appendChild(badge);
       });
@@ -837,7 +837,7 @@ window.APC.ie = (function () {
     });
 
     const clear = document.createElement('div');
-    clear.className = 'ie-projects__clear';
+    clear.className = 'netescape-projects__clear';
     grid.appendChild(clear);
 
     page.appendChild(grid);
@@ -851,18 +851,18 @@ window.APC.ie = (function () {
     injectAltchaScript();
 
     const page = document.createElement('div');
-    page.className = 'ie-guestbook';
+    page.className = 'netescape-guestbook';
 
     // Header
     const header = document.createElement('div');
-    header.className = 'ie-guestbook__header';
+    header.className = 'netescape-guestbook__header';
 
     const h1 = document.createElement('h1');
-    h1.className = 'ie-guestbook__title';
+    h1.className = 'netescape-guestbook__title';
     h1.textContent = 'Guestbook';
 
     const sub = document.createElement('p');
-    sub.className = 'ie-guestbook__subtitle';
+    sub.className = 'netescape-guestbook__subtitle';
     sub.textContent = 'Leave a message and say hello!';
 
     header.appendChild(h1);
@@ -871,33 +871,33 @@ window.APC.ie = (function () {
 
     // Form section
     const formSection = document.createElement('div');
-    formSection.className = 'ie-guestbook__form-section';
+    formSection.className = 'netescape-guestbook__form-section';
 
     const formTitle = document.createElement('h2');
-    formTitle.className = 'ie-guestbook__section-title';
+    formTitle.className = 'netescape-guestbook__section-title';
     formTitle.textContent = 'Sign the Book';
     formSection.appendChild(formTitle);
 
     // formArea holds error + form; on success its contents are replaced
     const formArea = document.createElement('div');
-    formArea.className = 'ie-guestbook__form-area';
+    formArea.className = 'netescape-guestbook__form-area';
 
     // Error message — hidden by default, shown via class removal
     const errorEl = document.createElement('p');
-    errorEl.className = 'ie-guestbook__error ie-guestbook__message--hidden';
+    errorEl.className = 'netescape-guestbook__error ie-guestbook__message--hidden';
     errorEl.setAttribute('role', 'alert');
     formArea.appendChild(errorEl);
 
     const form = document.createElement('form');
-    form.className = 'ie-guestbook__form';
+    form.className = 'netescape-guestbook__form';
     form.setAttribute('novalidate', '');
 
     // Helper: builds a labeled field row
     function makeField(labelText, inputEl, required) {
       const row = document.createElement('div');
-      row.className = 'ie-guestbook__field';
+      row.className = 'netescape-guestbook__field';
       const label = document.createElement('label');
-      label.className = 'ie-guestbook__label';
+      label.className = 'netescape-guestbook__label';
       label.textContent = labelText + (required ? ' *' : '');
       label.setAttribute('for', inputEl.id);
       row.appendChild(label);
@@ -908,7 +908,7 @@ window.APC.ie = (function () {
     const nameInput = document.createElement('input');
     nameInput.type = 'text';
     nameInput.id = 'gb-name';
-    nameInput.className = 'ie-guestbook__input';
+    nameInput.className = 'netescape-guestbook__input';
     nameInput.setAttribute('required', '');
     nameInput.setAttribute('maxlength', '100');
     nameInput.setAttribute('autocomplete', 'name');
@@ -917,7 +917,7 @@ window.APC.ie = (function () {
     const emailInput = document.createElement('input');
     emailInput.type = 'email';
     emailInput.id = 'gb-email';
-    emailInput.className = 'ie-guestbook__input';
+    emailInput.className = 'netescape-guestbook__input';
     emailInput.setAttribute('required', '');
     emailInput.setAttribute('maxlength', '200');
     emailInput.setAttribute('autocomplete', 'email');
@@ -926,7 +926,7 @@ window.APC.ie = (function () {
     const websiteInput = document.createElement('input');
     websiteInput.type = 'url';
     websiteInput.id = 'gb-website';
-    websiteInput.className = 'ie-guestbook__input';
+    websiteInput.className = 'netescape-guestbook__input';
     websiteInput.placeholder = 'https://';
     websiteInput.setAttribute('maxlength', '200');
     websiteInput.setAttribute('autocomplete', 'url');
@@ -934,7 +934,7 @@ window.APC.ie = (function () {
 
     const messageInput = document.createElement('textarea');
     messageInput.id = 'gb-message';
-    messageInput.className = 'ie-guestbook__textarea';
+    messageInput.className = 'netescape-guestbook__textarea';
     messageInput.setAttribute('required', '');
     messageInput.setAttribute('maxlength', '1000');
     messageInput.rows = 4;
@@ -942,17 +942,17 @@ window.APC.ie = (function () {
 
     // Resume request checkbox — auto-checked when ?resume=1 param is present
     const resumeRow = document.createElement('div');
-    resumeRow.className = 'ie-guestbook__field ie-guestbook__field--checkbox';
+    resumeRow.className = 'netescape-guestbook__field ie-guestbook__field--checkbox';
 
     const resumeCheckbox = document.createElement('input');
     resumeCheckbox.type = 'checkbox';
     resumeCheckbox.id = 'gb-resume';
     resumeCheckbox.name = 'resume_requested';
-    resumeCheckbox.className = 'ie-guestbook__checkbox';
+    resumeCheckbox.className = 'netescape-guestbook__checkbox';
     if (currentParams.resume === '1') { resumeCheckbox.checked = true; }
 
     const resumeLabel = document.createElement('label');
-    resumeLabel.className = 'ie-guestbook__label ie-guestbook__label--checkbox';
+    resumeLabel.className = 'netescape-guestbook__label ie-guestbook__label--checkbox';
     resumeLabel.setAttribute('for', 'gb-resume');
     resumeLabel.textContent = 'I\'d like a copy of your resume';
 
@@ -964,7 +964,7 @@ window.APC.ie = (function () {
     // No hmackey attribute → widget skips signature validation (client-side only).
     // Server-side HMAC verification via ALTCHA_HMAC_SECRET to be added later.
     const altchaRow = document.createElement('div');
-    altchaRow.className = 'ie-guestbook__field ie-guestbook__field--altcha';
+    altchaRow.className = 'netescape-guestbook__field ie-guestbook__field--altcha';
     const altchaWidget = document.createElement('altcha-widget');
     altchaWidget.setAttribute('challengeurl', '/altcha/challenge');
     altchaWidget.setAttribute('name', 'altcha');
@@ -973,7 +973,7 @@ window.APC.ie = (function () {
 
     const submitBtn = document.createElement('button');
     submitBtn.type = 'submit';
-    submitBtn.className = 'ie-guestbook__submit';
+    submitBtn.className = 'netescape-guestbook__submit';
     submitBtn.textContent = 'Sign the Book';
     // Disabled until Altcha proof-of-work is solved.
     submitBtn.disabled = true;
@@ -988,13 +988,13 @@ window.APC.ie = (function () {
     });
 
     const reqNote = document.createElement('p');
-    reqNote.className = 'ie-guestbook__required-note';
+    reqNote.className = 'netescape-guestbook__required-note';
     reqNote.textContent = '* Required fields';
     form.appendChild(reqNote);
 
     form.addEventListener('submit', function (e) {
       e.preventDefault();
-      errorEl.classList.add('ie-guestbook__message--hidden');
+      errorEl.classList.add('netescape-guestbook__message--hidden');
 
       const name    = nameInput.value.trim();
       const email   = emailInput.value.trim();
@@ -1003,7 +1003,7 @@ window.APC.ie = (function () {
 
       if (!name || !email || !message) {
         errorEl.textContent = 'Please fill in all required fields.';
-        errorEl.classList.remove('ie-guestbook__message--hidden');
+        errorEl.classList.remove('netescape-guestbook__message--hidden');
         return;
       }
 
@@ -1042,7 +1042,7 @@ window.APC.ie = (function () {
         // Replace form area with success message.
         formArea.innerHTML = '';
         const successEl = document.createElement('p');
-        successEl.className = 'ie-guestbook__success';
+        successEl.className = 'netescape-guestbook__success';
         successEl.textContent =
           'Thanks for signing the guestbook! Your message will appear within 24 hours ' +
           'after review. If you requested a resume, I will email it to you directly.';
@@ -1056,7 +1056,7 @@ window.APC.ie = (function () {
         submitBtn.disabled = false;
         submitBtn.textContent = 'Sign the Book';
         errorEl.textContent = 'Something went wrong. Please try again later.';
-        errorEl.classList.remove('ie-guestbook__message--hidden');
+        errorEl.classList.remove('netescape-guestbook__message--hidden');
       });
     });
 
@@ -1065,24 +1065,24 @@ window.APC.ie = (function () {
     page.appendChild(formSection);
 
     const divider = document.createElement('hr');
-    divider.className = 'ie-guestbook__divider';
+    divider.className = 'netescape-guestbook__divider';
     divider.setAttribute('aria-hidden', 'true');
     page.appendChild(divider);
 
     // Entries section
     const entriesSection = document.createElement('div');
-    entriesSection.className = 'ie-guestbook__entries-section';
+    entriesSection.className = 'netescape-guestbook__entries-section';
 
     const entriesTitle = document.createElement('h2');
-    entriesTitle.className = 'ie-guestbook__section-title';
+    entriesTitle.className = 'netescape-guestbook__section-title';
     entriesTitle.textContent = 'Recent Entries';
     entriesSection.appendChild(entriesTitle);
 
     const entriesContainer = document.createElement('div');
-    entriesContainer.className = 'ie-guestbook__entries';
+    entriesContainer.className = 'netescape-guestbook__entries';
 
     const loadingMsg = document.createElement('p');
-    loadingMsg.className = 'ie-guestbook__loading';
+    loadingMsg.className = 'netescape-guestbook__loading';
     loadingMsg.textContent = 'Loading entries...';
     entriesContainer.appendChild(loadingMsg);
 
@@ -1125,7 +1125,7 @@ window.APC.ie = (function () {
       .catch(function () {
         container.innerHTML = '';
         const err = document.createElement('p');
-        err.className = 'ie-guestbook__error';
+        err.className = 'netescape-guestbook__error';
         err.textContent = 'Could not load entries. Please try again later.';
         container.appendChild(err);
       });
@@ -1137,7 +1137,7 @@ window.APC.ie = (function () {
 
     if (!entries || entries.length === 0) {
       const empty = document.createElement('p');
-      empty.className = 'ie-guestbook__empty';
+      empty.className = 'netescape-guestbook__empty';
       empty.textContent = 'No entries yet. Be the first to sign!';
       container.appendChild(empty);
       return;
@@ -1145,13 +1145,13 @@ window.APC.ie = (function () {
 
     entries.forEach(function (entry) {
       const item = document.createElement('div');
-      item.className = 'ie-guestbook__entry';
+      item.className = 'netescape-guestbook__entry';
 
       const meta = document.createElement('div');
-      meta.className = 'ie-guestbook__entry-meta';
+      meta.className = 'netescape-guestbook__entry-meta';
 
       const nameSpan = document.createElement('span');
-      nameSpan.className = 'ie-guestbook__entry-name';
+      nameSpan.className = 'netescape-guestbook__entry-name';
       nameSpan.textContent = entry.name;
       meta.appendChild(nameSpan);
 
@@ -1159,7 +1159,7 @@ window.APC.ie = (function () {
       if (entry.website && isValidUrl(entry.website)) {
         meta.appendChild(document.createTextNode(' · '));
         const link = document.createElement('a');
-        link.className = 'ie-guestbook__entry-link';
+        link.className = 'netescape-guestbook__entry-link';
         link.href = entry.website;
         link.textContent = entry.website;
         link.target = '_blank';
@@ -1170,7 +1170,7 @@ window.APC.ie = (function () {
       if (entry.created) {
         meta.appendChild(document.createTextNode(' · '));
         const dateSpan = document.createElement('span');
-        dateSpan.className = 'ie-guestbook__entry-date';
+        dateSpan.className = 'netescape-guestbook__entry-date';
         try {
           dateSpan.textContent = new Date(entry.created).toLocaleDateString('en-US', {
             year: 'numeric', month: 'short', day: 'numeric'
@@ -1184,7 +1184,7 @@ window.APC.ie = (function () {
       item.appendChild(meta);
 
       const msg = document.createElement('p');
-      msg.className = 'ie-guestbook__entry-msg';
+      msg.className = 'netescape-guestbook__entry-msg';
       msg.textContent = entry.message;
       item.appendChild(msg);
 
@@ -1226,34 +1226,34 @@ window.APC.ie = (function () {
     if (statusEl) { statusEl.textContent = 'Not connected'; }
 
     const page = document.createElement('div');
-    page.className = 'ie-noconn';
+    page.className = 'netescape-noconn';
 
     const icon = document.createElement('p');
-    icon.className = 'ie-noconn__icon';
+    icon.className = 'netescape-noconn__icon';
     icon.setAttribute('aria-hidden', 'true');
     icon.textContent = '\u2715'; // ✕
 
     const h1 = document.createElement('h1');
-    h1.className = 'ie-noconn__title';
+    h1.className = 'netescape-noconn__title';
     h1.textContent = 'This page cannot be displayed';
 
     const divider = document.createElement('hr');
-    divider.className = 'ie-noconn__divider';
+    divider.className = 'netescape-noconn__divider';
     divider.setAttribute('aria-hidden', 'true');
 
     const body = document.createElement('p');
-    body.className = 'ie-noconn__body';
+    body.className = 'netescape-noconn__body';
     body.textContent =
       'You are not connected to the internet. Please double-click the ' +
       'Dial-Up Networking icon on your desktop to connect, or use the link below.';
 
     const link = document.createElement('a');
-    link.className = 'ie-noconn__link';
+    link.className = 'netescape-noconn__link';
     link.href = 'javascript:void(0)';
     link.textContent = 'Open Dial-Up Networking';
     link.addEventListener('click', function (e) {
       e.preventDefault();
-      window.APC.ie.connect(function () {
+      window.APC.netescape.connect(function () {
         navigate(DEFAULT_URL, false);
       });
     });

@@ -1,11 +1,11 @@
 /* ============================================================
-   ie-home.css — ahisaka.com Homepage page content styles
-   CSS custom properties allowed here (IE page content theming,
+   netescape-home.css — ahisaka.com Homepage page content styles
+   CSS custom properties allowed here (NetEscape page content theming,
    not Win98 chrome). Font: Verdana per CLAUDE.md spec.
    ============================================================ */
 
-/* Page-level custom properties — scoped to .ie-home */
-.ie-home {
+/* Page-level custom properties — scoped to .netescape-home */
+.netescape-home {
   --ie-home-bg:           #000080;
   --ie-home-text:         #C0C0C0;
   --ie-home-link:         #FFAA00;
@@ -20,7 +20,7 @@
    Page root
 --------------------------------------------------------------- */
 
-.ie-home {
+.netescape-home {
   background: var(--ie-home-bg);
   color: var(--ie-home-text);
   font-family: Verdana, sans-serif;
@@ -34,11 +34,11 @@
    Header: site title, tagline, divider
 --------------------------------------------------------------- */
 
-.ie-home__header {
+.netescape-home__header {
   margin-bottom: 12px;
 }
 
-.ie-home__title {
+.netescape-home__title {
   font-family: Verdana, sans-serif;
   font-size: 18px;
   font-weight: bold;
@@ -48,14 +48,14 @@
   padding: 0;
 }
 
-.ie-home__tagline {
+.netescape-home__tagline {
   font-family: Verdana, sans-serif;
   font-size: 11px;
   color: var(--ie-home-text);
   margin: 0 0 10px;
 }
 
-.ie-home__divider {
+.netescape-home__divider {
   border: none;
   border-top: 1px solid var(--ie-home-divider);
   margin: 0;
@@ -65,25 +65,25 @@
    Two-column layout — float-based, no flex/grid
 --------------------------------------------------------------- */
 
-.ie-home__cols {
+.netescape-home__cols {
   margin-top: 12px;
 }
 
-.ie-home__col {
+.netescape-home__col {
   float: left;
 }
 
-.ie-home__col--left {
+.netescape-home__col--left {
   width: 38%;
 }
 
-.ie-home__col--right {
+.netescape-home__col--right {
   width: 59%;
   margin-left: 3%;
 }
 
 /* Clearfix: ends float context so footer sits below both columns */
-.ie-home__clear {
+.netescape-home__clear {
   clear: both;
 }
 
@@ -91,7 +91,7 @@
    Section title ([ NAVIGATE ], [ WELCOME ])
 --------------------------------------------------------------- */
 
-.ie-home__section-title {
+.netescape-home__section-title {
   font-family: Verdana, sans-serif;
   font-size: 11px;
   font-weight: bold;
@@ -103,11 +103,11 @@
    Navigation links
 --------------------------------------------------------------- */
 
-.ie-home__nav {
+.netescape-home__nav {
   margin: 0;
 }
 
-.ie-home__nav-link {
+.netescape-home__nav-link {
   color: var(--ie-home-link);
   font-family: Verdana, sans-serif;
   font-size: 11px;
@@ -117,16 +117,16 @@
   /* Amber links, period-authentic — no underline by default */
 }
 
-.ie-home__nav-link:hover {
+.netescape-home__nav-link:hover {
   color: var(--ie-home-link-hover);
   text-decoration: underline;
 }
 
-.ie-home__nav-link:visited {
+.netescape-home__nav-link:visited {
   color: var(--ie-home-link);
 }
 
-.ie-home__nav-link:focus {
+.netescape-home__nav-link:focus {
   outline: 1px dotted var(--ie-home-link);
   outline-offset: 1px;
 }
@@ -135,7 +135,7 @@
    Intro / body copy (right column)
 --------------------------------------------------------------- */
 
-.ie-home__intro {
+.netescape-home__intro {
   font-family: Verdana, sans-serif;
   font-size: 11px;
   color: var(--ie-home-text);
@@ -147,21 +147,21 @@
    Footer: hit counter + last updated stamp
 --------------------------------------------------------------- */
 
-.ie-home__footer {
+.netescape-home__footer {
   border-top: 1px solid var(--ie-home-divider);
   margin-top: 14px;
   padding-top: 10px;
   text-align: center;
 }
 
-.ie-home__counter {
+.netescape-home__counter {
   font-family: Verdana, sans-serif;
   font-size: 11px;
   color: var(--ie-home-text);
   margin: 0 0 4px;
 }
 
-.ie-home__updated {
+.netescape-home__updated {
   font-family: Verdana, sans-serif;
   font-size: 10px;
   color: var(--ie-home-footer-muted);
