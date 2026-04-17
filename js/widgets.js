@@ -107,6 +107,10 @@ window.APC.widgets = (function () {
   // --- Tray pop-up state ----------------------------------------------
 
   var trayPopupTimer = null;
+  // Persistent ARIA live region — appended once on init, mutated per popup.
+  // Appending an already-populated element does not reliably trigger screen
+  // readers; mutating a pre-existing region does.
+  var liveRegion = null;
 
   // --- RAM widget -----------------------------------------------------
 
@@ -182,6 +186,19 @@ window.APC.widgets = (function () {
   // Close button has TRAY_CLICK ms response delay per the timing spec.
 
   function initTrayPopups() {
+    // Create a single persistent live region so screen readers reliably
+    // announce tray notifications. Must be in the DOM before text is set.
+    liveRegion = document.createElement('div');
+    liveRegion.setAttribute('role', 'status');
+    liveRegion.setAttribute('aria-live', 'polite');
+    liveRegion.setAttribute('aria-atomic', 'true');
+    liveRegion.style.position = 'absolute';
+    liveRegion.style.width = '1px';
+    liveRegion.style.height = '1px';
+    liveRegion.style.overflow = 'hidden';
+    liveRegion.style.clip = 'rect(0,0,0,0)';
+    liveRegion.style.whiteSpace = 'nowrap';
+    document.body.appendChild(liveRegion);
     scheduleTrayPopup();
   }
 
@@ -202,8 +219,6 @@ window.APC.widgets = (function () {
 
     var popup = document.createElement('div');
     popup.className = 'win98-tray-popup';
-    popup.setAttribute('role', 'alert');
-    popup.setAttribute('aria-live', 'assertive');
 
     var msgEl = document.createElement('span');
     msgEl.className = 'win98-tray-popup__msg';
@@ -218,11 +233,19 @@ window.APC.widgets = (function () {
     popup.appendChild(closeBtn);
     document.body.appendChild(popup);
 
+    // Announce via the persistent live region (mutating pre-existing region
+    // is reliable; appending a populated element with aria-live is not).
+    if (liveRegion) { liveRegion.textContent = message; }
+
+    var dismissed = false;
     var autoTimer = setTimeout(dismiss, t.rand(t.TRAY_POPUP_DISPLAY_MIN_MS, t.TRAY_POPUP_DISPLAY_MAX_MS));
 
     function dismiss() {
+      if (dismissed) { return; }
+      dismissed = true;
       clearTimeout(autoTimer);
       if (popup.parentNode) { popup.parentNode.removeChild(popup); }
+      if (liveRegion) { liveRegion.textContent = ''; }
     }
 
     // TRAY_CLICK_MIN/MAX delay on close button response (Texture Zone tray click latency)
@@ -296,6 +319,14 @@ window.APC.widgets = (function () {
     initTrayPopups();
   }
 
-  return { init: init };
+  // Called by boot.restart() to cancel any in-flight popup timer so soft
+  // restarts don't accumulate parallel popup chains.
+  function reset() {
+    clearTimeout(trayPopupTimer);
+    trayPopupTimer = null;
+    if (liveRegion) { liveRegion.textContent = ''; }
+  }
+
+  return { init: init, reset: reset };
 
 }());
