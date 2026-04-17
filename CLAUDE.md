@@ -846,4 +846,67 @@ Status check: `sudo systemctl status caddy pocketbase ram-server cloudflared`
 
 ---
 
+## Resolved Spec Decisions (Standing Rules)
+
+These decisions are final. No source spec, comment, or future AI session may override them without explicit written update to this file.
+
+### System Properties — General Tab Hardware
+
+- **DO:** Show IBM Aptiva SE7 simulation hardware: manufacturer `IBM`, processor `Intel Pentium II Processor Intel MMX(TM) Technology`, `450MHz, 128.0MB RAM`.
+- **DO:** Include the "About This Machine" recessed inset box at the bottom of the General tab (from Behavioral Fidelity Spec).
+- **DO NOT:** Show real Raspberry Pi hardware (ARMv7, Samsung microSD, WiFi wlan0) on the General tab. These fields are permanently discarded.
+- **Exception:** Performance tab and (future) Virtual Memory tab may reference real Pi data as technical easter eggs for advanced users — they are not primary identity surfaces.
+
+### System Properties — Tab Count
+
+- **DO:** Implement exactly 4 tabs: General | Device Manager | Hardware Profiles | Performance.
+- **DO NOT:** Add File System or Virtual Memory tabs until there is a specific, meaningful interaction or easter egg to place inside them.
+- **DO:** Retain the "File System..." and "Virtual Memory..." deep-link buttons on the Performance tab as non-functional stubs; they anticipate future tabs but must not open anything yet.
+
+### Start Menu — Shut Down Radio Options
+
+- **DO:** Use exactly these three radio options in the Shut Down modal: (1) Shut down [default], (2) Restart, (3) Log Off.
+- **DO NOT:** Use "Restart in MS-DOS mode" — this option is permanently discarded.
+- **DO:** Log Off behavior: fire analytics `{source: 'start_menu', option: 'log_off'}`, call `desktop.closeAll()`, show sign-off dialog "Thanks for visiting. Close the tab…" with OK. No session wipe, no reload.
+- **Reference:** taskbar.js already implements this correctly. Do not change it.
+
+### Start Menu — Programs Submenu Structure
+
+- **DO:** Use the cascaded structure: Programs ▶ → Accessories ▶ → Winamp, Calculator, Minesweeper, Notepad.
+- **DO NOT:** Place apps directly under Programs (e.g., Programs → Winamp). This flat structure is deprecated.
+- **Reference:** Canonical Start Menu Spec (document 6c5df1cd) is the single source of truth for all menu behavior, visual spec, and acceptance criteria.
+
+### Tray Balloon — Timing Tokens
+
+- **DO:** Add all six tray balloon timing tokens to `win98-timing.js` before implementing any balloon code in `widgets.js`:
+  - `TRAY_POPUP_MIN_MS = 90000`
+  - `TRAY_POPUP_MAX_MS = 300000`
+  - `TRAY_POPUP_DISPLAY_MIN_MS = 10000`
+  - `TRAY_POPUP_DISPLAY_MAX_MS = 10000`
+  - `TRAY_CLICK_MIN_MS = 100`
+  - `TRAY_CLICK_MAX_MS = 200`
+- **DO NOT:** Hardcode any of these values in `widgets.js` or any other file.
+- **Note:** `TRAY_POPUP_DISPLAY_MIN_MS` and `TRAY_POPUP_DISPLAY_MAX_MS` are intentionally both 10000ms — the auto-dismiss window is fixed, not random. The matching values are correct.
+
+### Tray Balloon — Disk Cleanup Branch
+
+- **DO:** Implement the full Low Disk Space click flow when the spec is in hand: apply `TRAY_CLICK_MIN/MAX_MS` delay → dismiss balloon (`isBalloonVisible = false`) → open Disk Cleanup modal per Disk Cleanup Feature Spec (document 24c49bfe).
+- **DO NOT:** Implement any Disk Cleanup modal code until Feature Spec 24c49bfe has been provided to the coding session. The spec exists but has not yet been shared.
+- **DO:** Until the spec arrives, leave the Low Disk Space body-click path as a clearly marked stub — exact comment format below — and ship the rest of the balloon system clean.
+- **DO:** Pause the balloon timer while Disk Cleanup modal is open; resume with a fresh random interval when it closes.
+
+```js
+// TODO: Disk Cleanup click path
+// Spec: Disk Cleanup Feature Spec (document 24c49bfe)
+// On body click: apply TRAY_CLICK_MIN/MAX_MS delay → isBalloonVisible = false → open Disk Cleanup modal
+// Do not implement until spec is provided. Do not stub with a placeholder modal.
+```
+
+### Boot Flow Figma Spec
+
+- **DO NOT:** Implement any code from the Boot Flow Figma Spec. It is a design artifact only.
+- **DO:** File it as a GitHub issue labeled `design` or `figma` for tracking purposes.
+
+---
+
 *End of AI Coding Rules & Standards.*
