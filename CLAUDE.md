@@ -36,9 +36,11 @@ atsushis-pc/
 ├── projects.html               ← NetEscape Work/Projects
 ├── guestbook.html              ← NetEscape Guestbook
 ├── js/
+│   ├── win98-timing.js             ← All timing tokens live here; never hardcode delays elsewhere
 │   ├── boot.js
 │   ├── desktop.js
-│   ├── ie.js
+│   ├── taskbar.js                  ← Start Menu (Programs, Documents, Shut Down modal)
+│   ├── netescape.js                ← NetEscape browser window (renamed from ie.js)
 │   ├── widgets.js
 │   └── apps/
 │       ├── winamp.js
@@ -166,7 +168,7 @@ atsushis-pc/
 * Core shells:
   * `js/desktop.js`: Desktop/window management
   * `js/boot.js`: Handles Matrix → terminal prompt → loading bar → desktop fade-in
-  * `js/ie.js`: NetEscape browser window (routing, dial-up logic, navigation) — **pending rename to `netescape.js` as part of brand pivot**
+  * `js/netescape.js`: NetEscape browser window (routing, dial-up logic, navigation)
   * `js/widgets.js`: Taskbar widgets (weather, RAM, clock)
   * `js/win98-timing.js`: Centralised timing token file — all delay values live here, never hardcoded elsewhere
 
@@ -298,7 +300,7 @@ Modem reality: V.90 was limited by telephone infrastructure optimised for voice.
 | Microsoft | Microblob |
 | Internet Explorer | NetEscape |
 
-CSS files and JS modules currently named `ie-*.css` / `ie.js` are pending rename to `netescape-*.css` / `netescape.js` as part of the brand pivot. Do not create new files using the `ie-` prefix.
+`js/netescape.js` and `css/netescape-*.css` are the canonical names. Do not create new files using the `ie-` prefix. Existing `ie-*.css` files are pending rename to `netescape-*.css` (tracked separately — do not rename as part of unrelated PRs).
 
 ### Matrix Gate Screen — Load Immediately
 
@@ -350,10 +352,25 @@ Status bar sequence: `""` → `"Opening page [url]..."` → `"Transferring data 
 | Action | Delay |
 | --- | --- |
 | Open | 80–180ms |
-| Submenu expand | 200–400ms |
+| Submenu expand (mouse hover) | 200–400ms |
+| Submenu expand (keyboard Right) | Immediate — no delay |
+| Submenu close (after mouse leaves) | 300ms — cancelled on mouse re-entry |
 | Item → action | 100–250ms |
 
 Failure: 1-in-12 chance menu flickers closed on open (requires second click).
+
+**Menu items:** Programs ► | Documents ► | Settings (disabled) | Find (disabled) | Help | Run… | — | Shut Down…
+
+**Programs submenu:** Winamp, Minesweeper, Calculator, Notepad — dispatches to `desktop.launchApp()`.
+
+**Documents submenu:** Populated just-in-time from `sessionStorage['ne_history']` (up to 10 recent NetEscape URLs). `netescape.js` writes to this key at the end of `renderPage()`.
+
+**Shut Down modal — three radio options:**
+1. **Shut Down** — shows a non-dismissable black "It is now safe to turn off your computer." overlay.
+2. **Restart the computer** — fires Umami `shutdown_trigger`, 100ms tick, then `sessionStorage.clear()` + `boot.restart()` (soft restart, no page reload).
+3. **Close all programs and log off as Atsushi** — closes all open windows via `desktop.closeAll()`, then shows: `"Thanks for visiting. Close the tab whenever you're ready."` ← **intentional deviation from the original "Restart in MS-DOS mode" spec slot.** Log Off was chosen because it provides a genuine recruiter-facing goodbye moment. Do not revert to MS-DOS mode.
+
+**`beforeunload` Umami event:** Registered as best-effort via `navigator.sendBeacon()`. Umami CDN does not expose a sendBeacon API, so this is currently a documented no-op. **QA note: mark as "expected to be unreliable / not tracked" — do not treat missing beforeunload events as a bug.**
 
 #### Desktop App Launches (Texture Zone)
 
@@ -503,7 +520,7 @@ Before each milestone:
 
   **Correct**: All chrome corners are sharp. Set `border-radius: 0` if needed.
 * **Pitfall**: Dial-up runs on every NetEscape navigation
-  **Correct**: Dial-up *only* on (1) first NetEscape session and (2) manual URL entry. Track `hasDialedUp` boolean in `ie.js` (pending rename to `netescape.js`).
+  **Correct**: Dial-up *only* on (1) first NetEscape session and (2) manual URL entry. Track `hasDialedUp` boolean in `netescape.js`.
 * **Pitfall**: Rendering guestbook entries with unsanitized HTML  
 
   **Correct**: Always set text with `textContent`; validate URLs before rendering `<a>`.
