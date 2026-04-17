@@ -44,8 +44,11 @@ window.APC.desktop = (function () {
   function init() {
     startClock();
     bindDesktopIcons();
-    bindStartButton();
     bindContextMenu();
+    // Start menu is owned by taskbar.js which is loaded before desktop.js fires.
+    if (window.APC.taskbar && typeof window.APC.taskbar.init === 'function') {
+      window.APC.taskbar.init();
+    }
     // Widgets fire their first fetch immediately; subsequent fetches self-schedule via setTimeout.
     if (window.APC.widgets && typeof window.APC.widgets.init === 'function') {
       window.APC.widgets.init();
@@ -1179,8 +1182,40 @@ window.APC.desktop = (function () {
     contentEl.appendChild(wrap);
   }
 
+  // --- Close all windows -----------------------------------------------
+  // Called by Start Menu Log Off action and by boot.restart().
+
+  function closeAll() {
+    var ids = Object.keys(windows);
+    ids.forEach(function (id) {
+      if (windows[id]) { closeWindow(windows[id]); }
+    });
+    syspropsState = null;
+  }
+
+  // --- Module reset (called by boot.restart()) -------------------------
+  // Discards all window references so state is clean when desktop.init()
+  // fires again after the gate/boot sequence replays. DOM cleanup (removing
+  // window-layer and taskbar-windows children) is done by boot.restart().
+
+  function reset() {
+    Object.keys(windows).forEach(function (id) { delete windows[id]; });
+    Object.keys(iconLastClick).forEach(function (k) { delete iconLastClick[k]; });
+    Object.keys(appLaunching).forEach(function (k) { delete appLaunching[k]; });
+    zCounter = 100;
+    winIdCounter = 0;
+    activeWindowId = null;
+    syspropsState = null;
+  }
+
   // --- Public exports --------------------------------------------------
 
-  return { init: init, createWindow: createWindow };
+  return {
+    init:         init,
+    createWindow: createWindow,
+    launchApp:    launchApp,
+    closeAll:     closeAll,
+    reset:        reset
+  };
 
 }());

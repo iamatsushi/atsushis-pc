@@ -100,6 +100,7 @@
     MENU_ACTION_MIN_MS:       100,  // item click → action fires
     MENU_ACTION_MAX_MS:       250,
     MENU_FLICKER_CHANCE:      1/12, // probability menu flickers closed on open
+    SUBMENU_CLOSE_DELAY_MS:    300, // delay before submenu closes after mouse leaves
 
     // -------------------------------------------------------------------------
     // Desktop App Launches  —  TEXTURE ZONE

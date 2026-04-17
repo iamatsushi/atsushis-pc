@@ -546,6 +546,99 @@ window.APC.boot = (function () {
     }, skipDelay ? 0 : window.APC.timing.BOOT_DESKTOP_PAUSE_MS);
   }
 
-  return { init };
+  // --- Soft restart ---------------------------------------------------
+  // Resets all module state and re-runs the full gate → boot → desktop
+  // sequence without a page reload. Called by the Start Menu Shut Down
+  // dialog when the user selects "Restart the computer".
+
+  function restart() {
+    // Reset module-level animation state.
+    hasStarted = false;
+    identityPhase = 'waiting';
+    identityTyped1 = '';
+    identityTyped2 = '';
+    if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null; }
+    startupAudio = null;
+
+    // Reset session connection state.
+    if (window.APC.session) { window.APC.session.isConnected = false; }
+
+    // Reset netescape and desktop module state (avoids dangling references).
+    if (window.APC.netescape && typeof window.APC.netescape.reset === 'function') {
+      window.APC.netescape.reset();
+    }
+    if (window.APC.desktop && typeof window.APC.desktop.reset === 'function') {
+      window.APC.desktop.reset();
+    }
+
+    // Clear session keys so init() runs the full sequence.
+    sessionStorage.removeItem('boot_complete');
+    sessionStorage.removeItem('ne_history');
+
+    // Reset DOM — hide desktop, clear open windows and taskbar buttons.
+    var desktop = document.getElementById('desktop');
+    if (desktop) { desktop.classList.add('desktop--hidden'); }
+
+    var windowLayer = document.getElementById('window-layer');
+    if (windowLayer) { windowLayer.innerHTML = ''; }
+
+    var taskbarWindows = document.getElementById('taskbar-windows');
+    if (taskbarWindows) { taskbarWindows.innerHTML = ''; }
+
+    // Reset boot progress track.
+    var track = document.getElementById('boot-progress-track');
+    if (track) { track.innerHTML = ''; track.setAttribute('aria-valuenow', '0'); }
+
+    var bootScreen = document.getElementById('boot-screen');
+    if (bootScreen) {
+      bootScreen.classList.add('boot-screen--hidden');
+      bootScreen.classList.remove('boot-screen--fade');
+    }
+
+    // Show gate screen fresh.
+    var gate = document.getElementById('gate-screen');
+    if (gate) {
+      gate.classList.remove('gate-screen--hidden');
+      gate.classList.remove('gate-screen--fade');
+    }
+
+    var gatePrompt = document.getElementById('gate-prompt');
+    if (gatePrompt) { gatePrompt.classList.add('gate-prompt--hidden'); }
+
+    // Re-run the boot init — sets up canvas, rain, and gate listeners.
+    init();
+  }
+
+  // --- Shutdown screen -------------------------------------------------
+  // Shows a non-dismissable "safe to turn off" overlay — the simulation
+  // equivalent of WinDoors 98 powering off.
+
+  function shutdown() {
+    if (window.umami) { window.umami.track('shutdown_trigger'); }
+
+    var overlay = document.createElement('div');
+    overlay.setAttribute('role', 'alertdialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', 'Shut down');
+    overlay.style.cssText = [
+      'position:fixed;top:0;left:0;width:100%;height:100%;',
+      'background:#000000;',
+      'z-index:99999;',
+      'font-family:"MS Sans Serif",Tahoma,sans-serif;'
+    ].join('');
+
+    var msg = document.createElement('div');
+    msg.style.cssText = [
+      'position:absolute;bottom:80px;left:0;right:0;',
+      'color:#FFFFFF;font-size:13px;text-align:center;',
+      'line-height:1.8;'
+    ].join('');
+    msg.textContent = 'It is now safe to turn off your computer.';
+
+    overlay.appendChild(msg);
+    document.body.appendChild(overlay);
+  }
+
+  return { init: init, restart: restart, shutdown: shutdown };
 
 }());

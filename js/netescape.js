@@ -473,6 +473,22 @@ window.APC.netescape = (function () {
       guestbook: renderGuestbook
     };
     (renderers[pageKey] || renderHome)();
+
+    // Record nav history AFTER successful render so Start Menu > Documents
+    // always reflects pages that actually loaded (not just navigation attempts).
+    recordNavHistory(currentUrl);
+  }
+
+  // Persist up to 10 recently visited URLs in sessionStorage for Start Menu > Documents.
+  // Deduplicates: re-visiting a URL moves it to the front. Called at end of renderPage().
+  function recordNavHistory(url) {
+    try {
+      var hist = JSON.parse(sessionStorage.getItem('ne_history') || '[]');
+      hist = hist.filter(function (u) { return u !== url; });
+      hist.unshift(url);
+      if (hist.length > 10) { hist = hist.slice(0, 10); }
+      sessionStorage.setItem('ne_history', JSON.stringify(hist));
+    } catch (e) {}
   }
 
   function renderHome() {
@@ -1584,8 +1600,29 @@ window.APC.netescape = (function () {
     });
   }
 
+  // --- Module reset (called by boot.restart()) -------------------------
+  // Clears all netescape state so a soft restart doesn't leave dangling
+  // references to closed/removed DOM elements.
+
+  function reset() {
+    isDialingUp = false;
+    ieWindowState = null;
+    currentUrl = DEFAULT_URL;
+    pageEl = null;
+    addressInput = null;
+    statusEl = null;
+    backBtn = null;
+    fwdBtn = null;
+    navHistory = [];
+    navIndex = -1;
+    currentParams = {};
+    if (freezeTimer)    { clearTimeout(freezeTimer);    freezeTimer = null;    }
+    if (pageLoadTimer)  { clearTimeout(pageLoadTimer);  pageLoadTimer = null;  }
+    if (pageLoadMidTimer) { clearTimeout(pageLoadMidTimer); pageLoadMidTimer = null; }
+  }
+
   // --- Public exports --------------------------------------------------
 
-  return { open: open, connect: connect };
+  return { open: open, connect: connect, reset: reset };
 
 }());

@@ -58,7 +58,7 @@
       <div class="desktop-icon" data-app="netescape"
            tabindex="0" role="button" aria-label="NetEscape">
         <span class="desktop-icon__img" aria-hidden="true">🌐</span>
-        <span class="desktop-icon__label">Internet Explorer</span>
+        <span class="desktop-icon__label">NetEscape</span>
       </div>
       <div class="desktop-icon" data-app="dialup"
            tabindex="0" role="button" aria-label="Dial-Up Networking">
@@ -75,10 +75,8 @@
     <!-- Window layer — windows are appended here by desktop.js -->
     <div id="window-layer"></div>
 
-    <!-- Start menu stub — toggled by start button -->
-    <div id="start-menu" aria-label="Start menu" role="menu">
-      <p class="start-menu__stub">Start menu coming soon</p>
-    </div>
+    <!-- Start menu — content built by taskbar.js on init() -->
+    <div id="start-menu" role="menu" aria-label="Start menu"></div>
 
     <!-- Taskbar: start button (float left), system tray (float right),
          taskbar-windows fills remaining width via BFC (overflow:hidden) -->
@@ -101,6 +99,7 @@
   </div>
 
   <script src="js/win98-timing.js"></script>
+  <script src="js/taskbar.js"></script>
   <script src="js/desktop.js"></script>
   <script src="js/netescape.js"></script>
   <script src="js/apps/winamp.js"></script>
