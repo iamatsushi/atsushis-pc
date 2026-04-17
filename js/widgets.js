@@ -40,13 +40,13 @@ window.APC.widgets = (function () {
   // --- Weather widget -------------------------------------------------
 
   var weatherEl = null;
-  var lastWeatherText = '--';
+  var lastWeatherText = '--\u00B0F';  // placeholder shown while first fetch is in-flight
   var cachedLat = null;   // visitor latitude from Geolocation API (null until resolved)
   var cachedLon = null;   // visitor longitude
 
   function initWeather() {
     weatherEl = document.getElementById('taskbar-weather');
-    if (weatherEl) { weatherEl.textContent = '--'; }
+    if (weatherEl) { weatherEl.textContent = '--\u00B0F'; }
 
     // Request geolocation once; cache coords for all subsequent fetches.
     // If denied, timed out, or unavailable, fall back to Pi default (Portland).
@@ -89,7 +89,11 @@ window.APC.widgets = (function () {
         var emoji = condId !== null ? getWeatherEmoji(condId) : '\uD83C\uDF21';
         var city = (data.name && data.name.length) ? data.name : 'Local';
         lastWeatherText = emoji + ' ' + city + ' ' + temp + '\u00B0F';
-        if (weatherEl) { weatherEl.textContent = lastWeatherText; }
+        // Render delay: keep '--°F' visible for WEATHER_LOAD ms before revealing (Texture Zone)
+        var t = window.APC.timing;
+        setTimeout(function () {
+          if (weatherEl) { weatherEl.textContent = lastWeatherText; }
+        }, t.rand(t.WEATHER_LOAD_MIN_MS, t.WEATHER_LOAD_MAX_MS));
       })
       .catch(function () {
         // Silent fail — display keeps last known value (initialized to '--')
@@ -99,6 +103,10 @@ window.APC.widgets = (function () {
         setTimeout(fetchWeather, WEATHER_INTERVAL_MS);
       });
   }
+
+  // --- Tray pop-up state ----------------------------------------------
+
+  var trayPopupTimer = null;
 
   // --- RAM widget -----------------------------------------------------
 
@@ -127,7 +135,11 @@ window.APC.widgets = (function () {
         if (!data || !data.total || data.total === 0) { throw new Error('Invalid RAM data'); }
         var pct = Math.round((data.used / data.total) * 100);
         lastRamText = 'RAM: ' + pct + '%';
-        if (ramEl) { ramEl.textContent = lastRamText; }
+        // Render delay: wait RAM_RENDER ms before updating display (Texture Zone)
+        var t = window.APC.timing;
+        setTimeout(function () {
+          if (ramEl) { ramEl.textContent = lastRamText; }
+        }, t.rand(t.RAM_RENDER_MIN_MS, t.RAM_RENDER_MAX_MS));
         // Schedule next fetch from success path — explicit, not chained after .catch()
         setTimeout(fetchRam, RAM_INTERVAL_MS);
       })
@@ -161,6 +173,61 @@ window.APC.widgets = (function () {
           window.umami.track('easteregg_trigger', { easter_egg: 'ram_overload' });
         }
       }
+    });
+  }
+
+  // --- Tray pop-ups  (Texture Zone) -----------------------------------
+  // Simulates Win98 security/system notifications from the notification area.
+  // Fires every TRAY_POPUP_MIN–MAX ms; each balloon stays for TRAY_POPUP_DISPLAY ms.
+  // Close button has TRAY_CLICK ms response delay per the timing spec.
+
+  function initTrayPopups() {
+    scheduleTrayPopup();
+  }
+
+  function scheduleTrayPopup() {
+    var t = window.APC.timing;
+    trayPopupTimer = setTimeout(function () {
+      var messages = [
+        'Your computer may be at risk.',
+        'Low disk space on C:'
+      ];
+      showTrayPopup(messages[Math.floor(Math.random() * messages.length)]);
+      scheduleTrayPopup();
+    }, t.rand(t.TRAY_POPUP_MIN_MS, t.TRAY_POPUP_MAX_MS));
+  }
+
+  function showTrayPopup(message) {
+    var t = window.APC.timing;
+
+    var popup = document.createElement('div');
+    popup.className = 'win98-tray-popup';
+    popup.setAttribute('role', 'alert');
+    popup.setAttribute('aria-live', 'assertive');
+
+    var msgEl = document.createElement('span');
+    msgEl.className = 'win98-tray-popup__msg';
+    msgEl.textContent = message;
+
+    var closeBtn = document.createElement('button');
+    closeBtn.className = 'win98-tray-popup__close';
+    closeBtn.textContent = '\u00D7';
+    closeBtn.setAttribute('aria-label', 'Dismiss notification');
+
+    popup.appendChild(msgEl);
+    popup.appendChild(closeBtn);
+    document.body.appendChild(popup);
+
+    var autoTimer = setTimeout(dismiss, t.rand(t.TRAY_POPUP_DISPLAY_MIN_MS, t.TRAY_POPUP_DISPLAY_MAX_MS));
+
+    function dismiss() {
+      clearTimeout(autoTimer);
+      if (popup.parentNode) { popup.parentNode.removeChild(popup); }
+    }
+
+    // TRAY_CLICK_MIN/MAX delay on close button response (Texture Zone tray click latency)
+    closeBtn.addEventListener('click', function () {
+      setTimeout(dismiss, t.rand(t.TRAY_CLICK_MIN_MS, t.TRAY_CLICK_MAX_MS));
     });
   }
 
@@ -226,6 +293,7 @@ window.APC.widgets = (function () {
   function init() {
     initWeather();
     initRam();
+    initTrayPopups();
   }
 
   return { init: init };
