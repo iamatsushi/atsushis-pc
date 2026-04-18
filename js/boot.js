@@ -877,6 +877,7 @@ window.APC.boot = (function () {
       'background:#C0C0C0;',
       'border:1px solid #808080;',
       'font-size:0;line-height:0;',
+      'text-align:left;',
       'margin:0 auto;',
       'overflow:hidden;'
     ].join('');
