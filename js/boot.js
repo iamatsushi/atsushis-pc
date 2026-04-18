@@ -497,6 +497,10 @@ window.APC.boot = (function () {
       window.APC.bootScene.init(function () {
         cancelAnimationFrame(animFrame);
         hideGate();
+        // Guard: preloadBootAudio() should have fired in onGateInteract, but if
+        // bootAudio is somehow null (e.g. soft restart race), preload it now so
+        // renderPostScreen() can always play hdd-chatter.
+        if (!bootAudio) { preloadBootAudio(); }
         advanceBootState(BOOT_STATE.POST);
       });
     }, window.APC.timing.GATE_FADE_MS);
