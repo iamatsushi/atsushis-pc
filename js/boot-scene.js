@@ -90,10 +90,7 @@ var POWER_X1  = 877, POWER_Y1  = 683, POWER_X2  = 927, POWER_Y2  = 738;
   // Called once on init and again on every resize.
 
   function computeRegions() {
-    scale = Math.min(
-  Math.max(window.innerWidth / ASSET_W, window.innerHeight / ASSET_H),
-  window.innerHeight / ASSET_H
-);
+    scale = Math.max(window.innerWidth / ASSET_W, window.innerHeight / ASSET_H);
     var drawW = ASSET_W * scale;
     var drawH = ASSET_H * scale;
     offsetX = (window.innerWidth  - drawW) / 2;
