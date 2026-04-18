@@ -24,29 +24,30 @@
   display: block;
 }
 
-/* --- Centered prompt overlay ------------------------------- */
+/* --- Prompt overlay — top set by JS via MATRIX_PROMPT_CANVAS_Y_PCT --- */
 
 #gate-prompt {
   position: absolute;
-  top: 50%;
+  /* top controlled by JS (resizeCanvas + revealPrompt) */
   left: 50%;
-  transform: translate(-50%, -50%);
+  transform: translateX(-50%);
   text-align: center;
   pointer-events: none;
   outline: none;
   user-select: none;
+  opacity: 0;
+  transition: opacity 300ms ease;
 }
 
-/* --- "Click to Start" label — blinking at 1s --------------- */
+/* Reveal class added by JS after identity line sequence completes */
+#gate-prompt.gate-prompt--visible {
+  opacity: 1;
+}
+
+/* --- "Click to Start" label — hidden per #87 spec ---------- */
 
 #gate-label {
-  font-family: 'Courier New', monospace;
-  font-size: 22px;
-  color: #00FF41;
-  letter-spacing: 4px;
-  text-transform: uppercase;
-  margin: 0 0 20px 0;
-  animation: label-blink 1000ms step-end infinite;
+  display: none;
 }
 
 /* --- Terminal prompt line ----------------------------------- */
@@ -66,10 +67,16 @@
   animation: cursor-blink 530ms step-end infinite;
 }
 
-/* --- Hidden until identity line sequence completes --------- */
+/* --- Five-screen boot sequence container ------------------- */
 
-#gate-prompt.gate-prompt--hidden {
-  visibility: hidden;
+#boot-sequence {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+}
+
+.boot-sequence--hidden {
+  display: none;
 }
 
 /* --- Fade-out transition triggered by JS ------------------- */
