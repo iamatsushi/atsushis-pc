@@ -1239,18 +1239,21 @@ window.APC.boot = (function () {
     var GLOW_MAX_R   = t.WORMHOLE_GLOW_MAX_RADIUS;
     var GLOW_PULSE_R = t.WORMHOLE_GLOW_PULSE_RADIUS;
 
-    // --- Build wormhole character grid ---
-    // One character per canvas cell at ~60% density, sampled from the full grid.
-    // Density keeps frame cost reasonable on large viewports.
-    var gridCols = Math.floor(w / FONT_SIZE);
+    // --- Snapshot live Matrix rain columns ---
+    // Build wormChars from the actual columns array so the animation starts
+    // from the real rain state (column x-positions, current row as anchor).
+    // ~60% density keeps frame cost reasonable on large viewports.
     var gridRows = Math.floor(h / FONT_SIZE);
     var wormChars = [];
 
-    for (var ci = 0; ci < gridCols; ci++) {
+    for (var ci = 0; ci < columns.length; ci++) {
+      var col = columns[ci];
       for (var ri = 0; ri < gridRows; ri++) {
         if (Math.random() > 0.6) { continue; }
-        var px  = ci * FONT_SIZE + FONT_SIZE / 2;
-        var py  = (ri + 1) * FONT_SIZE;
+        var px  = col.x + FONT_SIZE / 2;
+        // Distribute rows relative to column's live rain-head position.
+        var row = (col.currentRow + ri) % gridRows;
+        var py  = (row + 1) * FONT_SIZE;
         var dx  = px - cx;
         var dy  = py - cy;
         var dist = Math.sqrt(dx * dx + dy * dy);
@@ -1330,7 +1333,7 @@ window.APC.boot = (function () {
 
         // Glow grows 0 → GLOW_MAX using smoothstep.
         var glowProg = tNorm * tNorm * (3 - 2 * tNorm);
-        glowRadius   = glowProg * GLOW_MAX_R * bmpScale;
+        glowRadius   = glowProg * GLOW_MAX_R;
 
         for (i = 0; i < wormChars.length; i++) {
           c = wormChars[i];
@@ -1359,10 +1362,10 @@ window.APC.boot = (function () {
         // First 40% (200ms): hold at GLOW_MAX. Next 60% (300ms): contract to GLOW_PULSE.
         var EXPAND_FRAC = 0.4;
         if (prog < EXPAND_FRAC) {
-          glowRadius = GLOW_MAX_R * bmpScale;
+          glowRadius = GLOW_MAX_R;
         } else {
           var contractProg = (prog - EXPAND_FRAC) / (1 - EXPAND_FRAC);
-          glowRadius = (GLOW_MAX_R - (GLOW_MAX_R - GLOW_PULSE_R) * contractProg) * bmpScale;
+          glowRadius = GLOW_MAX_R - (GLOW_MAX_R - GLOW_PULSE_R) * contractProg;
         }
 
         drawGlow(glowRadius);
@@ -1381,7 +1384,7 @@ window.APC.boot = (function () {
         }
 
         // Held glow fades as desk scene reveals.
-        glowRadius = GLOW_PULSE_R * bmpScale * (1 - phaseElapsed / REVEAL_MS);
+        glowRadius = GLOW_PULSE_R * (1 - phaseElapsed / REVEAL_MS);
         drawGlow(glowRadius);
 
         // Radial clip reveal: slow start, fast finish (cubic ease).

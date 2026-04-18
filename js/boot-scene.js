@@ -413,7 +413,8 @@ var POWER_X1  = 882, POWER_Y1  = 723, POWER_X2  = 927, POWER_Y2  = 738;
       'z-index:100;',
       'opacity:0;',
       'display:block;',
-      'background:transparent;'
+      'background:transparent;',
+      'pointer-events:none;'
     ].join('');
     document.body.appendChild(sceneCanvas);
     sceneCtx = sceneCanvas.getContext('2d');
@@ -451,8 +452,9 @@ var POWER_X1  = 882, POWER_Y1  = 723, POWER_X2  = 927, POWER_Y2  = 738;
         }, function () {
           // Wormhole complete — snap scene canvas visible and start rAF.
           if (!sceneCanvas) { return; }
-          sceneCanvas.style.transition = 'none';
-          sceneCanvas.style.opacity    = '1';
+          sceneCanvas.style.transition    = 'none';
+          sceneCanvas.style.opacity       = '1';
+          sceneCanvas.style.pointerEvents = '';
           drawFrame();
           sceneCanvas.addEventListener('mousemove', onMouseMove);
           sceneCanvas.addEventListener('click', onCanvasClick);

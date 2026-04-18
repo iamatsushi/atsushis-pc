@@ -133,7 +133,7 @@ boot.js was fully rewritten in PR #97. The old single-screen Win98 progress bar 
 - Phase 1 `WORMHOLE_DISTURBANCE_MS` (1500ms): characters drift tangentially (±30px), angle updated each frame for smooth Phase 2 handoff
 - Phase 2 `WORMHOLE_SPIRAL_MS` (2000ms): radius = `initRadius * (1 − easedT)²` — deterministic, characters arrive at center exactly at phase end; rotation speed increases with `easedT`; glow 0 → 120px
 - Phase 3 `WORMHOLE_COLLAPSE_MS` (500ms): glow pulse — hold 120px (first 40%), contract to 20px (last 60%)
-- Phase 4 `WORMHOLE_REVEAL_MS` (1000ms): desk scene bitmap revealed via `ctx.arc` + `clip()` from pinhole outward; cubic ease; glow fades
+- Phase 4 `WORMHOLE_REVEAL_MS` (2000ms): desk scene bitmap revealed via `ctx.arc` + `clip()` from pinhole outward; cubic ease; glow fades
 - On complete: `boot-scene.js` snaps sceneCanvas to `opacity:1` (no transition) and starts its rAF loop
 
 **Boot audio files** (all preloaded on gate interact, never before):

@@ -268,7 +268,7 @@
     WORMHOLE_DISTURBANCE_MS:    1500,  // phase 1 — lateral drift before spiral
     WORMHOLE_SPIRAL_MS:         2000,  // phase 2 — full inward vortex
     WORMHOLE_COLLAPSE_MS:        500,  // phase 3 — final rush + glow pulse
-    WORMHOLE_REVEAL_MS:         1000,  // phase 4 — desk scene radial reveal
+    WORMHOLE_REVEAL_MS:         2000,  // phase 4 — desk scene radial reveal
     WORMHOLE_GLOW_MAX_RADIUS:    120,  // peak glow radius in px (pre-scale)
     WORMHOLE_GLOW_PULSE_RADIUS:   20,  // contracted radius after collapse pulse
 
