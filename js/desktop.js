@@ -408,8 +408,8 @@ window.APC.desktop = (function () {
 
     // Animate fill from 0 → 100% over 2000–3000ms using small increments
     var t = window.APC.timing;
-    var totalMs   = t.rand(2000, 3000);
-    var stepMs    = 50;
+    var totalMs   = t.rand(t.RECYCLEBIN_EMPTY_MIN_MS, t.RECYCLEBIN_EMPTY_MAX_MS);
+    var stepMs    = t.RECYCLEBIN_PROGRESS_STEP_MS;
     var steps     = Math.floor(totalMs / stepMs);
     var stepCount = 0;
 
