@@ -439,23 +439,25 @@ var POWER_X1  = 882, POWER_Y1  = 723, POWER_X2  = 927, POWER_Y2  = 738;
     });
     img.addEventListener('load', function () {
       processAsset(img, function () {
-        // Start the rAF loop and fade in the scene.
-        drawFrame();
-
-        // Fade in over BOOT_SCENE_FADE_IN_MS.
-        var t = window.APC.timing;
-        sceneCanvas.style.transition = 'opacity ' + t.BOOT_SCENE_FADE_IN_MS + 'ms ease';
-        // Double-rAF to ensure the initial opacity:0 has been painted before transition starts.
-        requestAnimationFrame(function () {
-          requestAnimationFrame(function () {
-            if (sceneCanvas) { sceneCanvas.style.opacity = '1'; }
-          });
+        // Wormhole transition (#106): matrix rain spirals into desk scene.
+        // startWormhole takes control of #matrix-canvas, runs four phases,
+        // then calls onComplete when the desk scene is fully revealed.
+        window.APC.boot.startWormhole(processedBitmap, {
+          offsetX: offsetX,
+          offsetY: offsetY,
+          scale:   scale,
+          assetW:  ASSET_W,
+          assetH:  ASSET_H
+        }, function () {
+          // Wormhole complete — snap scene canvas visible and start rAF.
+          if (!sceneCanvas) { return; }
+          sceneCanvas.style.transition = 'none';
+          sceneCanvas.style.opacity    = '1';
+          drawFrame();
+          sceneCanvas.addEventListener('mousemove', onMouseMove);
+          sceneCanvas.addEventListener('click', onCanvasClick);
+          window.addEventListener('resize', onResize);
         });
-
-        // Attach interaction listeners.
-        sceneCanvas.addEventListener('mousemove', onMouseMove);
-        sceneCanvas.addEventListener('click', onCanvasClick);
-        window.addEventListener('resize', onResize);
       });
     });
     img.src = 'assets/images/desk-scene_edited.png';
