@@ -25,7 +25,7 @@ var ASSET_W = 1024;
 var ASSET_H = 1172;
   
 var SCREEN_X1 = 201, SCREEN_Y1 = 205, SCREEN_X2 = 654, SCREEN_Y2 = 600;
-var POWER_X1  = 877, POWER_Y1  = 683, POWER_X2  = 927, POWER_Y2  = 738;
+var POWER_X1  = 882, POWER_Y1  = 723, POWER_X2  = 927, POWER_Y2  = 738;
 
   // Power indicator light (adjacent to power button in asset coordinates).
   var INDICATOR_AX = 873, INDICATOR_AY = 680;
