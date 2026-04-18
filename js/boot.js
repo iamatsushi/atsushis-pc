@@ -990,6 +990,13 @@ window.APC.boot = (function () {
       window.APC.desktop.init();
     }
 
+    // Force desktop visible — CSS transition or lingering opacity from desktop--hidden
+    // removal may leave #desktop invisible even after init() runs.
+    if (desktop) {
+      desktop.style.opacity = '1';
+      desktop.style.display = 'block';
+    }
+
     // Begin opacity fade on the next frame so the browser has processed the
     // opacity:1 initial style before the transition kicks in.
     container.style.transition = 'opacity ' + bs.DESKTOP_FADE_MS + 'ms ease';
@@ -1010,7 +1017,12 @@ window.APC.boot = (function () {
   // --- Boot complete (#94) ---------------------------------------------
 
   function handleBootComplete(container) {
-    // Hide boot-sequence — desktop is now fully visible.
+    // Fully clear all inline style state left by the Screen 5 fade, then hide.
+    // display:none must be inline (not just class) because advanceBootState sets
+    // an inline display:block that would otherwise override boot-sequence--hidden.
+    container.style.display = 'none';
+    container.style.opacity = '';
+    container.style.transition = '';
     container.classList.add('boot-sequence--hidden');
     container.innerHTML = '';
 
