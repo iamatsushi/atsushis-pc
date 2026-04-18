@@ -923,6 +923,350 @@
 }
 
 /* ---------------------------------------------------------------
+   System Properties — purple titlebar + no-resize override
+   win98-window--sysprops is added by desktop.js after createWindow.
+   Resize handles are present in the DOM but hidden by CSS.
+--------------------------------------------------------------- */
+
+.win98-window--sysprops .win98-window__titlebar {
+  background: linear-gradient(to right, #7A5ACD, #4B2E83);
+}
+
+.win98-window--sysprops .win98-window__title,
+.win98-window--sysprops .win98-window__btn {
+  color: #FFFFFF;
+}
+
+.win98-window--sysprops .win98-window__btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.win98-window--sysprops .win98-window__resize {
+  display: none;
+}
+
+/* ---------------------------------------------------------------
+   About This Machine inset box (General tab)
+--------------------------------------------------------------- */
+
+.sysprops-about-box {
+  border: 2px solid;
+  border-color: #808080 #FFFFFF #FFFFFF #808080;
+  background: #C0C0C0;
+  padding: 6px 8px;
+  margin-top: 10px;
+}
+
+.sysprops-about-box__header {
+  font-family: 'MS Sans Serif', Tahoma, sans-serif;
+  font-size: 11px;
+  font-weight: bold;
+  color: #000000;
+  margin: 0 0 4px;
+}
+
+.sysprops-about-box__line {
+  font-family: 'MS Sans Serif', Tahoma, sans-serif;
+  font-size: 11px;
+  color: #000000;
+  margin: 0;
+  line-height: 1.45;
+}
+
+/* ---------------------------------------------------------------
+   Device Manager — radio buttons, device tree
+--------------------------------------------------------------- */
+
+.sysprops-radio-row {
+  padding: 0 0 6px;
+}
+
+.sysprops-radio-label {
+  display: block;
+  font-family: 'MS Sans Serif', Tahoma, sans-serif;
+  font-size: 11px;
+  color: #000000;
+  line-height: 1.6;
+  cursor: default;
+}
+
+.sysprops-device-tree {
+  border: 2px solid;
+  border-color: #808080 #FFFFFF #FFFFFF #808080;
+  background: #FFFFFF;
+  height: 180px;
+  overflow-y: auto;
+  font-family: 'MS Sans Serif', Tahoma, sans-serif;
+  font-size: 11px;
+  color: #000000;
+}
+
+.sysprops-device-node {
+  padding-left: 0;
+}
+
+.sysprops-device-node--child {
+  padding-left: 18px;
+}
+
+.sysprops-device-item {
+  display: block;
+  padding: 1px 4px;
+  white-space: nowrap;
+  cursor: default;
+  line-height: 1.6;
+}
+
+.sysprops-device-item:focus {
+  outline: 1px dotted #000000;
+  outline-offset: -2px;
+}
+
+.sysprops-device-item--selected {
+  background: #000080;
+  color: #FFFFFF;
+}
+
+.sysprops-device-toggle {
+  display: inline-block;
+  width: 18px;
+  font-family: 'MS Sans Serif', Tahoma, sans-serif;
+  font-size: 10px;
+  cursor: pointer;
+  color: #000000;
+}
+
+.sysprops-device-item--selected .sysprops-device-toggle {
+  color: #FFFFFF;
+}
+
+.sysprops-device-class-icon {
+  display: inline-block;
+  margin-right: 4px;
+  font-size: 12px;
+}
+
+.sysprops-device-children {
+  padding-left: 0;
+}
+
+/* Status icons — yellow ! and red × */
+
+.sysprops-status-icon {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  line-height: 12px;
+  text-align: center;
+  font-size: 10px;
+  font-weight: bold;
+  border-radius: 0;
+  margin-right: 2px;
+  vertical-align: middle;
+}
+
+.sysprops-status-icon--warn {
+  background: #FFFF00;
+  color: #000000;
+  border: 1px solid #000000;
+}
+
+.sysprops-status-icon--err {
+  background: #FF0000;
+  color: #FFFFFF;
+  border: 1px solid #000000;
+}
+
+/* Device Manager action buttons */
+
+.sysprops-dm-btns {
+  padding-top: 6px;
+  text-align: right;
+}
+
+.sysprops-dm-btns .sysprops-btn {
+  margin-left: 4px;
+}
+
+/* ---------------------------------------------------------------
+   Hardware Profiles tab stub
+--------------------------------------------------------------- */
+
+.sysprops-hw-list {
+  border: 2px solid;
+  border-color: #808080 #FFFFFF #FFFFFF #808080;
+  background: #FFFFFF;
+  height: 120px;
+  font-family: 'MS Sans Serif', Tahoma, sans-serif;
+  font-size: 11px;
+}
+
+.sysprops-hw-item {
+  padding: 2px 6px;
+  background: #000080;
+  color: #FFFFFF;
+}
+
+/* ---------------------------------------------------------------
+   Performance tab
+--------------------------------------------------------------- */
+
+.sysprops-perf-msg {
+  font-family: 'MS Sans Serif', Tahoma, sans-serif;
+  font-size: 11px;
+  color: #000000;
+  margin: 0 0 12px;
+}
+
+.sysprops-perf-stubs {
+  text-align: right;
+}
+
+.sysprops-perf-stubs .sysprops-btn {
+  margin-left: 4px;
+}
+
+/* ---------------------------------------------------------------
+   Nested dialog overlays (Properties, Remove, Clear Queue, etc.)
+--------------------------------------------------------------- */
+
+.sysprops-nested-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3500;
+  display: -ms-flexbox;
+  display: flex;
+  -ms-flex-align: center;
+  align-items: center;
+  -ms-flex-pack: center;
+  justify-content: center;
+  background: transparent;
+}
+
+.sysprops-nested-dialog {
+  background: #C0C0C0;
+  border: 2px solid;
+  border-color: #FFFFFF #808080 #808080 #FFFFFF;
+  min-width: 280px;
+  max-width: 420px;
+  font-family: 'MS Sans Serif', Tahoma, sans-serif;
+  font-size: 11px;
+}
+
+.sysprops-nested-dialog--props {
+  min-width: 360px;
+}
+
+.sysprops-nested-dialog__body {
+  padding: 10px 12px 8px;
+}
+
+.sysprops-nested-dialog__msg {
+  font-family: 'MS Sans Serif', Tahoma, sans-serif;
+  font-size: 11px;
+  color: #000000;
+  margin: 0 0 12px;
+  line-height: 1.5;
+}
+
+/* ---------------------------------------------------------------
+   Properties dialog panes (field rows, status box, driver row)
+--------------------------------------------------------------- */
+
+.sysprops-props-field {
+  display: block;
+  font-family: 'MS Sans Serif', Tahoma, sans-serif;
+  font-size: 11px;
+  color: #000000;
+  margin-bottom: 4px;
+  line-height: 1.5;
+}
+
+.sysprops-props-field--disabled {
+  color: #808080;
+}
+
+.sysprops-props-field__label {
+  font-weight: bold;
+  margin-right: 4px;
+}
+
+.sysprops-props-field__value {
+  color: #000000;
+}
+
+.sysprops-props-status-box {
+  border: 2px solid;
+  border-color: #808080 #FFFFFF #FFFFFF #808080;
+  background: #FFFFFF;
+  padding: 4px 6px;
+  margin-top: 6px;
+  min-height: 60px;
+}
+
+.sysprops-props-status-label {
+  font-family: 'MS Sans Serif', Tahoma, sans-serif;
+  font-size: 11px;
+  font-weight: bold;
+  color: #000000;
+  margin: 0 0 4px;
+}
+
+.sysprops-props-status-msg {
+  font-family: 'MS Sans Serif', Tahoma, sans-serif;
+  font-size: 11px;
+  color: #000000;
+  margin: 0;
+  line-height: 1.45;
+}
+
+.sysprops-props-driver-row {
+  padding-top: 8px;
+}
+
+/* ---------------------------------------------------------------
+   Clear Queue progress bar
+--------------------------------------------------------------- */
+
+.sysprops-progress-bar {
+  width: 100%;
+  height: 16px;
+  border: 2px solid;
+  border-color: #808080 #FFFFFF #FFFFFF #808080;
+  background: #FFFFFF;
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.sysprops-progress-fill {
+  height: 100%;
+  background: #000080;
+  width: 0%;
+}
+
+/* ---------------------------------------------------------------
+   Toast notification ("Removal requested — operation simulated")
+--------------------------------------------------------------- */
+
+.sysprops-toast {
+  position: fixed;
+  bottom: 36px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #FFFFCC;
+  border: 1px solid #000000;
+  padding: 4px 12px;
+  font-family: 'MS Sans Serif', Tahoma, sans-serif;
+  font-size: 11px;
+  color: #000000;
+  z-index: 6000;
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------
    Desktop wallpaper variants — cycled via Change Wallpaper
 --------------------------------------------------------------- */
 
