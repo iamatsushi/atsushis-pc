@@ -192,6 +192,14 @@
     SCREENSAVER_RESEED_MIN_MS: 25000, // min interval between node origin reseeds
     SCREENSAVER_RESEED_MAX_MS: 35000, // max interval
 
+    // -------------------------------------------------------------------------
+    // Recycle Bin — easter egg progress dialog  —  TEXTURE ZONE
+    // -------------------------------------------------------------------------
+
+    RECYCLEBIN_EMPTY_MIN_MS:       2000, // min total duration of progress fill
+    RECYCLEBIN_EMPTY_MAX_MS:       3000, // max total duration
+    RECYCLEBIN_PROGRESS_STEP_MS:     50, // setInterval tick for progress bar update
+
   };
 
 }());
