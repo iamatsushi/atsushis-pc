@@ -208,20 +208,9 @@ var POWER_X1  = 877, POWER_Y1  = 683, POWER_X2  = 927, POWER_Y2  = 738;
     // --- CRT region content (drawn before PNG so PNG transparent pixels reveal it) ---
 
     if (crtState === 'idle') {
-      // Black backing + matrix rain at reduced opacity. flickerActive dims further.
+      // CRT is off — pure black. No content until power button is clicked.
       ctx.fillStyle = '#000000';
       ctx.fillRect(sr.x, sr.y, sr.w, sr.h);
-
-      if (matrixCanvas) {
-        ctx.save();
-        ctx.globalAlpha = flickerActive ? 0.3 : 0.4;
-        ctx.drawImage(
-          matrixCanvas,
-          sr.x, sr.y, sr.w, sr.h, // src — same viewport coords
-          sr.x, sr.y, sr.w, sr.h  // dst
-        );
-        ctx.restore();
-      }
 
     } else if (crtState === 'btn_flash') {
       // Power button flash: CRT screen stays dim.
@@ -402,7 +391,8 @@ var POWER_X1  = 877, POWER_Y1  = 683, POWER_X2  = 927, POWER_Y2  = 738;
       'position:fixed;inset:0;',
       'z-index:100;',
       'opacity:0;',
-      'display:block;'
+      'display:block;',
+      'background:transparent;'
     ].join('');
     document.body.appendChild(sceneCanvas);
     sceneCtx = sceneCanvas.getContext('2d');
@@ -430,7 +420,6 @@ var POWER_X1  = 877, POWER_Y1  = 683, POWER_X2  = 927, POWER_Y2  = 738;
       processAsset(img, function () {
         // Start the rAF loop and fade in the scene.
         drawFrame();
-        scheduleIdleFlicker();
 
         // Fade in over BOOT_SCENE_FADE_IN_MS.
         var t = window.APC.timing;
