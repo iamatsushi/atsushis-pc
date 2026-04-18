@@ -21,14 +21,14 @@ window.APC.bootScene = (function () {
   // --- Asset coordinates (spec) -----------------------------------------------
   // Raw pixel positions in the 1024×894 source image.
 
-  var ASSET_W = 1024;
-  var ASSET_H = 894;
-
-  var SCREEN_X1 = 216, SCREEN_Y1 = 72,  SCREEN_X2 = 642, SCREEN_Y2 = 405;
-  var POWER_X1  = 882, POWER_Y1  = 545, POWER_X2  = 920, POWER_Y2  = 581;
+var ASSET_W = 1024;
+var ASSET_H = 1172;
+  
+var SCREEN_X1 = 201, SCREEN_Y1 = 205, SCREEN_X2 = 654, SCREEN_Y2 = 563;
+var POWER_X1  = 877, POWER_Y1  = 683, POWER_X2  = 927, POWER_Y2  = 738;
 
   // Power indicator light (adjacent to power button in asset coordinates).
-  var INDICATOR_AX = 878, INDICATOR_AY = 542;
+  var INDICATOR_AX = 873, INDICATOR_AY = 680;
   var INDICATOR_SIZE_PX = 4; // unscaled size
 
   // Chroma key colors (exact — no tolerance).
@@ -448,7 +448,7 @@ window.APC.bootScene = (function () {
         window.addEventListener('resize', onResize);
       });
     });
-    img.src = 'assets/images/desk-scene.png';
+    img.src = 'assets/images/desk-scene_edited.png';
   }
 
   function destroy() {
