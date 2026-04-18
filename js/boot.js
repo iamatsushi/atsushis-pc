@@ -492,10 +492,9 @@ window.APC.boot = (function () {
 
   function preloadBootAudio() {
     bootAudio = {
-      hddSpinup:  new Audio('assets/audio/hdd-spinup.mp3'),
       hddChatter: new Audio('assets/audio/hdd-chatter.mp3'),
       postBeep:   new Audio('assets/audio/post-beep.mp3'),
-      floppySeek: new Audio('assets/audio/floppy-seek.mp3'),
+      floppySeek: new Audio('assets/audio/floppy-read.mp3'),
       screech:    new Audio('assets/audio/hdd-screech.mp3'),
       chime:      new Audio('assets/audio/startup.mp3')
     };
@@ -581,7 +580,7 @@ window.APC.boot = (function () {
   //
   // Black screen, white monospace text, left-aligned.
   // Header lines appear sequentially, then RAM counter animates 0K→131072K.
-  // hdd-spinup plays on screen start; hdd-chatter begins after spinup ends.
+  // hdd-chatter plays on screen start (spin-up is baked into its first few seconds).
   // post-beep fires when RAM counter completes.
 
   function renderPostScreen(gen, container) {
@@ -600,20 +599,9 @@ window.APC.boot = (function () {
     ].join('');
     container.appendChild(output);
 
-    // hdd-spinup plays immediately; hdd-chatter begins when spinup ends.
-    // 3000ms fallback guards against the 'ended' event not firing (e.g. load error).
-    var chatterStarted = false;
-    function startChatter() {
-      if (chatterStarted || gen !== bootGen) { return; }
-      chatterStarted = true;
-      if (bootAudio) {
-        try { bootAudio.hddChatter.play().catch(function () {}); } catch (e) {}
-      }
-    }
+    // hdd-chatter plays immediately — spin-up sound is baked into its opening seconds.
     if (bootAudio) {
-      try { bootAudio.hddSpinup.play().catch(function () {}); } catch (e) {}
-      bootAudio.hddSpinup.addEventListener('ended', startChatter);
-      setTimeout(startChatter, 3000);
+      try { bootAudio.hddChatter.play().catch(function () {}); } catch (e) {}
     }
 
     function appendLine(text) {
