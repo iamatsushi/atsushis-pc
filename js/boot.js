@@ -633,9 +633,6 @@ window.APC.boot = (function () {
     function startRAMCounter() {
       if (gen !== bootGen) { return; }
       const RAM_TARGET = 131072;
-      // Derive step count from POST_DURATION_MS so counter fills in that window.
-      const totalSteps = Math.ceil(bs.POST_DURATION_MS / bs.RAM_INCREMENT_INTERVAL_MS);
-      const increment = Math.ceil(RAM_TARGET / totalSteps);
       let ramVal = 0;
 
       // Memory Test line with an inline span for the counter value.
@@ -646,16 +643,30 @@ window.APC.boot = (function () {
       ramDiv.appendChild(ramCounter);
       output.appendChild(ramDiv);
 
-      const timer = setInterval(function () {
-        if (gen !== bootGen) { clearInterval(timer); return; }
-        ramVal = Math.min(ramVal + increment, RAM_TARGET);
-        const formatted = String(ramVal) + 'K';
-        ramCounter.textContent = formatted.padStart(8, ' ');
+      // Recursive setTimeout with variable tick speed and occasional mechanical
+      // hesitation — simulates a real BIOS pausing to test each memory block
+      // rather than counting at a robotically fixed rate.
+      function tick() {
+        if (gen !== bootGen) { return; }
+        ramVal = Math.min(ramVal + bs.RAM_STEP_K, RAM_TARGET);
+        ramCounter.textContent = (String(ramVal) + 'K').padStart(8, ' ');
         if (ramVal >= RAM_TARGET) {
-          clearInterval(timer);
           onRAMComplete();
+          return;
         }
-      }, bs.RAM_INCREMENT_INTERVAL_MS);
+        const nextTick = t.rand(bs.RAM_TICK_MIN_MS, bs.RAM_TICK_MAX_MS);
+        if (Math.random() < bs.RAM_HESITATION_CHANCE) {
+          // Hesitation: counter stalls as if the machine is verifying that block.
+          setTimeout(function () {
+            if (gen !== bootGen) { return; }
+            setTimeout(tick, nextTick);
+          }, t.rand(bs.RAM_HESITATION_MIN_MS, bs.RAM_HESITATION_MAX_MS));
+        } else {
+          setTimeout(tick, nextTick);
+        }
+      }
+
+      setTimeout(tick, t.rand(bs.RAM_TICK_MIN_MS, bs.RAM_TICK_MAX_MS));
     }
 
     function onRAMComplete() {

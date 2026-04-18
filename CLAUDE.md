@@ -304,7 +304,7 @@ The boot sequence is a **six-state state machine** that fires after the gate cli
 
 **Screech roll:** Rolled once at gate interact. `screechFires = Math.random() < 0.6`. If fires: `screechScreen = Math.random() < 0.5 ? 'dos_log' : 'windoors_logo'`. Stored at module level, checked by Screens 3 and 4.
 
-**Screen 1 — POST (`renderPostScreen`):** Black background, white monospace. BIOS header lines print at `POST_TEXT_LINE_INTERVAL_MS` (100ms) intervals. RAM counter animates 0K → 131072K at `RAM_INCREMENT_INTERVAL_MS` (20ms) ticks. Post-beep plays after last line. `hddChatter.play()` called directly (no spinup).
+**Screen 1 — POST (`renderPostScreen`):** Black background, white monospace. BIOS header lines print at `POST_TEXT_LINE_INTERVAL_MS` (100ms) intervals. RAM counter animates 0K → 131072K in `RAM_STEP_K` (2048K) steps via recursive `setTimeout` at `RAM_TICK_MIN/MAX_MS` (30–90ms) per step; each step rolls `RAM_HESITATION_CHANCE` (8%) to insert a `RAM_HESITATION_MIN/MAX_MS` (200–600ms) mechanical pause before the next tick, simulating the machine verifying each memory block. Post-beep plays after last line. `hddChatter.play()` called directly (no spinup).
 
 **Screen 2 — IBS Splash (`renderIBSSplashScreen`):** Navy `#102046` background. CSS "IBS" logotype. Duration: `IBS_SPLASH_DURATION_MS` (6000ms). Floppy-seek plays at `FLOPPY_SEEK_DELAY_MIN/MAX_MS` (800–1000ms) after screen appears.
 
