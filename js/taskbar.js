@@ -247,23 +247,165 @@ window.APC.taskbar = (function () {
   }
 
   // --- Programs submenu -----------------------------------------------
+  // Programs only contains a single cascade item: Accessories ►
+  // All apps live one level deeper: Programs ► → Accessories ► → apps.
 
   function buildProgramsSubmenu() {
     var sub = document.createElement('div');
     sub.className = 'start-menu__submenu';
     sub.setAttribute('role', 'menu');
     sub.setAttribute('aria-label', 'Programs');
+    sub.appendChild(buildAccessoriesCascadeItem(sub));
+    return sub;
+  }
+
+  // Builds the Accessories cascade item, including its own hover timers.
+  // Hover discipline mirrors the top-level submenu pattern exactly:
+  //   MENU_SUBMENU_MIN/MAX_MS delay on enter, SUBMENU_CLOSE_DELAY_MS on leave,
+  //   clearTimeout on re-entry. Managed locally to avoid conflating with the
+  //   global openSubmenuEl tracker (which is single-level).
+  function buildAccessoriesCascadeItem(programsSub) {
+    var accOpenTimer  = null;
+    var accCloseTimer = null;
+
+    var el = document.createElement('div');
+    el.className = 'start-menu__submenu-item start-menu__submenu-item--has-submenu';
+    el.setAttribute('role', 'menuitem');
+    el.setAttribute('tabindex', '0');
+    el.setAttribute('aria-haspopup', 'menu');
+    el.setAttribute('aria-expanded', 'false');
+    el.dataset.key = 'accessories';
+
+    var iconSpan = document.createElement('span');
+    iconSpan.className = 'start-menu__item-icon';
+    iconSpan.setAttribute('aria-hidden', 'true');
+    iconSpan.textContent = '\uD83D\uDCC1';
+    el.appendChild(iconSpan);
+
+    var labelSpan = document.createElement('span');
+    labelSpan.className = 'start-menu__item-label';
+    labelSpan.textContent = 'Accessories';
+    el.appendChild(labelSpan);
+
+    var arrowSpan = document.createElement('span');
+    arrowSpan.className = 'start-menu__item-arrow';
+    arrowSpan.setAttribute('aria-hidden', 'true');
+    arrowSpan.textContent = '\u25BA';
+    el.appendChild(arrowSpan);
+
+    // openAcc/closeAcc are function declarations so they are hoisted and
+    // available when passed to buildAccessoriesSubmenu below.
+    function openAcc() {
+      clearTimeout(accCloseTimer);
+      accCloseTimer = null;
+      accSub.classList.add('start-menu__submenu--open');
+      el.setAttribute('aria-expanded', 'true');
+      el.classList.add('start-menu__submenu-item--open');
+    }
+
+    function closeAcc() {
+      clearTimeout(accOpenTimer);
+      accOpenTimer  = null;
+      clearTimeout(accCloseTimer);
+      accCloseTimer = null;
+      accSub.classList.remove('start-menu__submenu--open');
+      el.setAttribute('aria-expanded', 'false');
+      el.classList.remove('start-menu__submenu-item--open');
+    }
+
+    var accSub = buildAccessoriesSubmenu(closeAcc, el);
+    el.appendChild(accSub);
+
+    // Hover: same OPEN delay as top-level submenus.
+    el.addEventListener('mouseenter', function () {
+      clearTimeout(accCloseTimer);
+      accCloseTimer = null;
+      var t = window.APC.timing;
+      accOpenTimer = setTimeout(function () {
+        accOpenTimer = null;
+        openAcc();
+      }, t.rand(t.MENU_SUBMENU_MIN_MS, t.MENU_SUBMENU_MAX_MS));
+    });
+
+    el.addEventListener('mouseleave', function () {
+      clearTimeout(accOpenTimer);
+      accOpenTimer = null;
+      var t = window.APC.timing;
+      accCloseTimer = setTimeout(function () {
+        accCloseTimer = null;
+        closeAcc();
+      }, t.SUBMENU_CLOSE_DELAY_MS);
+    });
+
+    // Keep Accessories open while mouse is over the sub-submenu.
+    accSub.addEventListener('mouseenter', function () {
+      clearTimeout(accCloseTimer);
+      accCloseTimer = null;
+    });
+
+    accSub.addEventListener('mouseleave', function () {
+      var t = window.APC.timing;
+      accCloseTimer = setTimeout(function () {
+        accCloseTimer = null;
+        closeAcc();
+      }, t.SUBMENU_CLOSE_DELAY_MS);
+    });
+
+    // Keyboard: ArrowRight opens immediately (no delay), ArrowLeft/Escape closes
+    // and returns focus to the Programs top-level item.
+    el.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        openAcc();
+        var first = accSub.querySelector(
+          '.start-menu__submenu-item:not(.start-menu__submenu-item--has-submenu)' +
+          ':not(.start-menu__submenu-item--empty)'
+        );
+        if (first) { first.focus(); }
+      } else if (e.key === 'ArrowLeft' || e.key === 'Escape') {
+        e.preventDefault();
+        closeAcc();
+        var programsEl = menuEl.querySelector('[data-key="programs"]');
+        if (programsEl) { programsEl.focus(); }
+      }
+    });
+
+    // Reset Accessories state when Programs submenu closes, so it does not
+    // re-appear as stale-open on the next Programs hover.
+    var mo = new MutationObserver(function () {
+      if (!programsSub.classList.contains('start-menu__submenu--open')) {
+        closeAcc();
+      }
+    });
+    mo.observe(programsSub, { attributes: true, attributeFilter: ['class'] });
+
+    return el;
+  }
+
+  // Builds the Accessories sub-submenu containing the four app items.
+  // closeAcc / accEl are passed in so ArrowLeft on an app item can close
+  // Accessories and return focus to the Accessories cascade item.
+  function buildAccessoriesSubmenu(closeAcc, accEl) {
+    var sub = document.createElement('div');
+    sub.className = 'start-menu__submenu';
+    sub.setAttribute('role', 'menu');
+    sub.setAttribute('aria-label', 'Accessories');
 
     [
       { app: 'winamp',      icon: '\uD83C\uDFB5', label: 'Winamp'      },
-      { app: 'minesweeper', icon: '\uD83D\uDCA3', label: 'Minesweeper' },
       { app: 'calculator',  icon: '\uD83E\uDDF2', label: 'Calculator'  },
+      { app: 'minesweeper', icon: '\uD83D\uDCA3', label: 'Minesweeper' },
       { app: 'notepad',     icon: '\uD83D\uDCDD', label: 'Notepad'     }
     ].forEach(function (def) {
       sub.appendChild(buildSubmenuItem(def.icon, def.label, function () {
         if (window.APC.desktop && typeof window.APC.desktop.launchApp === 'function') {
           window.APC.desktop.launchApp(def.app);
         }
+      }, function () {
+        // ArrowLeft/Escape from an Accessories app item: close Accessories
+        // and return focus to the Accessories cascade item (not Programs).
+        closeAcc();
+        accEl.focus();
       }));
     });
 
@@ -311,7 +453,10 @@ window.APC.taskbar = (function () {
 
   // --- Submenu item helper --------------------------------------------
 
-  function buildSubmenuItem(icon, label, action) {
+  // onBack (optional): called on ArrowLeft/Escape instead of the default
+  // closeAllSubmenus() behaviour. Used by Accessories items to go back one
+  // level instead of collapsing the entire menu stack.
+  function buildSubmenuItem(icon, label, action, onBack) {
     var el = document.createElement('div');
     el.className = 'start-menu__submenu-item';
     el.setAttribute('role', 'menuitem');
@@ -341,10 +486,13 @@ window.APC.taskbar = (function () {
         e.preventDefault();
         el.click();
       }
-      // Left arrow closes submenu and returns focus to parent item.
+      // Left arrow / Escape: go up one level. onBack overrides the default
+      // so Accessories items return to the Accessories item, not Programs.
       if (e.key === 'ArrowLeft' || e.key === 'Escape') {
         e.preventDefault();
-        if (openSubmenuKey) {
+        if (onBack) {
+          onBack();
+        } else if (openSubmenuKey) {
           var parentEl = menuEl.querySelector('[data-key="' + openSubmenuKey + '"]');
           closeAllSubmenus();
           if (parentEl) { parentEl.focus(); }
@@ -594,9 +742,9 @@ window.APC.taskbar = (function () {
 
     // Radio options
     var options = [
-      { value: 'shutdown',  label: 'Shut down'                                   },
-      { value: 'restart',   label: 'Restart the computer'                         },
-      { value: 'logoff',    label: 'Close all programs and log off as Atsushi'    }
+      { value: 'shutdown', label: 'Shut down'  },
+      { value: 'restart',  label: 'Restart'    },
+      { value: 'logoff',   label: 'Log Off'    }
     ];
 
     var radiosEl = document.createElement('div');
@@ -659,6 +807,9 @@ window.APC.taskbar = (function () {
     okBtn.addEventListener('click', function () {
       dismiss();
       if (selectedValue === 'shutdown') {
+        if (window.umami) {
+          window.umami.track('shutdown_trigger', { source: 'start_menu', option: 'shut_down' });
+        }
         window.APC.boot.shutdown();
       } else if (selectedValue === 'restart') {
         doRestart();
@@ -679,7 +830,9 @@ window.APC.taskbar = (function () {
   }
 
   function doRestart() {
-    if (window.umami) { window.umami.track('shutdown_trigger', { action: 'restart' }); }
+    if (window.umami) {
+      window.umami.track('shutdown_trigger', { source: 'start_menu', option: 'restart' });
+    }
     // ~100ms tick lets the Umami call dispatch before state is cleared.
     setTimeout(function () {
       // Remove only the keys this restart flow owns. sessionStorage.clear()
@@ -694,7 +847,9 @@ window.APC.taskbar = (function () {
   }
 
   function doLogOff() {
-    // Close all open windows.
+    if (window.umami) {
+      window.umami.track('shutdown_trigger', { source: 'start_menu', option: 'log_off' });
+    }
     if (window.APC.desktop && typeof window.APC.desktop.closeAll === 'function') {
       window.APC.desktop.closeAll();
     }

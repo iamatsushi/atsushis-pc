@@ -393,6 +393,19 @@
   cursor: default;
 }
 
+/* Cascade item — anchors its sub-submenu and allows visual overflow */
+.start-menu__submenu-item--has-submenu {
+  position: relative;
+  overflow: visible;
+}
+
+/* Highlights the cascade item while its sub-submenu is open */
+.start-menu__submenu-item--open {
+  background: #000080;
+  color: #FFFFFF;
+  outline: none;
+}
+
 /* ---------------------------------------------------------------
    Shut Down dialog — extends win98-msgbox styles
 --------------------------------------------------------------- */
