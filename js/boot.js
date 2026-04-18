@@ -491,6 +491,7 @@ window.APC.boot = (function () {
       gate.style.zIndex     = '98';
       gate.style.opacity    = '1';
       gate.style.transition = 'none';
+      gate.classList.remove('gate-screen--fade');
 
       // Hand off to boot scene. onComplete fires after the CRT sequence + fade-out.
       window.APC.bootScene.init(function () {
