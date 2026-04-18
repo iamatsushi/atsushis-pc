@@ -209,10 +209,14 @@
     // -------------------------------------------------------------------------
 
     BOOT_SEQUENCE: {
-      POST_DURATION_MS:               4000, // RAM counter target duration
       POST_TEXT_LINE_INTERVAL_MS:      100, // ms between each header/footer line
       POST_AFTER_LAST_LINE_MS:         400, // pause after "Press DEL" before advance
-      RAM_INCREMENT_INTERVAL_MS:        20, // setInterval tick for RAM counter
+      RAM_TICK_MIN_MS:                  30, // fastest tick between RAM counter steps
+      RAM_TICK_MAX_MS:                  90, // slowest tick
+      RAM_HESITATION_CHANCE:          0.08, // ~1-in-12 chance of mechanical pause per step
+      RAM_HESITATION_MIN_MS:           200, // min hesitation duration
+      RAM_HESITATION_MAX_MS:           600, // max hesitation duration
+      RAM_STEP_K:                     2048, // KB increment per step (131072K / 64 steps)
 
       IBS_SPLASH_DURATION_MS:         6000, // total time on IBS BIOS splash screen
       FLOPPY_SEEK_DELAY_MIN_MS:        800, // floppy-seek fires this long after screen appears
