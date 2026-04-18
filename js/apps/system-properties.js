@@ -277,7 +277,7 @@ window.APC.systemProperties = (function () {
 
     var lines = [
       { bold: true,  text: 'Microblob WinDoors 98'                           },
-      { bold: false, text: 'Version 4.10.1998'                               },
+      { bold: false, text: '4.10.1998'                                        },
       { bold: false, text: '\u00A9 Copyright Microblob Corp 1981-1998.'      },
       { bold: false, text: '\u00A0'                                          },
       { bold: false, text: 'This product is licensed to:'                   },
@@ -285,7 +285,7 @@ window.APC.systemProperties = (function () {
       { bold: false, text: 'Product ID: 24796-OEM-0014736-00000'            },
       { bold: false, text: '\u00A0'                                          },
       { bold: true,  text: 'IBM'                                             },
-      { bold: false, text: 'Intel Pentium II Processor Intel MMX\u2122 Technology' },
+      { bold: false, text: 'Intel Pentium II Processor Intel MMX(TM) Technology' },
       { bold: false, text: '450MHz, 128.0MB RAM'                            }
     ];
 
