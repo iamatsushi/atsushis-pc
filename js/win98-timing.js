@@ -43,11 +43,14 @@
     // that plays after the rain has established itself.
     // -------------------------------------------------------------------------
 
-    MATRIX_IDENTITY_START_MS:       2000,  // rain runs; identity lines begin typing
-    MATRIX_IDENTITY_CHAR_MIN_MS:      40,  // min ms per character
-    MATRIX_IDENTITY_CHAR_MAX_MS:      60,  // max ms per character
-    MATRIX_IDENTITY_LINE_GAP_MS:     600,  // pause between line 1 and line 2
-    MATRIX_IDENTITY_PROMPT_GAP_MS:  1000,  // pause after line 2 before prompt appears
+    MATRIX_GATE_START_DELAY_MS:      3000,  // rain runs before any text appears
+    MATRIX_IDENTITY_CHAR_DELAY_MIN_MS: 20, // min ms per character (lines 2–8)
+    MATRIX_IDENTITY_CHAR_DELAY_MAX_MS: 30, // max ms per character (lines 2–8)
+    MATRIX_LINE1_HOLD_MS:             600,  // hold after line 1 before lines 2–8 begin
+    MATRIX_POST_LINES_PAUSE_MS:       800,  // pause after line 8 before prompt fades in
+    MATRIX_PROMPT_FADE_MS:            300,  // prompt opacity fade-in duration
+    MATRIX_PROMPT_CANVAS_Y_PCT:      0.84,  // prompt vertical position (84% of canvas height)
+    MATRIX_IDENTITY_START_Y_PCT:     0.30,  // identity lines top anchor (30% of canvas height)
 
     // Rain column typing pace — per-column typing reveal model.
     // Columns advance one character at a time at a randomised speed.
@@ -199,6 +202,39 @@
     RECYCLEBIN_EMPTY_MIN_MS:       2000, // min total duration of progress fill
     RECYCLEBIN_EMPTY_MAX_MS:       3000, // max total duration
     RECYCLEBIN_PROGRESS_STEP_MS:     50, // setInterval tick for progress bar update
+
+    // -------------------------------------------------------------------------
+    // Boot sequence — five-screen state machine (#89–#94)
+    // Placeholder values; final tuning in issue #95.
+    // -------------------------------------------------------------------------
+
+    BOOT_SEQUENCE: {
+      POST_DURATION_MS:               4000, // RAM counter target duration
+      POST_TEXT_LINE_INTERVAL_MS:      100, // ms between each header/footer line
+      POST_AFTER_LAST_LINE_MS:         400, // pause after "Press DEL" before advance
+      RAM_INCREMENT_INTERVAL_MS:        20, // setInterval tick for RAM counter
+
+      IBS_SPLASH_DURATION_MS:         3000, // total time on IBS BIOS splash screen
+      FLOPPY_SEEK_DELAY_MIN_MS:        800, // floppy-seek fires this long after screen appears
+      FLOPPY_SEEK_DELAY_MAX_MS:       1000,
+
+      DOS_LOG_LINE_INTERVAL_MIN_MS:     80, // min ms between bootlog lines
+      DOS_LOG_LINE_INTERVAL_MAX_MS:    150, // max ms between bootlog lines
+      DOS_LOG_AFTER_LAST_LINE_MS:      300, // pause after final line before advance
+      DOS_LOG_DURATION_MS:            2500, // reference ceiling for screech scheduling
+
+      WINDOORS_LOGO_STALL_60_MS:      3500, // stall at 60% progress (3.5s)
+      WINDOORS_LOGO_STALL_85_MS:      2000, // stall at 85% progress (2s)
+      WINDOORS_LOGO_COMPLETE_PAUSE_MS: 500, // pause after 100% before advance
+      WINDOORS_LOGO_DURATION_MS:     15000, // reference ceiling for screech scheduling
+      WINDOORS_BLOCK_SPEED_SLOW_MS:    600, // blocks 0–5  (0–30%)
+      WINDOORS_BLOCK_SPEED_MED_MS:     800, // blocks 6–11 (30–60%)
+      WINDOORS_BLOCK_SPEED_FAST_MS:    500, // blocks 12–16 (60–85%, burst after stall)
+      WINDOORS_BLOCK_SPEED_BURST_MS:   300, // blocks 17–19 (85–100%, fast finish)
+
+      DESKTOP_FADE_MS:                1200, // #boot-sequence fade-out duration
+      HDD_CHATTER_FADE_MS:             300, // hdd-chatter volume fade-out duration
+    },
 
   };
 

@@ -24,7 +24,6 @@
   <div id="gate-screen" aria-label="System startup screen">
     <canvas id="matrix-canvas" aria-hidden="true"></canvas>
     <div id="gate-prompt"
-         class="gate-prompt--hidden"
          role="button"
          tabindex="0"
          aria-label="Click or press any key to start Atsushi's PC">
@@ -44,6 +43,10 @@
          aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"
          aria-label="Windows 98 loading progress"></div>
   </div>
+
+  <!-- Five-screen boot sequence — POST, IBS Splash, DOS Log, WinDoors Logo, Desktop Arrival -->
+  <div id="boot-sequence" class="boot-sequence--hidden"
+       role="status" aria-live="polite" aria-label="System boot sequence"></div>
 
   <!-- Desktop shell — shown after boot sequence completes -->
   <div id="desktop" class="desktop--hidden">

@@ -1,7 +1,8 @@
-// boot.js — Gate screen: Matrix rain, Click to Start, audio unlock
-// Handles: Matrix → Win98 boot screen → desktop
+// boot.js — Gate screen (Matrix rain + identity lines) and five-screen boot state machine.
+// Sequence: gate → keypress → POST → IBS_SPLASH → DOS_LOG → WINDOORS_LOGO → DESKTOP_ARRIVAL → COMPLETE
 // Namespaced under window.APC per project conventions.
 // All timing values sourced from window.APC.timing (js/win98-timing.js).
+// Issues implemented: #86, #87, #89, #90, #91, #92, #93, #94.
 
 window.APC = window.APC || {};
 
@@ -16,7 +17,6 @@ window.APC.boot = (function () {
   const MATRIX_EMOJI_FREQUENCY_MAX = 0.05; // re-rolled per draw call
 
   // Exact character set from CLAUDE.md spec — half-width katakana + ASCII + symbols.
-  // Spread operator used for correct Unicode code-point splitting.
   const MATRIX_CHARS = [
     ...'ｦｧｨｩｪｫｬｭｮｯｰｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ' +
     'ABCDEFGHIJKLMNOPQRSTUVWXYZ' +
@@ -31,37 +31,80 @@ window.APC.boot = (function () {
     '♟️', '🌉', '📦', '🧨', '📊', '🧭'
   ];
 
+  // --- Boot state enum (#89) -------------------------------------------
+
+  const BOOT_STATE = {
+    IDLE:            'idle',
+    POST:            'post',
+    IBS_SPLASH:      'ibs_splash',
+    DOS_LOG:         'dos_log',
+    WINDOORS_LOGO:   'windoors_logo',
+    DESKTOP_ARRIVAL: 'desktop_arrival',
+    COMPLETE:        'complete'
+  };
+
+  // --- Identity lines (#86) — 8 lines, verbatim, no alteration ---------
+
+  const IDENTITY_LINES = [
+    '> welcome to 1998.',
+    '> you are about to experience the most powerful home computer money could buy.',
+    '> the IBM Aptiva 2139-SE7. Pentium II 450MHz. 128MB RAM.',
+    '> $3,299 in 1998. that\'s $6,683 today.',
+    '> the internet ran on a 56K modem. pages loaded one bit at a time.',
+    '> clicks did not respond in milliseconds. they responded in heartbeats.',
+    '> you could hear the machine work.',
+    '> take your time. sound on.'
+  ];
+
+  // --- DOS bootlog lines (#92) — exact, verbatim, in this order --------
+
+  const DOS_LOG_LINES = [
+    'HIMEM is testing extended memory...done.',
+    'IBS Captiva Memory Manager v4.1',
+    'MSCDEX Version 2.25',
+    'Drive D: = Driver CDROM001 unit 0',
+    'Loading WINBLAST.SYS...done.',
+    'Microblob Mouse Driver v2.3 Initialized',
+    'Microblob Corp Plug and Play BIOS Extension v1.0A',
+    'Detecting hardware configuration...',
+    'IBS Surepath Audio Controller: IRQ 5, DMA 1',
+    'Crystal 4235KQ Sound - 16-bit Stereo initialized',
+    '56K V.90 Modem - COM3 - Microblob Communications',
+    'Loading WINDOORS98.SYS...',
+    'Starting Microblob WinDoors 98...'
+  ];
+
   // --- Module state ----------------------------------------------------
 
   let canvas, ctx, columns, animFrame;
-  let startupAudio;
   let hasStarted = false;
 
-  // Identity lines state — typed portions redrawn each frame at full brightness.
-  const IDENTITY_LINE_1 = '> initializing experience on IBM Aptiva SE7';
-  const IDENTITY_LINE_2 = '> $3,299 in 1998. the fastest consumer PC money could buy.';
+  // Identity lines state.
+  let identityPhase = 'waiting'; // waiting | line1_instant | line1_hold | typing | pause | done
+  let identityTypedLines = [];   // array of typed strings, one per line revealed so far
+  let currentLineIdx = 0;        // index of line currently being typed (0-based)
 
-  let identityPhase = 'waiting'; // waiting | line1 | gap | line2 | pause | done
-  let identityTyped1 = '';
-  let identityTyped2 = '';
-  let identityX = 0;
-  let identityY1 = 0;
-  let identityY2 = 0;
+  // Boot state machine (#89) — generation counter prevents stale callbacks
+  // from a dismissed screen from firing in the context of a later screen.
+  let bootGen = 0;
+
+  // Audio — preloaded on first user gesture (#89, #90, #91, #92, #93, #94).
+  let bootAudio = null;
+
+  // Screech roll — decided once at boot start, checked by Screen 3 and 4 (#92, #93).
+  let screechFires = false;
+  let screechScreen = null;
 
   // --- Public API ------------------------------------------------------
 
-  // --- Mobile detection ----------------------------------------------------
+  // --- Mobile detection ------------------------------------------------
+  //
+  // All three conditions must be true to show the mobile interstitial:
+  // 1. Genuine touch hardware (maxTouchPoints > 1)
+  // 2. Physically small screen (screen.width < 1024)
+  // 3. No fine pointer (no mouse/trackpad)
 
   function isMobileOrTouch() {
-    // All three conditions must be true:
-    // 1. Genuine touch hardware (maxTouchPoints > 1).
-    //    > 1 (not > 0) excludes macOS Force Touch / precision touchpad.
-    // 2. Physically small screen (screen.width < 1024).
-    //    screen.width (not window.innerWidth) avoids false positives on
-    //    laptops with small browser windows.
-    // 3. No fine pointer (mouse / trackpad).
-    //    Excludes docked tablets and small desktop monitors that have a
-    //    touch layer but are primarily operated with a precise pointer.
     return navigator.maxTouchPoints > 1 &&
            screen.width < 1024 &&
            !window.matchMedia('(pointer: fine)').matches;
@@ -71,7 +114,6 @@ window.APC.boot = (function () {
     var w = window.innerWidth;
     var h = window.innerHeight;
 
-    // Full-screen overlay — classic WinDoors 98 teal desktop behind the dialog.
     var overlay = document.createElement('div');
     overlay.setAttribute('role', 'alertdialog');
     overlay.setAttribute('aria-modal', 'true');
@@ -86,7 +128,6 @@ window.APC.boot = (function () {
       'font-size:11px;'
     ].join('');
 
-    // Win98 dialog box.
     var dialog = document.createElement('div');
     dialog.style.cssText = [
       'background:#c0c0c0;',
@@ -96,7 +137,6 @@ window.APC.boot = (function () {
       'box-shadow:1px 1px 0 #000;'
     ].join('');
 
-    // Title bar.
     var titlebar = document.createElement('div');
     titlebar.id = 'mobile-gate-title';
     titlebar.style.cssText = [
@@ -126,7 +166,6 @@ window.APC.boot = (function () {
     titlebar.appendChild(titleText);
     titlebar.appendChild(closeBtn);
 
-    // Body — icon + message.
     var body = document.createElement('div');
     body.id = 'mobile-gate-body';
     body.style.cssText = 'padding:16px 12px 8px 12px;display:flex;gap:12px;align-items:flex-start;';
@@ -156,14 +195,12 @@ window.APC.boot = (function () {
     body.appendChild(icon);
     body.appendChild(text);
 
-    // Separator.
     var sep = document.createElement('div');
     sep.style.cssText = [
       'margin:0 8px;height:2px;',
       'border-top:1px solid #808080;border-bottom:1px solid #fff;'
     ].join('');
 
-    // Footer — OK button.
     var footer = document.createElement('div');
     footer.style.cssText = 'padding:8px;text-align:center;';
 
@@ -181,7 +218,6 @@ window.APC.boot = (function () {
     okBtn.addEventListener('click', function () { window.location.reload(); });
 
     footer.appendChild(okBtn);
-
     dialog.appendChild(titlebar);
     dialog.appendChild(body);
     dialog.appendChild(sep);
@@ -189,43 +225,33 @@ window.APC.boot = (function () {
     overlay.appendChild(dialog);
     document.body.appendChild(overlay);
 
-    // Focus OK button for keyboard accessibility.
     okBtn.focus();
   }
 
-  // --- Boot init -----------------------------------------------------------
+  // --- Boot init -------------------------------------------------------
 
   function init() {
     // Hard gate: WinDoors 98 does not run on mobile or touch devices.
-    // Boot sequence never initialises — interstitial is shown and we return.
     if (isMobileOrTouch()) {
       showMobileInterstitial();
       return;
     }
 
-    // Skip both gate and boot screens if already completed this session.
+    // Skip gate and boot sequence if already completed this session.
     if (sessionStorage.getItem('boot_complete')) {
       hideGate();
-      goToDesktop(true);  // skip delay and audio on session restore
+      goToDesktop(true);
       return;
     }
 
     canvas = document.getElementById('matrix-canvas');
     ctx = canvas.getContext('2d');
 
-    // Preload startup audio. .play() is deferred until after user gesture
-    // to comply with browser autoplay policy — never call before interaction.
-    startupAudio = new Audio('assets/audio/startup.mp3');
-    startupAudio.preload = 'auto';
-    // Suppress load errors (e.g. 404) silently — boot must continue regardless.
-    startupAudio.addEventListener('error', () => {});
-
     resizeCanvas();
     animFrame = requestAnimationFrame(drawFrame);
 
     // Schedule identity lines to begin after rain has established itself.
-    // Prompt stays hidden until the full sequence completes.
-    setTimeout(startIdentityLines, window.APC.timing.MATRIX_IDENTITY_START_MS);
+    setTimeout(startIdentityLines, window.APC.timing.MATRIX_GATE_START_DELAY_MS);
 
     // Gate screen catches all clicks anywhere on screen.
     const gate = document.getElementById('gate-screen');
@@ -241,52 +267,55 @@ window.APC.boot = (function () {
     document.getElementById('gate-prompt').focus();
   }
 
-  // --- Identity lines --------------------------------------------------
+  // --- Identity lines (#86 + #87) --------------------------------------
   //
-  // Two lines type character-by-character onto the canvas at 40–60ms/char,
-  // appearing as part of the rain. Both are redrawn at full brightness every
-  // frame so the 0.15 fade overlay doesn't dim them while they're typing.
-  // All timeouts abort immediately if the user has already interacted.
+  // Line 1 appears as a full complete line instantly at the 3s mark.
+  // Lines 2–8 type character by character at 20–30ms/char.
+  // All drawn onto the canvas each frame so the fade overlay doesn't dim them
+  // while they're actively being typed. Y positions recalculate on canvas resize.
 
   function startIdentityLines() {
     if (hasStarted) { return; }
-    // identityX is constant (no dependency on canvas dimensions).
-    // identityY1/Y2 are recalculated each frame in drawFrame() so they
-    // stay accurate if the window is resized between now and draw time.
-    identityX  = 2 * FONT_SIZE;
-    identityPhase = 'line1';
-    typeNextChar();
+    const t = window.APC.timing;
+
+    // Line 1 appears as a complete line instantly — no typing animation.
+    identityTypedLines = [IDENTITY_LINES[0]];
+    currentLineIdx = 0;
+    identityPhase = 'line1_hold';
+
+    // Hold 600ms then begin typing lines 2–8.
+    setTimeout(function () {
+      if (hasStarted) { return; }
+      identityPhase = 'typing';
+      currentLineIdx = 1;
+      identityTypedLines[1] = '';
+      typeNextChar();
+    }, t.MATRIX_LINE1_HOLD_MS);
   }
 
   function typeNextChar() {
     if (hasStarted) { return; }
     const t = window.APC.timing;
+    const lineIdx = currentLineIdx;
+    const targetLine = IDENTITY_LINES[lineIdx];
+    const typed = identityTypedLines[lineIdx] || '';
 
-    if (identityPhase === 'line1') {
-      const idx = identityTyped1.length;
-      if (idx < IDENTITY_LINE_1.length) {
-        identityTyped1 += IDENTITY_LINE_1[idx];
-        setTimeout(typeNextChar, t.rand(t.MATRIX_IDENTITY_CHAR_MIN_MS, t.MATRIX_IDENTITY_CHAR_MAX_MS));
-      } else {
-        // Line 1 complete — pause before line 2.
-        identityPhase = 'gap';
-        setTimeout(function () {
-          if (hasStarted) { return; }
-          identityPhase = 'line2';
-          typeNextChar();
-        }, t.MATRIX_IDENTITY_LINE_GAP_MS);
-      }
-
-    } else if (identityPhase === 'line2') {
-      const idx = identityTyped2.length;
-      if (idx < IDENTITY_LINE_2.length) {
-        identityTyped2 += IDENTITY_LINE_2[idx];
-        setTimeout(typeNextChar, t.rand(t.MATRIX_IDENTITY_CHAR_MIN_MS, t.MATRIX_IDENTITY_CHAR_MAX_MS));
-      } else {
-        // Line 2 complete — pause then reveal prompt.
-        identityPhase = 'pause';
-        setTimeout(revealPrompt, t.MATRIX_IDENTITY_PROMPT_GAP_MS);
-      }
+    if (typed.length < targetLine.length) {
+      // Advance one character.
+      identityTypedLines[lineIdx] = targetLine.slice(0, typed.length + 1);
+      setTimeout(typeNextChar,
+        t.rand(t.MATRIX_IDENTITY_CHAR_DELAY_MIN_MS, t.MATRIX_IDENTITY_CHAR_DELAY_MAX_MS));
+    } else if (lineIdx < IDENTITY_LINES.length - 1) {
+      // This line complete — advance to next line.
+      currentLineIdx = lineIdx + 1;
+      identityTypedLines[currentLineIdx] = '';
+      // Inter-line gap uses the same char delay range — keeps rhythm consistent.
+      setTimeout(typeNextChar,
+        t.rand(t.MATRIX_IDENTITY_CHAR_DELAY_MIN_MS, t.MATRIX_IDENTITY_CHAR_DELAY_MAX_MS));
+    } else {
+      // All 8 lines complete — pause then fade-in prompt.
+      identityPhase = 'pause';
+      setTimeout(revealPrompt, t.MATRIX_POST_LINES_PAUSE_MS);
     }
   }
 
@@ -294,7 +323,14 @@ window.APC.boot = (function () {
     if (hasStarted) { return; }
     identityPhase = 'done';
     const prompt = document.getElementById('gate-prompt');
-    if (prompt) { prompt.classList.remove('gate-prompt--hidden'); }
+    if (prompt) {
+      // Position prompt at MATRIX_PROMPT_CANVAS_Y_PCT of canvas height.
+      prompt.style.top = Math.floor(
+        canvas.height * window.APC.timing.MATRIX_PROMPT_CANVAS_Y_PCT
+      ) + 'px';
+      // Opacity transition is defined in CSS — adding the class triggers it.
+      prompt.classList.add('gate-prompt--visible');
+    }
   }
 
   // --- Canvas setup ----------------------------------------------------
@@ -303,6 +339,15 @@ window.APC.boot = (function () {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
     initColumns();
+    // Reposition prompt if already visible, so it stays at the correct y position.
+    if (identityPhase === 'done') {
+      const prompt = document.getElementById('gate-prompt');
+      if (prompt) {
+        prompt.style.top = Math.floor(
+          canvas.height * window.APC.timing.MATRIX_PROMPT_CANVAS_Y_PCT
+        ) + 'px';
+      }
+    }
   }
 
   function initColumns() {
@@ -313,9 +358,7 @@ window.APC.boot = (function () {
     for (let i = 0; i < count; i++) {
       columns.push({
         x: i * FONT_SIZE,
-        // Stagger starting row so columns don't all begin at the top simultaneously.
         currentRow: Math.floor(Math.random() * rows),
-        // Stagger initial start time so columns begin typing at different moments.
         nextCharTime: Date.now() + Math.floor(Math.random() * t.MATRIX_RAIN_STAGGER_MAX_MS),
         charDelay: t.rand(t.MATRIX_RAIN_CHAR_MIN_MS, t.MATRIX_RAIN_CHAR_MAX_MS),
         pauseUntil: 0
@@ -326,10 +369,8 @@ window.APC.boot = (function () {
   // --- Matrix rain render loop -----------------------------------------
   //
   // Per-column typing reveal: each column advances one character at a time,
-  // top to bottom, at a randomised 40–180ms cadence. No smooth y-drop,
-  // no frame throttle — rAF runs at native speed; columns self-pace via
-  // nextCharTime. After filling to the bottom, each column pauses 800–2500ms
-  // before resetting to row 0 with a new random char delay.
+  // top to bottom, at a randomised 40–180ms cadence. Identity lines are
+  // redrawn at full brightness each frame so the fade overlay doesn't dim them.
 
   function drawFrame() {
     animFrame = requestAnimationFrame(drawFrame);
@@ -347,47 +388,38 @@ window.APC.boot = (function () {
     for (let i = 0; i < columns.length; i++) {
       const col = columns[i];
 
-      // Column is in post-fill pause — skip until pause expires.
       if (now < col.pauseUntil) { continue; }
-
-      // Not yet time to type the next character.
       if (now < col.nextCharTime) { continue; }
 
-      // Draw one character at the current row position.
-      const y = (col.currentRow + 1) * FONT_SIZE;  // +1 offsets for font baseline
+      const y = (col.currentRow + 1) * FONT_SIZE;
 
-      // Frequency re-rolled per character: random threshold between 1–5%.
+      // Emoji frequency re-rolled per character: random threshold between 1–5%.
       const emojiThreshold = MATRIX_EMOJI_FREQUENCY_MIN +
         Math.random() * (MATRIX_EMOJI_FREQUENCY_MAX - MATRIX_EMOJI_FREQUENCY_MIN);
       const isEmoji = Math.random() < emojiThreshold;
 
       if (isEmoji) {
         // CSS emoji color filter hack: collapses emoji's native colors to black
-        // via brightness(0), then rebuilds to #00FF41 green through the filter
-        // chain. Alpha (shape) is preserved throughout. Reset to 'none' immediately
-        // after to avoid bleeding into subsequent draw calls.
+        // via brightness(0), then rebuilds to #00FF41 green through the filter chain.
         ctx.filter =
           'brightness(0) saturate(100%) invert(57%) sepia(99%) ' +
           'saturate(400%) hue-rotate(85deg) brightness(110%)';
         ctx.fillText(
           MATRIX_EMOJIS[Math.floor(Math.random() * MATRIX_EMOJIS.length)],
-          col.x,
-          y
+          col.x, y
         );
         ctx.filter = 'none';
       } else {
         ctx.fillStyle = MATRIX_COLOR;
         ctx.fillText(
           MATRIX_CHARS[Math.floor(Math.random() * MATRIX_CHARS.length)],
-          col.x,
-          y
+          col.x, y
         );
       }
 
       col.currentRow++;
 
       if (col.currentRow >= rows) {
-        // Column has filled to bottom — pause before resetting to row 0.
         col.pauseUntil = now + t.rand(t.MATRIX_RAIN_RESET_MIN_MS, t.MATRIX_RAIN_RESET_MAX_MS);
         col.currentRow = 0;
         col.charDelay = t.rand(t.MATRIX_RAIN_CHAR_MIN_MS, t.MATRIX_RAIN_CHAR_MAX_MS);
@@ -396,21 +428,24 @@ window.APC.boot = (function () {
       col.nextCharTime = now + col.charDelay;
     }
 
-    // Redraw typed identity lines at full brightness each frame so the fade
-    // overlay doesn't dim them while they're still being typed.
-    // Y positions recalculated here so a window resize between startIdentityLines()
-    // and this frame doesn't leave the text at a stale vertical position.
-    if (identityPhase !== 'waiting') {
-      const anchorRow = Math.floor(Math.floor(canvas.height / FONT_SIZE) * 0.42);
-      identityY1 = (anchorRow + 1) * FONT_SIZE;
-      identityY2 = (anchorRow + 2) * FONT_SIZE;
+    // Redraw identity lines at full brightness each frame so the fade overlay
+    // doesn't dim them while they're still being typed.
+    // Y positions recalculate from canvas.height on each frame so a resize
+    // mid-sequence doesn't leave lines at stale vertical positions.
+    if (identityPhase !== 'waiting' && identityTypedLines.length > 0) {
+      const startY = canvas.height * t.MATRIX_IDENTITY_START_Y_PCT;
+      const lineHeight = FONT_SIZE * 1.6;
+
+      ctx.filter = 'none'; // ensure no leftover filter from emoji columns
       ctx.font = FONT_SIZE + 'px "Courier New", monospace';
       ctx.fillStyle = MATRIX_COLOR;
-      if (identityTyped1) {
-        ctx.fillText(identityTyped1, identityX, identityY1);
-      }
-      if (identityTyped2) {
-        ctx.fillText(identityTyped2, identityX, identityY2);
+
+      for (let li = 0; li < identityTypedLines.length; li++) {
+        if (!identityTypedLines[li]) { continue; }
+        const lineY = startY + li * lineHeight;
+        const measured = ctx.measureText(identityTypedLines[li]).width;
+        const lineX = (canvas.width / 2) - (measured / 2);
+        ctx.fillText(identityTypedLines[li], lineX, lineY);
       }
     }
   }
@@ -418,7 +453,6 @@ window.APC.boot = (function () {
   // --- Interaction handlers --------------------------------------------
 
   function onDocKeyDown(e) {
-    // Pass through modifier-only keypresses — they don't count as "any key".
     if (['Shift', 'Control', 'Alt', 'Meta', 'Tab'].includes(e.key)) { return; }
     onGateInteract();
   }
@@ -427,156 +461,625 @@ window.APC.boot = (function () {
     if (hasStarted) { return; }
     hasStarted = true;
 
-    // Clean up listeners.
+    // Clean up gate listeners.
     document.getElementById('gate-screen').removeEventListener('click', onGateInteract);
     document.removeEventListener('keydown', onDocKeyDown);
     window.removeEventListener('resize', resizeCanvas);
 
-    // Audio element was preloaded at init — the gate click is the first user gesture
-    // that satisfies autoplay policy. .play() is deferred to goToDesktop() so the
-    // chime fires as the teal desktop fades in, not at the gate click.
+    // Fire analytics event.
+    if (window.umami) { window.umami.track('click_to_start'); }
 
-    // Fire Umami analytics event. Guard in case script hasn't loaded yet.
-    if (window.umami) {
-      window.umami.track('click_to_start');
-    }
+    // Preload all boot audio assets — user gesture has now satisfied autoplay policy.
+    preloadBootAudio();
 
-    // Begin fade-out, then hand off to next boot stage.
+    // Roll screech decision once (#92, #93). Stored at module level so both
+    // Screen 3 and Screen 4 read the same decision — they do not re-roll.
+    screechFires = Math.random() < 0.6;
+    screechScreen = screechFires
+      ? (Math.random() < 0.5 ? 'dos_log' : 'windoors_logo')
+      : null;
+
     const gate = document.getElementById('gate-screen');
     gate.classList.add('gate-screen--fade');
-    setTimeout(() => {
+    setTimeout(function () {
       cancelAnimationFrame(animFrame);
       hideGate();
-      complete();
+      advanceBootState(BOOT_STATE.POST);
     }, window.APC.timing.GATE_FADE_MS);
   }
 
-  // --- Teardown --------------------------------------------------------
+  // --- Audio -----------------------------------------------------------
+
+  function preloadBootAudio() {
+    bootAudio = {
+      hddSpinup:  new Audio('assets/audio/hdd-spinup.mp3'),
+      hddChatter: new Audio('assets/audio/hdd-chatter.mp3'),
+      postBeep:   new Audio('assets/audio/post-beep.mp3'),
+      floppySeek: new Audio('assets/audio/floppy-seek.mp3'),
+      screech:    new Audio('assets/audio/hdd-screech.mp3'),
+      chime:      new Audio('assets/audio/startup.mp3')
+    };
+
+    // hdd-chatter does NOT loop — plays once, 59s straight through.
+    bootAudio.hddChatter.loop = false;
+
+    // Suppress load errors silently — boot must continue regardless of audio failure.
+    Object.keys(bootAudio).forEach(function (key) {
+      bootAudio[key].preload = 'auto';
+      bootAudio[key].addEventListener('error', function () {});
+    });
+  }
+
+  // Fade audio volume to 0 over durationMs, then pause it.
+  // Calls optional cb when complete. Safe to call with null audio.
+  function fadeAudioOut(audio, durationMs, cb) {
+    if (!audio) { if (cb) { cb(); } return; }
+    const startVol = audio.volume || 1;
+    const stepMs = 16;
+    const steps = Math.max(1, Math.ceil(durationMs / stepMs));
+    let step = 0;
+    const timer = setInterval(function () {
+      step++;
+      audio.volume = Math.max(0, startVol * (1 - step / steps));
+      if (step >= steps) {
+        clearInterval(timer);
+        try { audio.pause(); } catch (e) {}
+        audio.volume = startVol;
+        if (cb) { cb(); }
+      }
+    }, stepMs);
+  }
+
+  // --- Gate teardown ---------------------------------------------------
 
   function hideGate() {
     const gate = document.getElementById('gate-screen');
     if (gate) { gate.classList.add('gate-screen--hidden'); }
   }
 
-  function complete() {
-    showBootScreen();
+  // --- Boot state machine (#89) ----------------------------------------
+  //
+  // Each screen renders into #boot-sequence. When the state machine advances,
+  // the old screen's content is cleared before the new one is rendered.
+  // bootGen increments on each advance — stale setTimeout callbacks capture
+  // the gen from when they were created and abort if gen has moved on.
+
+  function advanceBootState(state) {
+    const gen = ++bootGen;
+
+    const container = document.getElementById('boot-sequence');
+    if (!container) { return; }
+
+    container.innerHTML = '';
+    container.style.opacity = '';
+    container.style.transition = '';
+    container.classList.remove('boot-sequence--hidden');
+
+    switch (state) {
+      case BOOT_STATE.POST:
+        renderPostScreen(gen, container);
+        break;
+      case BOOT_STATE.IBS_SPLASH:
+        renderIBSSplashScreen(gen, container);
+        break;
+      case BOOT_STATE.DOS_LOG:
+        renderDOSLogScreen(gen, container);
+        break;
+      case BOOT_STATE.WINDOORS_LOGO:
+        renderWindoorsLogoScreen(gen, container);
+        break;
+      case BOOT_STATE.DESKTOP_ARRIVAL:
+        renderDesktopArrivalScreen(gen, container);
+        break;
+      case BOOT_STATE.COMPLETE:
+        handleBootComplete(container);
+        break;
+    }
   }
 
-  // --- Win98 boot sequence ---------------------------------------------
+  // --- Screen 1: POST / RAM count (#90) --------------------------------
+  //
+  // Black screen, white monospace text, left-aligned.
+  // Header lines appear sequentially, then RAM counter animates 0K→131072K.
+  // hdd-spinup plays on screen start; hdd-chatter begins after spinup ends.
+  // post-beep fires when RAM counter completes.
 
-  function showBootScreen() {
-    const bootScreen = document.getElementById('boot-screen');
-    bootScreen.classList.remove('boot-screen--hidden');
-    // Brief settle delay before progress bar begins — mirrors real Win98 timing.
-    setTimeout(animateProgressBar, window.APC.timing.BOOT_SETTLE_MS);
-  }
-
-  function animateProgressBar() {
-    // Guard: if win98-timing.js failed to load, BOOT_BLOCK_COUNT is undefined.
-    // Without this, addBlock() would see blocksFilled >= undefined (false forever)
-    // and loop indefinitely, or NaN arithmetic would break the progress display.
-    if (!window.APC.timing || !window.APC.timing.BOOT_BLOCK_COUNT) { return; }
+  function renderPostScreen(gen, container) {
     const t = window.APC.timing;
-    const track = document.getElementById('boot-progress-track');
-    let blocksFilled = 0;
+    const bs = t.BOOT_SEQUENCE;
 
-    // Simulate Win98 uneven disk loading — occasional stalls mirror real HDD seek
-    // behavior on the IBM Aptiva SE7's 5400 RPM Deskstar.
-    function randomBlockDelay() {
-      if (Math.random() < t.BOOT_BLOCK_STALL_CHANCE) {
-        return t.rand(t.BOOT_BLOCK_STALL_MIN_MS, t.BOOT_BLOCK_STALL_MAX_MS);
+    container.style.cssText = 'position:fixed;inset:0;background:#000;z-index:9000;';
+
+    const output = document.createElement('div');
+    output.style.cssText = [
+      'position:absolute;top:40px;left:40px;',
+      'font-family:"Courier New",Courier,monospace;',
+      'font-size:13px;color:#fff;',
+      '-webkit-font-smoothing:none;',
+      'line-height:1.6;'
+    ].join('');
+    container.appendChild(output);
+
+    // hdd-spinup plays immediately; hdd-chatter begins when spinup ends.
+    // 3000ms fallback guards against the 'ended' event not firing (e.g. load error).
+    var chatterStarted = false;
+    function startChatter() {
+      if (chatterStarted || gen !== bootGen) { return; }
+      chatterStarted = true;
+      if (bootAudio) {
+        try { bootAudio.hddChatter.play().catch(function () {}); } catch (e) {}
       }
-      return t.rand(t.BOOT_BLOCK_NORMAL_MIN_MS, t.BOOT_BLOCK_NORMAL_MAX_MS);
+    }
+    if (bootAudio) {
+      try { bootAudio.hddSpinup.play().catch(function () {}); } catch (e) {}
+      bootAudio.hddSpinup.addEventListener('ended', startChatter);
+      setTimeout(startChatter, 3000);
     }
 
+    function appendLine(text) {
+      const d = document.createElement('div');
+      d.textContent = text;
+      output.appendChild(d);
+    }
+
+    const headerLines = [
+      'IBS Surepath BIOS v3.26.11',
+      'IBS Captiva 2139-$E7 - Pentium II 450MHz',
+      'Microblob Corp - Copyright (C) 1993-1998',
+      '\u00a0'  // blank separator line (non-breaking space gives height)
+    ];
+
+    let lineIdx = 0;
+
+    function appendNextHeaderLine() {
+      if (gen !== bootGen) { return; }
+      if (lineIdx < headerLines.length) {
+        appendLine(headerLines[lineIdx]);
+        lineIdx++;
+        setTimeout(appendNextHeaderLine, bs.POST_TEXT_LINE_INTERVAL_MS);
+      } else {
+        startRAMCounter();
+      }
+    }
+
+    function startRAMCounter() {
+      if (gen !== bootGen) { return; }
+      const RAM_TARGET = 131072;
+      // Derive step count from POST_DURATION_MS so counter fills in that window.
+      const totalSteps = Math.ceil(bs.POST_DURATION_MS / bs.RAM_INCREMENT_INTERVAL_MS);
+      const increment = Math.ceil(RAM_TARGET / totalSteps);
+      let ramVal = 0;
+
+      // Memory Test line with an inline span for the counter value.
+      const ramDiv = document.createElement('div');
+      ramDiv.textContent = 'Memory Test: ';
+      const ramCounter = document.createElement('span');
+      ramCounter.textContent = '      0K';
+      ramDiv.appendChild(ramCounter);
+      output.appendChild(ramDiv);
+
+      const timer = setInterval(function () {
+        if (gen !== bootGen) { clearInterval(timer); return; }
+        ramVal = Math.min(ramVal + increment, RAM_TARGET);
+        const formatted = String(ramVal) + 'K';
+        ramCounter.textContent = formatted.padStart(8, ' ');
+        if (ramVal >= RAM_TARGET) {
+          clearInterval(timer);
+          onRAMComplete();
+        }
+      }, bs.RAM_INCREMENT_INTERVAL_MS);
+    }
+
+    function onRAMComplete() {
+      if (gen !== bootGen) { return; }
+      // post-beep fires exactly when RAM counter reaches 131072K.
+      if (bootAudio) {
+        try { bootAudio.postBeep.play().catch(function () {}); } catch (e) {}
+      }
+      // Append confirmation and final prompt lines.
+      setTimeout(function () {
+        if (gen !== bootGen) { return; }
+        appendLine('131072K OK');
+        setTimeout(function () {
+          if (gen !== bootGen) { return; }
+          appendLine('\u00a0');
+          appendLine('Press DEL to enter Setup');
+          setTimeout(function () {
+            if (gen !== bootGen) { return; }
+            advanceBootState(BOOT_STATE.IBS_SPLASH);
+          }, bs.POST_AFTER_LAST_LINE_MS);
+        }, bs.POST_TEXT_LINE_INTERVAL_MS);
+      }, bs.POST_TEXT_LINE_INTERVAL_MS);
+    }
+
+    appendNextHeaderLine();
+  }
+
+  // --- Screen 2: IBS BIOS splash (#91) ---------------------------------
+  //
+  // Deep navy blue (#102046), "IBS" logotype centered, floppy-seek plays at 0.8–1s.
+  // hdd-chatter continues looping from Screen 1.
+
+  function renderIBSSplashScreen(gen, container) {
+    const t = window.APC.timing;
+    const bs = t.BOOT_SEQUENCE;
+
+    container.style.cssText = [
+      'position:fixed;inset:0;background:#102046;z-index:9000;',
+      'font-family:Tahoma,Arial,sans-serif;'
+    ].join('');
+
+    // Centered content column.
+    const col = document.createElement('div');
+    col.style.cssText = [
+      'position:absolute;top:50%;left:50%;',
+      'transform:translate(-50%,-50%);',
+      'text-align:center;'
+    ].join('');
+
+    const logo = document.createElement('div');
+    logo.textContent = 'IBS';
+    logo.style.cssText = [
+      'font-size:72px;font-weight:bold;',
+      'letter-spacing:12px;color:#fff;',
+      'text-shadow:2px 2px 4px rgba(0,0,0,0.6);',
+      'margin-bottom:24px;'
+    ].join('');
+
+    const modelEl = document.createElement('p');
+    modelEl.textContent = 'Captiva 2139-$E7';
+    modelEl.style.cssText = 'font-size:16px;color:#fff;margin:0 0 8px;';
+
+    const biosEl = document.createElement('p');
+    biosEl.textContent = 'Surepath BIOS v3.26.11';
+    biosEl.style.cssText = 'font-size:16px;color:#fff;margin:0;';
+
+    col.appendChild(logo);
+    col.appendChild(modelEl);
+    col.appendChild(biosEl);
+    container.appendChild(col);
+
+    // "Press F1" in bottom third — room above the bottom edge.
+    const f1El = document.createElement('p');
+    f1El.textContent = 'Press F1 to enter Setup';
+    f1El.style.cssText = [
+      'position:absolute;bottom:25%;left:0;right:0;',
+      'text-align:center;',
+      'font-family:Tahoma,Arial,sans-serif;',
+      'font-size:12px;color:#C0C0C0;margin:0;'
+    ].join('');
+    container.appendChild(f1El);
+
+    // floppy-seek fires 0.8–1s after screen appears.
+    const floppyDelay = t.rand(bs.FLOPPY_SEEK_DELAY_MIN_MS, bs.FLOPPY_SEEK_DELAY_MAX_MS);
+    setTimeout(function () {
+      if (gen !== bootGen) { return; }
+      if (bootAudio) {
+        try { bootAudio.floppySeek.play().catch(function () {}); } catch (e) {}
+      }
+    }, floppyDelay);
+
+    // Advance after splash duration.
+    setTimeout(function () {
+      if (gen !== bootGen) { return; }
+      advanceBootState(BOOT_STATE.DOS_LOG);
+    }, bs.IBS_SPLASH_DURATION_MS);
+  }
+
+  // --- Screen 3: DOS bootlog (#92) -------------------------------------
+  //
+  // Black screen, white monospace text, left-aligned. Lines appear one by one
+  // at 80–150ms intervals. hdd-screech may play if screechScreen === 'dos_log'.
+
+  function renderDOSLogScreen(gen, container) {
+    const t = window.APC.timing;
+    const bs = t.BOOT_SEQUENCE;
+
+    container.style.cssText = 'position:fixed;inset:0;background:#000;z-index:9000;';
+
+    const output = document.createElement('div');
+    output.style.cssText = [
+      'position:absolute;top:40px;left:40px;',
+      'font-family:"Courier New",Courier,monospace;',
+      'font-size:13px;color:#fff;',
+      '-webkit-font-smoothing:none;',
+      'line-height:1.6;'
+    ].join('');
+    container.appendChild(output);
+
+    // Schedule screech if this screen was selected at boot start.
+    // Fires at a random timestamp within this screen's duration — overlaid on hdd-chatter.
+    if (screechScreen === 'dos_log' && bootAudio) {
+      const scDelay = Math.random() * bs.DOS_LOG_DURATION_MS;
+      setTimeout(function () {
+        if (gen !== bootGen) { return; }
+        try { bootAudio.screech.play().catch(function () {}); } catch (e) {}
+      }, scDelay);
+    }
+
+    let lineIdx = 0;
+
+    function appendNextLine() {
+      if (gen !== bootGen) { return; }
+      if (lineIdx < DOS_LOG_LINES.length) {
+        const d = document.createElement('div');
+        d.textContent = DOS_LOG_LINES[lineIdx];
+        output.appendChild(d);
+        lineIdx++;
+        setTimeout(appendNextLine, t.rand(bs.DOS_LOG_LINE_INTERVAL_MIN_MS, bs.DOS_LOG_LINE_INTERVAL_MAX_MS));
+      } else {
+        // All lines shown — pause then advance.
+        setTimeout(function () {
+          if (gen !== bootGen) { return; }
+          advanceBootState(BOOT_STATE.WINDOORS_LOGO);
+        }, bs.DOS_LOG_AFTER_LAST_LINE_MS);
+      }
+    }
+
+    appendNextLine();
+  }
+
+  // --- Screen 4: WinDoors 98 logo + progress bar (#93) -----------------
+  //
+  // Black screen, WinDoors flag (four CSS divs), "WinDoors 98" text, chunky
+  // progress bar with exact stall rhythm: stall at 60% (3.5s), burst, stall at
+  // 85% (2s), fast finish. hdd-chatter volume drops to 0.7 during stalls.
+
+  function renderWindoorsLogoScreen(gen, container) {
+    const t = window.APC.timing;
+    const bs = t.BOOT_SEQUENCE;
+
+    container.style.cssText = [
+      'position:fixed;inset:0;background:#000;z-index:9000;',
+      'font-family:Tahoma,Arial,sans-serif;'
+    ].join('');
+
+    // Center wrapper positioned at ~35% from top.
+    const center = document.createElement('div');
+    center.style.cssText = [
+      'position:absolute;top:35%;left:50%;',
+      'transform:translateX(-50%);',
+      'text-align:center;'
+    ].join('');
+
+    // Title row: flag + "WinDoors 98" side by side.
+    const titleRow = document.createElement('div');
+    titleRow.style.cssText = [
+      'display:inline-flex;align-items:center;',
+      'margin-bottom:16px;'
+    ].join('');
+
+    // WinDoors flag — four colored divs in 2×2 grid.
+    // Colors clockwise from top-left: red, green, blue, yellow.
+    // This is a fictional flag — NOT the Windows logo.
+    const flag = document.createElement('div');
+    flag.setAttribute('aria-hidden', 'true');
+    flag.style.cssText = [
+      'display:grid;',
+      'grid-template-columns:40px 40px;',
+      'grid-template-rows:40px 40px;',
+      'gap:3px;',
+      'margin-right:16px;'
+    ].join('');
+
+    ['#FF0000', '#00FF00', '#0000FF', '#FFFF00'].forEach(function (color) {
+      const seg = document.createElement('div');
+      seg.style.background = color;
+      flag.appendChild(seg);
+    });
+
+    const titleEl = document.createElement('div');
+    titleEl.textContent = 'WinDoors 98';
+    titleEl.style.cssText = [
+      'font-size:28px;font-weight:bold;font-style:italic;',
+      'color:#fff;white-space:nowrap;'
+    ].join('');
+
+    titleRow.appendChild(flag);
+    titleRow.appendChild(titleEl);
+
+    const subtitleEl = document.createElement('p');
+    subtitleEl.textContent = 'Starting Microblob WinDoors 98...';
+    subtitleEl.style.cssText = 'font-size:11px;color:#C0C0C0;margin:0 0 16px;';
+
+    // Progress bar trough.
+    const trough = document.createElement('div');
+    trough.style.cssText = [
+      'width:260px;height:18px;',
+      'background:#C0C0C0;',
+      'border:1px solid #808080;',
+      'font-size:0;line-height:0;',
+      'margin:0 auto;',
+      'overflow:hidden;'
+    ].join('');
+
+    center.appendChild(titleRow);
+    center.appendChild(subtitleEl);
+    center.appendChild(trough);
+    container.appendChild(center);
+
+    // Schedule screech if this screen was selected at boot start.
+    // Fires in the first 70% of the screen duration — overlaid on hdd-chatter.
+    if (screechScreen === 'windoors_logo' && bootAudio) {
+      const scDelay = Math.random() * bs.WINDOORS_LOGO_DURATION_MS * 0.7;
+      setTimeout(function () {
+        if (gen !== bootGen) { return; }
+        try { bootAudio.screech.play().catch(function () {}); } catch (e) {}
+      }, scDelay);
+    }
+
+    // Progress bar — 20 discrete blocks.
+    // Block schedule (0-indexed):
+    //   0–5:   600ms each (0–30%)
+    //   6–11:  800ms each (30–60%)
+    //   after block 11 (60%): stall 3500ms — hdd-chatter drops to 0.7
+    //   12–16: 500ms each (60–85%)
+    //   after block 16 (85%): stall 2000ms — hdd-chatter drops to 0.7
+    //   17–19: 300ms each (85–100%, fast finish)
+    const TOTAL_BLOCKS = 20;
+    let blockIdx = 0;
+
     function addBlock() {
-      if (blocksFilled >= t.BOOT_BLOCK_COUNT) {
-        // Bar is full — hold briefly so it's visible, then complete boot.
-        setTimeout(completeBootScreen, t.BOOT_HOLD_MS);
+      if (gen !== bootGen) { return; }
+
+      if (blockIdx >= TOTAL_BLOCKS) {
+        // Bar complete — brief pause then advance to Screen 5.
+        setTimeout(function () {
+          if (gen !== bootGen) { return; }
+          advanceBootState(BOOT_STATE.DESKTOP_ARRIVAL);
+        }, bs.WINDOORS_LOGO_COMPLETE_PAUSE_MS);
         return;
       }
 
+      // Add a block to the trough.
       const block = document.createElement('span');
-      block.className = 'boot-progress__block';
-      track.appendChild(block);
+      block.style.cssText = [
+        'display:inline-block;',
+        'width:11px;height:18px;',
+        'background:#102046;',
+        'margin-right:1px;',
+        'vertical-align:top;'
+      ].join('');
+      trough.appendChild(block);
 
-      blocksFilled++;
+      const justAdded = blockIdx;
+      blockIdx++;
 
-      // Update ARIA progress value as a percentage for screen readers.
-      const pct = Math.round((blocksFilled / t.BOOT_BLOCK_COUNT) * 100);
-      track.setAttribute('aria-valuenow', pct);
+      // Determine the normal delay before the next block.
+      var delay;
+      if (justAdded < 6)        { delay = bs.WINDOORS_BLOCK_SPEED_SLOW_MS; }
+      else if (justAdded < 12)  { delay = bs.WINDOORS_BLOCK_SPEED_MED_MS; }
+      else if (justAdded < 17)  { delay = bs.WINDOORS_BLOCK_SPEED_FAST_MS; }
+      else                      { delay = bs.WINDOORS_BLOCK_SPEED_BURST_MS; }
 
-      setTimeout(addBlock, randomBlockDelay());
+      if (justAdded === 11) {
+        // Stall at 60%: machine is thinking. Reduce chatter volume, then resume.
+        if (bootAudio && bootAudio.hddChatter) { bootAudio.hddChatter.volume = 0.7; }
+        setTimeout(function () {
+          if (gen !== bootGen) { return; }
+          if (bootAudio && bootAudio.hddChatter) { bootAudio.hddChatter.volume = 1.0; }
+          setTimeout(addBlock, delay);
+        }, bs.WINDOORS_LOGO_STALL_60_MS);
+      } else if (justAdded === 16) {
+        // Stall at 85%: final tease.
+        if (bootAudio && bootAudio.hddChatter) { bootAudio.hddChatter.volume = 0.7; }
+        setTimeout(function () {
+          if (gen !== bootGen) { return; }
+          if (bootAudio && bootAudio.hddChatter) { bootAudio.hddChatter.volume = 1.0; }
+          setTimeout(addBlock, delay);
+        }, bs.WINDOORS_LOGO_STALL_85_MS);
+      } else {
+        setTimeout(addBlock, delay);
+      }
     }
 
     addBlock();
   }
 
-  function completeBootScreen() {
-    // Mark boot as complete before the fade so a mid-fade refresh skips
-    // both the gate screen and boot sequence entirely.
-    sessionStorage.setItem('boot_complete', '1');
+  // --- Screen 5: Desktop arrival (#94) ---------------------------------
+  //
+  // Fade hdd-chatter out (~300ms), fade #boot-sequence out (1.2s), init desktop,
+  // fire startup chime when desktop is fully visible. Mark session complete.
 
-    // Fire Umami boot_complete event.
-    if (window.umami) {
-      window.umami.track('boot_complete');
+  function renderDesktopArrivalScreen(gen, container) {
+    const t = window.APC.timing;
+    const bs = t.BOOT_SEQUENCE;
+
+    // Set base styles explicitly — container may have inherited from Screen 4.
+    container.style.cssText = 'position:fixed;inset:0;background:#000;z-index:9000;opacity:1;';
+
+    // Fade hdd-chatter volume to 0 and stop — simultaneous with the container fade.
+    if (bootAudio && bootAudio.hddChatter) {
+      fadeAudioOut(bootAudio.hddChatter, bs.HDD_CHATTER_FADE_MS, null);
     }
 
-    const bootScreen = document.getElementById('boot-screen');
-    bootScreen.classList.add('boot-screen--fade');
+    // Reveal desktop behind boot-sequence container before starting fade.
+    const desktop = document.getElementById('desktop');
+    if (desktop) { desktop.classList.remove('desktop--hidden'); }
 
-    setTimeout(() => {
-      bootScreen.classList.add('boot-screen--hidden');
-      bootScreen.classList.remove('boot-screen--fade');
-      goToDesktop();
-    }, window.APC.timing.BOOT_SCREEN_FADE_MS);
+    // Init desktop (taskbar, icons, system tray, widgets).
+    if (window.APC.desktop && typeof window.APC.desktop.init === 'function') {
+      window.APC.desktop.init();
+    }
+
+    // Begin opacity fade on the next frame so the browser has processed the
+    // opacity:1 initial style before the transition kicks in.
+    container.style.transition = 'opacity ' + bs.DESKTOP_FADE_MS + 'ms ease';
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        if (gen !== bootGen) { return; }
+        container.style.opacity = '0';
+      });
+    });
+
+    // After fade completes — advance to COMPLETE.
+    setTimeout(function () {
+      if (gen !== bootGen) { return; }
+      advanceBootState(BOOT_STATE.COMPLETE);
+    }, bs.DESKTOP_FADE_MS);
   }
 
-  // --- Desktop handoff -------------------------------------------------
+  // --- Boot complete (#94) ---------------------------------------------
+
+  function handleBootComplete(container) {
+    // Hide boot-sequence — desktop is now fully visible.
+    container.classList.add('boot-sequence--hidden');
+    container.innerHTML = '';
+
+    // Fire startup chime the moment desktop is fully visible.
+    if (bootAudio && bootAudio.chime) {
+      try { bootAudio.chime.play().catch(function () {}); } catch (e) {}
+    }
+
+    // Mark session as booted and fire analytics.
+    sessionStorage.setItem('boot_complete', '1');
+    if (window.umami) { window.umami.track('boot_complete'); }
+  }
+
+  // --- Desktop handoff (session restore path only) ---------------------
+  //
+  // Called when sessionStorage.boot_complete is already set — boot.js was never
+  // fully run this session, so bootAudio is null. Audio may not play (no gesture).
 
   function goToDesktop(skipDelay) {
-    // Play startup chime as the teal desktop fades in.
-    // startupAudio is null on session restore (init() never ran), so this guard
-    // ensures the chime only fires on a real first-boot, never on page refresh.
-    if (startupAudio) {
-      try {
-        startupAudio.play().catch(() => {});
-      } catch (e) {
-        // Silent fallback — audio failure must never block the desktop reveal.
-      }
-    }
+    var chime = new Audio('assets/audio/startup.mp3');
+    chime.preload = 'auto';
+    chime.addEventListener('error', function () {});
 
     const desktop = document.getElementById('desktop');
     desktop.classList.remove('desktop--hidden');
 
-    // Pause before desktop init — teal background is visible but empty, simulating
-    // Win98's 'loading desktop' moment before icons and taskbar appear.
-    // skipDelay is true on session restore so refreshes are instant.
     setTimeout(function () {
       if (window.APC.desktop && typeof window.APC.desktop.init === 'function') {
         window.APC.desktop.init();
       }
+      try { chime.play().catch(function () {}); } catch (e) {}
     }, skipDelay ? 0 : window.APC.timing.BOOT_DESKTOP_PAUSE_MS);
   }
 
   // --- Soft restart ---------------------------------------------------
   // Resets all module state and re-runs the full gate → boot → desktop
   // sequence without a page reload. Called by the Start Menu Shut Down
-  // dialog when the user selects "Restart the computer".
+  // dialog when the user selects "Restart".
 
   function restart() {
-    // Reset module-level animation state.
+    // Reset gate / identity state.
     hasStarted = false;
     identityPhase = 'waiting';
-    identityTyped1 = '';
-    identityTyped2 = '';
+    identityTypedLines = [];
+    currentLineIdx = 0;
     if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null; }
-    startupAudio = null;
 
-    // Reset session connection state.
+    // Invalidate any in-flight boot screen callbacks.
+    bootGen++;
+
+    // Clear audio and screech state.
+    bootAudio = null;
+    screechFires = false;
+    screechScreen = null;
+
+    // Reset other module state.
     if (window.APC.session) { window.APC.session.isConnected = false; }
-
-    // Reset netescape and desktop module state (avoids dangling references).
     if (window.APC.netescape && typeof window.APC.netescape.reset === 'function') {
       window.APC.netescape.reset();
     }
@@ -601,10 +1104,16 @@ window.APC.boot = (function () {
     var taskbarWindows = document.getElementById('taskbar-windows');
     if (taskbarWindows) { taskbarWindows.innerHTML = ''; }
 
-    // Reset boot progress track.
-    var track = document.getElementById('boot-progress-track');
-    if (track) { track.innerHTML = ''; track.setAttribute('aria-valuenow', '0'); }
+    // Reset boot-sequence container.
+    var bootSeq = document.getElementById('boot-sequence');
+    if (bootSeq) {
+      bootSeq.classList.add('boot-sequence--hidden');
+      bootSeq.innerHTML = '';
+      bootSeq.style.opacity = '';
+      bootSeq.style.transition = '';
+    }
 
+    // Reset legacy boot-screen (kept in DOM for DOM stability, never shown in new flow).
     var bootScreen = document.getElementById('boot-screen');
     if (bootScreen) {
       bootScreen.classList.add('boot-screen--hidden');
@@ -618,8 +1127,12 @@ window.APC.boot = (function () {
       gate.classList.remove('gate-screen--fade');
     }
 
+    // Reset prompt — remove visible class, clear JS-set top position.
     var gatePrompt = document.getElementById('gate-prompt');
-    if (gatePrompt) { gatePrompt.classList.add('gate-prompt--hidden'); }
+    if (gatePrompt) {
+      gatePrompt.classList.remove('gate-prompt--visible');
+      gatePrompt.style.top = '';
+    }
 
     // Re-run the boot init — sets up canvas, rain, and gate listeners.
     init();
@@ -627,7 +1140,7 @@ window.APC.boot = (function () {
 
   // --- Shutdown screen -------------------------------------------------
   // Shows a non-dismissable "safe to turn off" overlay — the simulation
-  // equivalent of WinDoors 98 powering off.
+  // equivalent of WinDoors 98 powering off. Called by taskbar.js.
 
   function shutdown() {
     if (window.umami) { window.umami.track('shutdown_trigger'); }
