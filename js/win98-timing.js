@@ -240,6 +240,26 @@
       HDD_CHATTER_FADE_MS:             300, // hdd-chatter volume fade-out duration
     },
 
+    // -------------------------------------------------------------------------
+    // Boot scene — pre-boot desk scene + CRT power-on sequence (#104)
+    // Inserts between Matrix gate keypress and POST screen.
+    // -------------------------------------------------------------------------
+
+    BOOT_SCENE_FADE_IN_MS:              600, // desk scene canvas fade-in duration
+    BOOT_SCENE_FADE_OUT_MS:             400, // desk scene canvas fade-out after CRT sequence
+
+    CRT_FLASH_MS:                        80, // step 1: CRT screen white flash duration
+    CRT_DIM_MS:                         120, // step 2: dims to #1A1A1A
+    CRT_SCANLINE_MS:                    200, // step 3: alternating scanline rows visible
+    CRT_GLOW_MS:                        300, // step 4: phosphor green glow fill
+    CRT_CONTENT_FADE_MS:                400, // step 5: matrix rain fades in at 0.6 opacity
+
+    POWER_BTN_FLASH_MS:                 100, // power button white flash on click
+
+    CRT_IDLE_FLICKER_INTERVAL_MIN_MS:  8000, // min interval between idle CRT flickers
+    CRT_IDLE_FLICKER_INTERVAL_MAX_MS: 12000, // max interval
+    CRT_IDLE_FLICKER_DURATION_MS:        80, // how long the flicker dim lasts
+
   };
 
 }());

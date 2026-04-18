@@ -482,9 +482,22 @@ window.APC.boot = (function () {
     const gate = document.getElementById('gate-screen');
     gate.classList.add('gate-screen--fade');
     setTimeout(function () {
-      cancelAnimationFrame(animFrame);
-      hideGate();
-      advanceBootState(BOOT_STATE.POST);
+      // Clear identity text so drawFrame stops rendering it behind the desk scene.
+      identityPhase = 'waiting';
+      identityTypedLines = [];
+
+      // Lower gate-screen below the desk scene canvas (z-index:100) and restore
+      // opacity instantly so Matrix rain stays visible through transparent PNG areas.
+      gate.style.zIndex     = '98';
+      gate.style.opacity    = '1';
+      gate.style.transition = 'none';
+
+      // Hand off to boot scene. onComplete fires after the CRT sequence + fade-out.
+      window.APC.bootScene.init(function () {
+        cancelAnimationFrame(animFrame);
+        hideGate();
+        advanceBootState(BOOT_STATE.POST);
+      });
     }, window.APC.timing.GATE_FADE_MS);
   }
 
