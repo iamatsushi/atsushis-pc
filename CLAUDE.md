@@ -45,7 +45,7 @@ atsushis-pc/
 │   └── apps/
 │       ├── winamp.js
 │       ├── calculator.js
-│       ├── screensaver.js          ← Signal Drift (pending — issue #2)
+│       ├── screensaver.js          ← Signal Drift screensaver
 │       ├── notepad.js
 │       └── minesweeper.js
 ├── pb_hooks/                   ← Pocketbase JS hooks (server-side, deployed to Pi)
@@ -56,7 +56,11 @@ atsushis-pc/
 ├── assets/
 │   ├── audio/
 │   │   ├── dialup.mp3
-│   │   └── startup.mp3
+│   │   ├── startup.mp3
+│   │   ├── hdd-chatter.mp3
+│   │   ├── floppy-read.mp3
+│   │   ├── hdd-screech.mp3
+│   │   └── post-beep.mp3
 │   ├── gifs/
 │   ├── fonts/
 │   └── CREDITS.md
@@ -223,25 +227,96 @@ function randomCharDelay() { return 40 + Math.random() * 140; }
 
 Fade-to-black trail: draw `rgba(0,0,0,0.15)` overlay each frame (unchanged — naturally dims older characters).
 
-**Rain color:** `#00FF41` — used exclusively for Matrix rain and the My Thoughts page. Never bleed into Win98 chrome.
+**Rain color:** `#00FF41` — used for Matrix rain, Signal Drift screensaver, and the My Thoughts page. Never bleed into Win98 chrome.
 
 **IBM Aptiva identity lines — appear during Matrix rain:**
 
-At the 2-second mark of the rain (after it has established itself), two lines type in character by character at **40–60ms per character**, in `#00FF41`, same Courier New font, same size as rain. No highlight, no special treatment — must feel typed by the rain itself, not injected as a separate UI element.
+Rain runs for `MATRIX_GATE_START_DELAY_MS` (3s) before any identity text appears. After 3s, 8 lines type in, all horizontally centered in the middle third of the canvas (anchored at `MATRIX_IDENTITY_START_Y_PCT` = 30% of canvas height):
+
+- Line 1 appears instantly (no per-character typing delay)
+- Lines 2–8 type character by character at `MATRIX_IDENTITY_CHAR_DELAY_MIN_MS`–`MATRIX_IDENTITY_CHAR_DELAY_MAX_MS` (20–30ms per character)
+- `MATRIX_LINE1_HOLD_MS` (600ms) pause after line 1 before lines 2–8 begin
+- `MATRIX_POST_LINES_PAUSE_MS` (800ms) pause after line 8 before prompt fades in
+
+**Exact line content (do not alter punctuation or capitalisation):**
 
 ```
-> initializing experience on IBM Aptiva SE7
-```
-600ms pause, then:
-```
-> $3,299 in 1998. the fastest consumer PC money could buy.
+> welcome to 1998.
+> you are about to experience the most powerful home computer money could buy.
+> the IBM Aptiva 2139-SE7. Pentium II 450MHz. 128MB RAM.
+> $3,299 in 1998. that's $6,683 today.
+> the internet ran on a 56K modem. pages loaded one bit at a time.
+> clicks did not respond in milliseconds. they responded in heartbeats.
+> you could hear the machine work.
+> take your time. sound on.
 ```
 
-Do not alter punctuation or capitalisation. Line 1 completes by the 3.5-second mark. After both lines render, a **1000ms pause**, then the standard prompt appears below:
-
-**Terminal prompt text (exact):** `C:\> press any key to continue_` — blinking block cursor at end (\~530ms blink interval). This is the exact string. Do not paraphrase or substitute.
+**Terminal prompt:** Fades in via CSS `opacity` transition (`MATRIX_PROMPT_FADE_MS` = 300ms) at `MATRIX_PROMPT_CANVAS_Y_PCT` (84% of canvas height). Text (exact): `C:\> press any key to continue` with blinking block cursor `█` at ~530ms interval.
 
 On any keypress or click: cut to black, begin boot sequence. The identity lines do not persist past this screen.
+
+### Screensaver — Signal Drift
+
+Idle-triggered full-viewport canvas animation. Injected into `<body>` on start, removed cleanly on stop.
+
+**Interface:** `window.APC.apps.screensaver = { start(onExit), stop() }`
+- `start(onExit)` — inject canvas, initialise nodes, begin animation. `onExit` is called after `stop()` completes (used by `desktop.js` to restart the idle timer).
+- `stop()` — cancel animation, clear timers, remove canvas, fire `onExit`. Idempotent — safe to call multiple times.
+
+**Visual constants:**
+
+| Constant | Value |
+|---|---|
+| Node count | 30 |
+| Connection threshold | 120px (proximity to draw a line) |
+| Node radius | 2px |
+| Node/line color | `#00FF41` (same as Matrix rain — intentional) |
+| Line weight | 0.5px |
+| Trail overdraw | `rgba(0,0,0,0.15)` per frame (no `clearRect` — natural fade) |
+
+**Motion model:** Each node drifts via independent sine/cosine paths.
+- Origin: randomised `x0`, `y0` across the full viewport
+- Amplitude: 60–120px on both axes
+- Speed: 0.3–0.8 rad/s on both axes
+- Phase: fully randomised on init
+- Position at time `t`: `x = x0 + ampX * sin(t * speedX + phaseX)`, `y = y0 + ampY * cos(t * speedY + phaseY)`
+
+**Reseed:** Every 25–35s (`SCREENSAVER_RESEED_MIN/MAX_MS`), re-randomise each node's `x0`/`y0` only. Speed, phase, and amplitude stay constant so the transition looks organic rather than abrupt. Schedules its own next reseed after running.
+
+**Line rendering:** O(n²) at n=30 = 870 proximity checks per frame. Lines drawn for pairs within 120px; `alpha = (1 - dist / 120).toFixed(3)` — closer = more opaque.
+
+**Idle trigger:** Managed by `desktop.js`. Timer resets on `mousemove`, `keydown`, `mousedown`, `touchstart`. Fires after `SCREENSAVER_IDLE_MS` (90s). Guard: checks `desktop--hidden` class before starting — suppresses during boot sequence.
+
+**Exit:** First `keydown` or `mousedown` calls `stop()`. Event listeners use `{ once: true }` plus explicit `removeEventListener` in `stop()` (safe no-op if already fired).
+
+**Timing tokens** (all in `win98-timing.js`):
+- `SCREENSAVER_IDLE_MS` = 90000
+- `SCREENSAVER_RESEED_MIN_MS` = 25000
+- `SCREENSAVER_RESEED_MAX_MS` = 35000
+
+### Five-Screen Boot Sequence (boot.js)
+
+The boot sequence is a **six-state state machine** that fires after the gate click. States: `IDLE → POST → IBS_SPLASH → DOS_LOG → WINDOORS_LOGO → DESKTOP_ARRIVAL → COMPLETE`. All screens render into `#boot-sequence` (`z-index: 9000`).
+
+**Generation counter pattern:** Every screen render captures `const gen = ++bootGen`. All `setTimeout` callbacks check `if (gen !== bootGen) { return; }` before advancing — prevents stale callbacks from a previous screen firing after the state machine has moved on.
+
+**Audio preload:** Called in `preloadBootAudio()` on first gate interaction (satisfies browser autoplay policy). Assets: `hdd-chatter.mp3`, `post-beep.mp3`, `floppy-read.mp3`, `hdd-screech.mp3`, `startup.mp3` (chime). **`hdd-spinup.mp3` does not exist** — call `bootAudio.hddChatter.play()` directly with no spinup/handoff logic. `hdd-chatter.loop = false` — plays once (~59s), carrying from Screen 1 through Screen 5.
+
+**Screech roll:** Rolled once at gate interact. `screechFires = Math.random() < 0.6`. If fires: `screechScreen = Math.random() < 0.5 ? 'dos_log' : 'windoors_logo'`. Stored at module level, checked by Screens 3 and 4.
+
+**Screen 1 — POST (`renderPostScreen`):** Black background, white monospace. BIOS header lines print at `POST_TEXT_LINE_INTERVAL_MS` (100ms) intervals. RAM counter animates 0K → 131072K at `RAM_INCREMENT_INTERVAL_MS` (20ms) ticks. Post-beep plays after last line. `hddChatter.play()` called directly (no spinup).
+
+**Screen 2 — IBS Splash (`renderIBSSplashScreen`):** Navy `#102046` background. CSS "IBS" logotype. Duration: `IBS_SPLASH_DURATION_MS` (6000ms). Floppy-seek plays at `FLOPPY_SEEK_DELAY_MIN/MAX_MS` (800–1000ms) after screen appears.
+
+**Screen 3 — DOS Log (`renderDOSLogScreen`):** 13 bootlog lines print at `DOS_LOG_LINE_INTERVAL_MIN/MAX_MS` (160–300ms) per line. Screech fires here if `screechScreen === 'dos_log'`.
+
+**Screen 4 — WinDoors Logo (`renderWindoorsLogoScreen`):** CSS 2×2 color flag (red/green/blue/yellow). Progress bar with exact stall rhythm — blocks 0–5 at `WINDOORS_BLOCK_SPEED_SLOW_MS` (600ms); blocks 6–11 at `WINDOORS_BLOCK_SPEED_MED_MS` (800ms); stall `WINDOORS_LOGO_STALL_60_MS` (3500ms) after block 11 (`hddChatter.volume = 0.7` during stall); blocks 12–16 at `WINDOORS_BLOCK_SPEED_FAST_MS` (500ms); stall `WINDOORS_LOGO_STALL_85_MS` (2000ms) after block 16; blocks 17–19 at `WINDOORS_BLOCK_SPEED_BURST_MS` (300ms); `WINDOORS_LOGO_COMPLETE_PAUSE_MS` (500ms) after 100%.
+
+**Screen 5 — Desktop Arrival (`renderDesktopArrivalScreen`):** Removes `desktop--hidden` class, calls `desktop.init()`, then forces `desktop.style.opacity = '1'; desktop.style.display = 'block'` inline — required, CSS class removal alone does not guarantee visibility. Fades `#boot-sequence` out over `DESKTOP_FADE_MS` (1200ms), then calls `handleBootComplete()`.
+
+**`handleBootComplete()`:** Must use inline `container.style.display = 'none'` (not class toggle alone) to override the prior inline `display:block` set in `advanceBootState()`. Also clears `container.style.opacity = ''` and `container.style.transition = ''`. Plays chime, sets `sessionStorage.boot_complete`, fires Umami `boot_complete`.
+
+**All `BOOT_SEQUENCE` timing tokens** live in the `BOOT_SEQUENCE` nested sub-object in `window.APC.timing` — reference as `const bs = window.APC.timing.BOOT_SEQUENCE`.
 
 ### Data Fetching
 
@@ -306,7 +381,7 @@ Modem reality: V.90 was limited by telephone infrastructure optimised for voice.
 
 The Matrix rain gate screen is exempt from all behavioral fidelity timing rules. It must render as fast as the browser allows — no artificial delay, no loading state, no spinner before the canvas starts. It is the first thing the visitor sees and must be instant.
 
-The timing values within the Matrix sequence (2s mark for identity lines, 40–60ms character cadence, 1000ms pause before prompt) are part of the animation choreography, not latency simulation. They are fixed creative timing, not IBMAptiva dial-up modeling.
+The timing values within the Matrix sequence (3s rain before identity lines, 20–30ms character cadence, 800ms pause before prompt) are part of the animation choreography, not latency simulation. They are fixed creative timing, not IBM Aptiva dial-up modeling.
 
 The behavioral fidelity timing rules below apply only after the visitor clicks through the gate and the boot sequence begins.
 
@@ -333,6 +408,7 @@ All timing values live in `js/win98-timing.js`. **Never hardcode delay values an
 * All delays are variable — use randomised ranges, never fixed values
 * Compound actions (e.g. dial-up + page load) sum their delays with distinct feedback at each stage
 * Hourglass cursor (`cursor: wait`) appears within 50ms of any delay > 300ms; reverts on completion
+* Boot sequence timings live in the nested `BOOT_SEQUENCE` sub-object: access via `const bs = window.APC.timing.BOOT_SEQUENCE`
 
 ### Component Timing Reference
 
@@ -403,6 +479,24 @@ Failure: 1-in-12 chance menu flickers closed on open (requires second click).
 
 Failure: 1-in-8 chance of extra 2000–3000ms delay before folder shows. Never delays `resume_FINAL_v3.exe` access.
 
+#### Recycle Bin (Texture Zone)
+
+Launch delay: `APP_RECYCLEBIN_MIN/MAX_MS` (400–800ms). No failure state. Singleton — only one instance open at a time.
+
+**Window:** 380×260px, `background:#C0C0C0`, Win98 chrome. Content: centered text "Recycle Bin is empty."
+
+**Right-click context menu (on desktop icon):** Open | *(separator)* | Empty Recycle Bin
+
+**"Empty Recycle Bin" flow:**
+1. Progress dialog opens with a standard Win98 progress bar.
+2. Bar fills over a randomised `RECYCLEBIN_EMPTY_MIN/MAX_MS` duration (2000–3000ms), ticking at `RECYCLEBIN_PROGRESS_STEP_MS` (50ms) intervals.
+3. On completion, dialog replaced with: "You have successfully deleted nothing. Have a great day." — OK button, Esc, and ✕ all dismiss.
+
+**Timing tokens** (all in `win98-timing.js`):
+- `RECYCLEBIN_EMPTY_MIN_MS` = 2000
+- `RECYCLEBIN_EMPTY_MAX_MS` = 3000
+- `RECYCLEBIN_PROGRESS_STEP_MS` = 50
+
 #### System Tray & Taskbar (Texture Zone)
 
 | Element | Behavior |
@@ -446,8 +540,7 @@ XP-style speech-bubble balloon anchored above the system tray, bottom-right. One
 **Timing tokens** (all in `win98-timing.js`):
 * `TRAY_POPUP_MIN_MS` = 90000 — minimum interval between balloons
 * `TRAY_POPUP_MAX_MS` = 300000 — maximum interval between balloons
-* `TRAY_POPUP_DISPLAY_MIN_MS` = 10000 — auto-dismiss after 10s if not interacted with
-* `TRAY_POPUP_DISPLAY_MAX_MS` = 10000 — (same as min; display is a fixed 10s)
+* `TRAY_POPUP_DISPLAY_MS` = 10000 — balloon auto-dismiss duration (fixed 10s; not randomised)
 * `TRAY_CLICK_MIN_MS` = 100 — minimum click-action delay
 * `TRAY_CLICK_MAX_MS` = 200 — maximum click-action delay
 
@@ -563,7 +656,7 @@ The "Atsushi's PC – Windows 98 Boot Flow: Figma-Ready Spec" document is a **de
 * DO namespace all JS globals under `window.APC` to prevent collisions.
 * DO unlock audio *only* after explicit user gesture on "Click to Start."
 * DO play `dialup.mp3` using a single preloaded `Audio` object.
-* DO use terminal green `#00FF41` for Matrix rain and My Thoughts page only.
+* DO use terminal green `#00FF41` for Matrix rain, Signal Drift screensaver, and My Thoughts page only.
 * DO apply the exact required CSS emoji green filter:  
 
   `filter: brightness(0) saturate(100%) invert(57%) sepia(99%) saturate(400%) hue-rotate(85deg) brightness(110%);`
@@ -630,6 +723,18 @@ Before each milestone:
   * Mobile/tablet (width < 1024px or touch device) shows "WinDoors 98" interstitial — hard gate, no dismiss path, boot sequence never initialises
   * Lighthouse initial load <2s
   * All Umami Cloud events fire and log as expected
+
+### PR Workflow for Feature Work
+
+All feature work (new functionality, non-trivial fixes) must go through a pull request. The standard flow:
+
+1. `git checkout -b feature/issue-N-short-description`
+2. Commit work on the feature branch
+3. `gh pr create --title "..." --body "..."`
+4. `gh pr merge --squash --delete-branch` (after confirming the PR looks correct)
+5. `git checkout main && git pull`
+
+Hotfixes to `main` (typos, linter corrections, config-only changes) may commit directly with justification noted in the commit message.
 
 ---
 
@@ -914,15 +1019,14 @@ These decisions are final. No source spec, comment, or future AI session may ove
 
 ### Tray Balloon — Timing Tokens
 
-- **DO:** Add all six tray balloon timing tokens to `win98-timing.js` before implementing any balloon code in `widgets.js`:
+- **DO:** Use exactly these five tray balloon timing tokens in `win98-timing.js`:
   - `TRAY_POPUP_MIN_MS = 90000`
   - `TRAY_POPUP_MAX_MS = 300000`
-  - `TRAY_POPUP_DISPLAY_MIN_MS = 10000`
-  - `TRAY_POPUP_DISPLAY_MAX_MS = 10000`
+  - `TRAY_POPUP_DISPLAY_MS = 10000` ← single token; auto-dismiss is fixed at 10s, not randomised
   - `TRAY_CLICK_MIN_MS = 100`
   - `TRAY_CLICK_MAX_MS = 200`
 - **DO NOT:** Hardcode any of these values in `widgets.js` or any other file.
-- **Note:** `TRAY_POPUP_DISPLAY_MIN_MS` and `TRAY_POPUP_DISPLAY_MAX_MS` are intentionally both 10000ms — the auto-dismiss window is fixed, not random. The matching values are correct.
+- **DO NOT:** Add `TRAY_POPUP_DISPLAY_MIN_MS` / `TRAY_POPUP_DISPLAY_MAX_MS` — those were a spec draft artifact. The canonical token is the single `TRAY_POPUP_DISPLAY_MS`.
 
 ### Tray Balloon — Disk Cleanup Branch
 
@@ -938,10 +1042,38 @@ These decisions are final. No source spec, comment, or future AI session may ove
 // Do not implement until spec is provided. Do not stub with a placeholder modal.
 ```
 
+### Screensaver — Color
+
+- **DO:** Use `#00FF41` for all Signal Drift screensaver rendering (nodes, lines). This is intentional — the screensaver shares terminal-green with the Matrix rain gate screen; both are pre-desktop surfaces in the same aesthetic register.
+- **DO NOT:** Treat this as a bleed into Win98 chrome. The screensaver canvas covers the entire viewport at `z-index:9999` and is removed on exit — it never touches chrome.
+
+### Start Menu — Accessories Cascade Hover Discipline
+
+- **DO:** Use local `accOpenTimer` / `accCloseTimer` variables inside `buildAccessoriesCascadeItem()` for the Programs → Accessories sub-submenu hover timing.
+- **DO NOT:** Reuse the global `openSubmenuEl` tracker or call `openSubmenu()` for the Accessories layer. The global `openSubmenu()` closes the previously open submenu when a new one opens — which would close Programs when Accessories opens, breaking the cascade.
+- **DO:** Attach a `MutationObserver` to the Programs submenu element. When Programs loses its `--open` class (i.e., the menu closes), the observer calls `closeAcc()` to clean up any open Accessories state. This prevents stale-open sub-submenus after keyboard or flicker dismissals.
+- **Reference:** `buildAccessoriesCascadeItem()` in `taskbar.js` is the canonical implementation.
+
 ### Boot Flow Figma Spec
 
 - **DO NOT:** Implement any code from the Boot Flow Figma Spec. It is a design artifact only.
 - **DO:** File it as a GitHub issue labeled `design` or `figma` for tracking purposes.
+
+### Boot Sequence — Audio File Realities
+
+- **DO:** Call `bootAudio.hddChatter.play()` directly in `renderPostScreen()`. No spinup/handoff wrapper.
+- **DO NOT:** Reference `hdd-spinup.mp3` — this file does not exist. Spin-up is baked into the opening seconds of `hdd-chatter.mp3`.
+- **DO:** Use `floppy-read.mp3` as the floppy seek audio filename. The JS key is `floppySeek` (unchanged).
+- **DO:** Set `hddChatter.loop = false`. The file plays once (~59s), carrying through from POST into Desktop Arrival.
+
+### Boot Sequence — Inline Style Specificity
+
+`advanceBootState()` always sets `container.style.display = 'block'` as an inline style before handing off to each screen renderer. Because inline styles override CSS class rules, `handleBootComplete()` cannot rely on `classList.add('boot-sequence--hidden')` alone — the CSS `display:none` from the class loses to the prior inline `display:block`.
+
+- **DO:** Use `container.style.display = 'none'` (inline) at the top of `handleBootComplete()` to win the specificity fight.
+- **DO:** Also clear `container.style.opacity = ''` and `container.style.transition = ''` in `handleBootComplete()` — `advanceBootState(COMPLETE)` resets opacity/transition inline before teardown runs, leaving stale values.
+- **DO NOT:** Rely on class toggling alone to hide `#boot-sequence` after the sequence completes.
+- **DO:** Force `desktop.style.opacity = '1'; desktop.style.display = 'block'` inline after `desktop.init()` in Screen 5 — removing `desktop--hidden` class alone does not guarantee the desktop is visually present.
 
 ---
 
