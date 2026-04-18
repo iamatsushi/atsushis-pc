@@ -1221,6 +1221,13 @@ window.APC.boot = (function () {
       animFrame = null;
     }
 
+    // Hide the gate prompt so it doesn't float over the wormhole animation.
+    var gatePrompt = document.getElementById('gate-prompt');
+    if (gatePrompt) {
+      gatePrompt.style.opacity    = '0';
+      gatePrompt.style.transition = 'none';
+    }
+
     var w  = canvas.width;
     var h  = canvas.height;
     var cx = w / 2;
