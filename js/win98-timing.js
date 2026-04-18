@@ -214,14 +214,14 @@
       POST_AFTER_LAST_LINE_MS:         400, // pause after "Press DEL" before advance
       RAM_INCREMENT_INTERVAL_MS:        20, // setInterval tick for RAM counter
 
-      IBS_SPLASH_DURATION_MS:         3000, // total time on IBS BIOS splash screen
+      IBS_SPLASH_DURATION_MS:         6000, // total time on IBS BIOS splash screen
       FLOPPY_SEEK_DELAY_MIN_MS:        800, // floppy-seek fires this long after screen appears
       FLOPPY_SEEK_DELAY_MAX_MS:       1000,
 
-      DOS_LOG_LINE_INTERVAL_MIN_MS:     80, // min ms between bootlog lines
-      DOS_LOG_LINE_INTERVAL_MAX_MS:    150, // max ms between bootlog lines
-      DOS_LOG_AFTER_LAST_LINE_MS:      300, // pause after final line before advance
-      DOS_LOG_DURATION_MS:            2500, // reference ceiling for screech scheduling
+      DOS_LOG_LINE_INTERVAL_MIN_MS:    160, // min ms between bootlog lines
+      DOS_LOG_LINE_INTERVAL_MAX_MS:    300, // max ms between bootlog lines
+      DOS_LOG_AFTER_LAST_LINE_MS:      600, // pause after final line before advance
+      DOS_LOG_DURATION_MS:            5000, // reference ceiling for screech scheduling
 
       WINDOORS_LOGO_STALL_60_MS:      3500, // stall at 60% progress (3.5s)
       WINDOORS_LOGO_STALL_85_MS:      2000, // stall at 85% progress (2s)
