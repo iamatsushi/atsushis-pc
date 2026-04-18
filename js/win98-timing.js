@@ -184,6 +184,14 @@
     SYSPROPS_CLOSE_MIN_MS:     200,  // OK button close delay
     SYSPROPS_CLOSE_MAX_MS:     400,
 
+    // -------------------------------------------------------------------------
+    // Screensaver — Signal Drift  —  ambient; not latency simulation
+    // -------------------------------------------------------------------------
+
+    SCREENSAVER_IDLE_MS:       90000, // no-input idle before screensaver fires
+    SCREENSAVER_RESEED_MIN_MS: 25000, // min interval between node origin reseeds
+    SCREENSAVER_RESEED_MAX_MS: 35000, // max interval
+
   };
 
 }());

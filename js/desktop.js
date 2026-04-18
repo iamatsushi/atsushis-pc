@@ -29,6 +29,10 @@ window.APC.desktop = (function () {
   let clockClickCount = 0;
   let clockFirstClickTime = 0;
 
+  // Screensaver idle timer state
+  let idleTimer = null;
+  let idleResetBound = false;
+
   // Context menu / wallpaper / system properties state
   let contextMenuEl = null;       // active context menu DOM node (or null)
   let wallpaperIndex = 0;         // current wallpaper variant index (0 = default teal)
@@ -52,6 +56,15 @@ window.APC.desktop = (function () {
     // Widgets fire their first fetch immediately; subsequent fetches self-schedule via setTimeout.
     if (window.APC.widgets && typeof window.APC.widgets.init === 'function') {
       window.APC.widgets.init();
+    }
+    startIdleTimer();
+    // Bind input reset listeners once for the lifetime of the page.
+    // idleResetBound guards against double-binding on restart (init fires again).
+    if (!idleResetBound) {
+      idleResetBound = true;
+      ['mousemove', 'keydown', 'mousedown', 'touchstart'].forEach(function (evt) {
+        document.addEventListener(evt, startIdleTimer, { passive: true });
+      });
     }
   }
 
@@ -1186,6 +1199,25 @@ window.APC.desktop = (function () {
     syspropsState = null;
   }
 
+  // --- Screensaver idle timer -------------------------------------------
+  // Resets on every user input event (mousemove, keydown, mousedown, touchstart).
+  // Fires screensaver after SCREENSAVER_IDLE_MS of inactivity. Guard check
+  // prevents screensaver launching during boot or gate screen.
+
+  function startIdleTimer() {
+    var t = window.APC.timing;
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(function () {
+      idleTimer = null;
+      // Only launch if the desktop is fully visible (not during boot/gate).
+      var desktopEl = document.getElementById('desktop');
+      if (desktopEl && desktopEl.classList.contains('desktop--hidden')) { return; }
+      if (window.APC.apps && window.APC.apps.screensaver) {
+        window.APC.apps.screensaver.start(startIdleTimer);
+      }
+    }, t.SCREENSAVER_IDLE_MS);
+  }
+
   // --- Module reset (called by boot.restart()) -------------------------
   // Discards all window references so state is clean when desktop.init()
   // fires again after the gate/boot sequence replays. DOM cleanup (removing
@@ -1200,6 +1232,12 @@ window.APC.desktop = (function () {
       clearTimeout(appLaunching[k]);
       delete appLaunching[k];
     });
+    // Stop screensaver and cancel idle timer before state resets.
+    clearTimeout(idleTimer);
+    idleTimer = null;
+    if (window.APC.apps && window.APC.apps.screensaver) {
+      window.APC.apps.screensaver.stop();
+    }
     zCounter = 100;
     winIdCounter = 0;
     activeWindowId = null;
