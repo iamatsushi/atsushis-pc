@@ -59,6 +59,12 @@
   left: 10px;
 }
 
+/* Recycle Bin — bottom-left per Win98 convention */
+.desktop-icon:nth-child(5) {
+  bottom: 8px;
+  left: 10px;
+}
+
 .desktop-icon__img {
   display: block;
   font-size: 32px;

@@ -200,6 +200,15 @@ window.APC.desktop = (function () {
           showIconContextMenu(e.clientX, e.clientY, icon);
         });
       }
+
+      // Recycle Bin: right-click shows "Empty Recycle Bin" easter egg option
+      if (icon.dataset.app === 'recycle-bin') {
+        icon.addEventListener('contextmenu', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          showRecycleBinContextMenu(e.clientX, e.clientY);
+        });
+      }
     });
 
     // Click on desktop (outside icons) clears selection
@@ -243,7 +252,235 @@ window.APC.desktop = (function () {
       openResumeExe();
     } else if (app === 'dialup') {
       openDialupNetworking();
+    } else if (app === 'recycle-bin') {
+      openRecycleBin();
     }
+  }
+
+  function openRecycleBin() {
+    const existing = findWindowByApp('recycle-bin');
+    if (existing) {
+      if (existing.minimized) { restoreWindow(existing); }
+      else { bringToFront(existing.el); }
+      return;
+    }
+
+    if (appLaunching['recycle-bin']) { return; }
+    document.body.style.cursor = 'wait';
+
+    var t = window.APC.timing;
+    appLaunching['recycle-bin'] = setTimeout(function () {
+      delete appLaunching['recycle-bin'];
+      document.body.style.cursor = '';
+      buildRecycleBinWindow();
+    }, t.rand(t.APP_RECYCLEBIN_MIN_MS, t.APP_RECYCLEBIN_MAX_MS));
+  }
+
+  function buildRecycleBinWindow() {
+    const state = createWindow({
+      title: 'Recycle Bin',
+      app: 'recycle-bin',
+      width: 380,
+      height: 260,
+      x: 80,
+      y: 60
+    });
+
+    // Empty state — centred message over grey content area
+    state.contentEl.style.background = '#C0C0C0';
+    state.contentEl.style.display = 'table';
+    state.contentEl.style.width = '100%';
+
+    const cell = document.createElement('div');
+    cell.style.cssText = 'display:table-cell;vertical-align:middle;text-align:center;';
+
+    const msg = document.createElement('p');
+    msg.style.cssText =
+      'font-family:\'MS Sans Serif\',Tahoma,sans-serif;font-size:11px;color:#000000;';
+    msg.textContent = 'Recycle Bin is empty.';
+    cell.appendChild(msg);
+    state.contentEl.appendChild(cell);
+
+    state.show();
+  }
+
+  // Right-click context menu on the Recycle Bin icon.
+  function showRecycleBinContextMenu(x, y) {
+    hideContextMenu();
+    const menu = document.createElement('div');
+    menu.className = 'desktop-context-menu';
+
+    const items = [
+      { label: 'Open',              action: function () { openRecycleBin(); } },
+      { sep: true },
+      { label: 'Empty Recycle Bin', action: showEmptyRecycleBinFlow }
+    ];
+
+    items.forEach(function (item) {
+      if (item.sep) {
+        const sep = document.createElement('div');
+        sep.className = 'desktop-context-menu__sep';
+        menu.appendChild(sep);
+        return;
+      }
+      const btn = document.createElement('button');
+      btn.className = 'desktop-context-menu__item';
+      btn.textContent = item.label;
+      (function (action) {
+        btn.addEventListener('click', function () { hideContextMenu(); action(); });
+      }(item.action));
+      menu.appendChild(btn);
+    });
+
+    menu.style.left = x + 'px';
+    menu.style.top  = y + 'px';
+    document.body.appendChild(menu);
+    contextMenuEl = menu;
+
+    const rect = menu.getBoundingClientRect();
+    const vw = document.documentElement.clientWidth;
+    const vh = document.documentElement.clientHeight;
+    if (x + rect.width  > vw) { x = vw - rect.width  - 4; }
+    if (y + rect.height > vh) { y = vh - rect.height - 4; }
+    if (x < 0) { x = 0; }
+    if (y < 0) { y = 0; }
+    menu.style.left = x + 'px';
+    menu.style.top  = y + 'px';
+
+    const onDocClick = function (e) {
+      if (contextMenuEl && !contextMenuEl.contains(e.target)) { hideContextMenu(); }
+    };
+    const onDocKey = function (e) { if (e.key === 'Escape') { hideContextMenu(); } };
+    setTimeout(function () {
+      document.addEventListener('click', onDocClick);
+      document.addEventListener('keydown', onDocKey);
+    }, 0);
+    menu._dismissClick = onDocClick;
+    menu._dismissKey   = onDocKey;
+
+    const first = menu.querySelector('.desktop-context-menu__item');
+    if (first) { first.focus(); }
+  }
+
+  // Easter egg: "Empty Recycle Bin" progress dialog → completion message.
+  function showEmptyRecycleBinFlow() {
+    // Phase 1: progress dialog
+    const overlay = document.createElement('div');
+    overlay.className = 'win98-msgbox-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-label', 'Emptying Recycle Bin');
+
+    const box = document.createElement('div');
+    box.className = 'win98-msgbox';
+
+    const tb = document.createElement('div');
+    tb.className = 'win98-window__titlebar';
+    const titleSpan = document.createElement('span');
+    titleSpan.className = 'win98-window__title';
+    titleSpan.textContent = 'Emptying Recycle Bin';
+    tb.appendChild(titleSpan);
+    box.appendChild(tb);
+
+    const body = document.createElement('div');
+    body.className = 'win98-msgbox__body';
+
+    const statusMsg = document.createElement('p');
+    statusMsg.className = 'win98-msgbox__msg';
+    statusMsg.textContent = 'Deleting items...';
+    body.appendChild(statusMsg);
+
+    // Progress bar — Win98-style (outer track + inner fill)
+    const track = document.createElement('div');
+    track.style.cssText =
+      'border:2px inset #808080;background:#FFFFFF;height:18px;' +
+      'margin-top:8px;position:relative;';
+    const fill = document.createElement('div');
+    fill.style.cssText =
+      'position:absolute;top:0;left:0;height:100%;width:0%;' +
+      'background:#000080;transition:none;';
+    track.appendChild(fill);
+    body.appendChild(track);
+
+    box.appendChild(body);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    // Animate fill from 0 → 100% over 2000–3000ms using small increments
+    var t = window.APC.timing;
+    var totalMs   = t.rand(2000, 3000);
+    var stepMs    = 50;
+    var steps     = Math.floor(totalMs / stepMs);
+    var stepCount = 0;
+
+    var progressTimer = setInterval(function () {
+      stepCount++;
+      var pct = Math.min(100, Math.round((stepCount / steps) * 100));
+      fill.style.width = pct + '%';
+      statusMsg.textContent = 'Deleting items... ' + pct + '%';
+
+      if (pct >= 100) {
+        clearInterval(progressTimer);
+        // Phase 2: completion dialog after a brief pause
+        setTimeout(function () {
+          if (overlay.parentNode) { overlay.parentNode.removeChild(overlay); }
+          showRecycleBinComplete();
+        }, 400);
+      }
+    }, stepMs);
+  }
+
+  function showRecycleBinComplete() {
+    const overlay = document.createElement('div');
+    overlay.className = 'win98-msgbox-overlay';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+    overlay.setAttribute('aria-labelledby', 'rb-complete-title');
+
+    const box = document.createElement('div');
+    box.className = 'win98-msgbox';
+
+    const tb = document.createElement('div');
+    tb.className = 'win98-window__titlebar';
+    const titleSpan = document.createElement('span');
+    titleSpan.className = 'win98-window__title';
+    titleSpan.id = 'rb-complete-title';
+    titleSpan.textContent = 'Recycle Bin';
+    const ctrls = document.createElement('span');
+    ctrls.className = 'win98-window__controls';
+    const xBtn = document.createElement('button');
+    xBtn.className = 'win98-window__btn';
+    xBtn.textContent = '\u00D7';
+    xBtn.setAttribute('aria-label', 'Close');
+    ctrls.appendChild(xBtn);
+    tb.appendChild(titleSpan);
+    tb.appendChild(ctrls);
+    box.appendChild(tb);
+
+    const body = document.createElement('div');
+    body.className = 'win98-msgbox__body';
+    const msg = document.createElement('p');
+    msg.className = 'win98-msgbox__msg';
+    msg.textContent = 'You have successfully deleted nothing. Have a great day.';
+    const okBtn = document.createElement('button');
+    okBtn.className = 'win98-msgbox__ok';
+    okBtn.textContent = 'OK';
+    body.appendChild(msg);
+    body.appendChild(okBtn);
+    box.appendChild(body);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+
+    function dismiss() {
+      if (overlay.parentNode) { overlay.parentNode.removeChild(overlay); }
+      document.removeEventListener('keydown', onKey);
+    }
+    const onKey = function (e) { if (e.key === 'Escape') { dismiss(); } };
+    document.addEventListener('keydown', onKey);
+    xBtn.addEventListener('click', dismiss);
+    okBtn.addEventListener('click', dismiss);
+    overlay.addEventListener('click', function (e) { if (e.target === overlay) { dismiss(); } });
+    okBtn.focus();
   }
 
   function openDialupNetworking() {
