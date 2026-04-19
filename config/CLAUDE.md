@@ -110,3 +110,19 @@ Git remotes on Pi:
 | `/var/log/deploy.log` | Deploy log |
 | `/var/log/pb-backup.log` | Backup log |
 | `/var/log/caddy-health.log` | Caddy health log |
+
+---
+
+## Cloudflare RUM — Intentionally Disabled
+
+Cloudflare automatically injects a Real User Monitoring (RUM) beacon script
+(`static.cloudflareinsights.com/beacon.min.js`) into pages proxied through their network.
+This site uses Umami for all analytics — Cloudflare RUM is not needed and was disabled.
+
+**Current state:** RUM disabled in Cloudflare dashboard → Analytics & Logs → Web Analytics.
+The script is not injected. The current CSP does NOT include `static.cloudflareinsights.com`
+and should not be updated to include it.
+
+**Do not** add `static.cloudflareinsights.com` to `script-src` in the Caddyfile.
+If you see a CSP console error for this domain, re-disable RUM in the Cloudflare dashboard
+(it may have been re-enabled by a Cloudflare setting change) — do not fix it via CSP.
