@@ -420,8 +420,9 @@ var POWER_X1  = 875, POWER_Y1  = 715, POWER_X2  = 930, POWER_Y2  = 775;
           gs.classList.add('gate-screen--hidden');
         }
 
+        var cb = onComplete;
         destroy();
-        if (onComplete) { onComplete(); }
+        if (cb) { cb(); }
       }, t.BOOT_SCENE_FADE_OUT_MS);
     }, t.DESK_ZOOM_MS);
   }
@@ -467,8 +468,9 @@ var POWER_X1  = 875, POWER_Y1  = 715, POWER_X2  = 930, POWER_Y2  = 775;
     var img = new Image();
     img.addEventListener('error', function () {
       // Asset load failed — skip scene and go straight to boot.
+      var cb = onComplete;
       destroy();
-      if (onComplete) { onComplete(); }
+      if (cb) { cb(); }
     });
     img.addEventListener('load', function () {
       processAsset(img, function () {
