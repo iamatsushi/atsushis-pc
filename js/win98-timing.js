@@ -65,6 +65,8 @@
     MATRIX_COL_SPEED_MIN_PCT:       0.80,  // per-column speed floor (80% of base velocity)
     MATRIX_COL_SPEED_MAX_PCT:       1.00,  // per-column speed ceiling (100% of base velocity)
     MATRIX_EMOJI_FREQUENCY:         0.02,  // 2% of all characters are emoji (natural color)
+    MATRIX_STREAM_LEN_MIN:             8,  // min visible characters per column stream
+    MATRIX_STREAM_LEN_MAX:            20,  // max visible characters per column stream
     MATRIX_CURSOR_BLINK_MS:          530,  // terminal prompt cursor blink interval (matches CSS)
     MATRIX_SESSION_TTL_MS:       3600000,  // 1 hour — localStorage skip-to-desktop TTL
 

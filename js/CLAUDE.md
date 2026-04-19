@@ -104,17 +104,55 @@ The Matrix rain canvas runs inside `boot.js` under the `window.APC.boot` namespa
 - `rainStartTime` set on first `drawFrame()` call
 - When `Date.now() - rainStartTime >= rainDuration`: cancel rAF, call `revealPrompt()`
 
+**Column stream model (PR #141):**
+- Each column is a full visible stream of 8–20 characters falling as a unit (`col.streamLen`, set once at `initColumns()`, not re-rolled on reset)
+- `col.headRow` is the current row of the stream head (was `col.currentRow` before PR #141 — do not use the old name)
+- `col.active = false` during the post-exit pause; `col.pauseUntil` is the resume timestamp
+- Characters re-randomize every frame (flicker effect) — katakana, ASCII, emojis at 2%
+- When `col.headRow - col.streamLen + 1 >= rows` (tail fully off bottom): set `active = false`, roll new `pauseUntil`
+- On resume: `active = true`, `headRow = 0`, `nextCharTime = now` — `streamLen` and `charDelay` unchanged
+
 **Per-column fixed speed:**
-- Base velocity: 100ms per character step (documented in `initColumns()` comment)
+- Base velocity: 100ms per head advance (documented in `initColumns()` comment)
 - Each column gets `speedFactor = rand(MATRIX_COL_SPEED_MIN_PCT, MATRIX_COL_SPEED_MAX_PCT)` (0.80–1.00)
 - `col.charDelay = Math.round(100 / speedFactor)` → range 100–125ms
-- charDelay is NOT re-rolled when a column resets to the top — speed is fixed for the full duration
+- charDelay is NOT re-rolled when a stream resets — speed is fixed for the full duration
+
+**Trail opacity — exact values, implement these:**
+
+| Position (j) | Opacity |
+|---|---|
+| 0 (head) | 1.0 |
+| 1 | 0.8 |
+| 2 | 0.6 |
+| 3 | 0.4 |
+| 4+ | 0.2, linear taper to 0 at stream tail |
+
+Defined in `TRAIL_OPACITIES` const in boot.js. Set `ctx.globalAlpha = opacity` per character; restore to 1.0 after the column loop.
+
+**Render model — clearRect (PR #141):**
+- `drawFrame()` calls `ctx.clearRect(0, 0, canvas.width, canvas.height)` at the start of every frame
+- All active stream cells are re-drawn explicitly
+- Do NOT restore the old `rgba(0,0,0,0.15)` `fillRect` overdraw — it is replaced
+
+**Prompt legibility:**
+- `#gate-prompt` has `background: rgba(0,0,0,0.75)` and `padding: 6px 12px` in `css/boot.css`
+- Do not remove these — the streaming rain runs behind the prompt
+
+**`revealPrompt()`:**
+- Calls `cancelAnimationFrame(animFrame)` before showing the prompt — rain stops when prompt appears
+- `identityPhase = 'done'` and the `gate-prompt--visible` class are set after the cancel
 
 **Emoji rendering — natural color, no filter:**
 - Frequency: exactly `MATRIX_EMOJI_FREQUENCY` (2%) — fixed, not re-rolled per character
 - Emojis render in natural OS color. No CSS filter. Do not add a filter.
 - Do NOT use the old `ctx.filter = 'brightness(0) saturate(100%)...'` hack — it is removed
 - Emoji list is defined in `MATRIX_EMOJIS` const in boot.js
+
+**Wormhole compatibility (`startWormhole()`):**
+- Snapshots `col.headRow` (not `col.currentRow`) when building `wormChars`
+- Clamp negative headRow values (above-canvas streams) to 0: `Math.max(0, col.headRow)`
+- Everything else in `startWormhole()` is unaffected by the streaming rewrite
 
 **`init(options)` signature:**
 - `options.force = true` bypasses the localStorage TTL check

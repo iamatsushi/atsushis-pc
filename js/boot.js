@@ -13,6 +13,9 @@ window.APC.boot = (function () {
 
   const MATRIX_COLOR = '#00FF41';
   const FONT_SIZE = 14;
+  // Trail opacity by stream position (j=0 is head, j=1 next, etc.).
+  // Positions beyond this array taper linearly from 0.2 toward 0 at stream tail.
+  const TRAIL_OPACITIES = [1.0, 0.8, 0.6, 0.4, 0.2];
   // Emoji frequency is fixed at MATRIX_EMOJI_FREQUENCY (2%) — no per-draw re-roll.
 
   // Exact character set from CLAUDE.md spec — half-width katakana + ASCII + symbols.
@@ -339,6 +342,8 @@ window.APC.boot = (function () {
 
   function revealPrompt() {
     if (hasStarted) { return; }
+    // Cancel the rain rAF — prompt is visible, rain is no longer needed.
+    if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null; }
     identityPhase = 'done';
     const prompt = document.getElementById('gate-prompt');
     if (prompt) {
@@ -371,30 +376,36 @@ window.APC.boot = (function () {
   function initColumns() {
     const t = window.APC.timing;
     const count = Math.floor(canvas.width / FONT_SIZE);
-    const rows = Math.floor(canvas.height / FONT_SIZE);
-    // Base velocity: 100ms per character step — tuned for readability at 1080p desktop.
+    // Base velocity: 100ms per head advance — tuned for readability at 1080p desktop.
     // Each column's charDelay = BASE_CHAR_DELAY_MS / speedFactor, giving a fixed
     // 100–125ms range (MATRIX_COL_SPEED_MIN_PCT 0.80 → 125ms, MAX 1.00 → 100ms).
+    // charDelay is NOT re-rolled when a stream resets — speed is fixed for the full duration.
     const BASE_CHAR_DELAY_MS = 100;
     columns = [];
     for (let i = 0; i < count; i++) {
       const speedFactor = t.MATRIX_COL_SPEED_MIN_PCT +
         Math.random() * (t.MATRIX_COL_SPEED_MAX_PCT - t.MATRIX_COL_SPEED_MIN_PCT);
+      const streamLen = t.rand(t.MATRIX_STREAM_LEN_MIN, t.MATRIX_STREAM_LEN_MAX);
       columns.push({
-        x: i * FONT_SIZE,
-        currentRow: Math.floor(Math.random() * rows),
-        nextCharTime: Date.now() + Math.floor(Math.random() * t.MATRIX_RAIN_STAGGER_MAX_MS),
-        charDelay: Math.round(BASE_CHAR_DELAY_MS / speedFactor), // fixed for duration — no re-roll
-        pauseUntil: 0
+        x:            i * FONT_SIZE,
+        headRow:      -Math.floor(Math.random() * streamLen), // stagger: head starts above canvas
+        streamLen:    streamLen,                               // fixed for duration — not re-rolled on reset
+        speedFactor:  speedFactor,
+        charDelay:    Math.round(BASE_CHAR_DELAY_MS / speedFactor), // fixed for duration
+        nextCharTime: Date.now() + t.rand(0, t.MATRIX_RAIN_STAGGER_MAX_MS),
+        active:       true,
+        pauseUntil:   0
       });
     }
   }
 
   // --- Matrix rain render loop -----------------------------------------
   //
-  // Per-column typing reveal: each column advances one character at a time,
-  // top to bottom, at a randomised 40–180ms cadence. Identity lines are
-  // redrawn at full brightness each frame so the fade overlay doesn't dim them.
+  // Column stream model: each column maintains a full visible stream of
+  // N characters (8–20) falling together as a unit. The head advances one
+  // row per tick; the trail follows above it, fading by position. Characters
+  // re-randomize every frame (flicker effect). clearRect replaces overdraw —
+  // all active cells are re-drawn explicitly each frame.
 
   function drawFrame() {
     const now = Date.now();
@@ -412,57 +423,83 @@ window.APC.boot = (function () {
     const rows = Math.floor(canvas.height / FONT_SIZE);
     const t = window.APC.timing;
 
-    // Fade-to-black trail — dims older characters naturally each frame.
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    // Clear full canvas each frame — streaming model re-draws all active cells explicitly.
+    // Replaces the old rgba(0,0,0,0.15) overdraw; canvas background shows through cleared cells.
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     ctx.font = FONT_SIZE + 'px "Courier New", monospace';
+    ctx.fillStyle = MATRIX_COLOR;
 
     for (let i = 0; i < columns.length; i++) {
       const col = columns[i];
 
-      if (now < col.pauseUntil) { continue; }
-      if (now < col.nextCharTime) { continue; }
-
-      const y = (col.currentRow + 1) * FONT_SIZE;
-
-      // 2% of characters are emoji — natural OS color, no filter applied.
-      const isEmoji = Math.random() < t.MATRIX_EMOJI_FREQUENCY;
-
-      if (isEmoji) {
-        ctx.fillText(
-          MATRIX_EMOJIS[Math.floor(Math.random() * MATRIX_EMOJIS.length)],
-          col.x, y
-        );
-      } else {
-        ctx.fillStyle = MATRIX_COLOR;
-        ctx.fillText(
-          MATRIX_CHARS[Math.floor(Math.random() * MATRIX_CHARS.length)],
-          col.x, y
-        );
+      if (!col.active) {
+        if (now >= col.pauseUntil) {
+          col.active = true;
+          col.headRow = 0;
+          col.nextCharTime = now;
+        }
+        continue;
       }
 
-      col.currentRow++;
+      // Advance head one row per tick.
+      if (now >= col.nextCharTime) {
+        col.headRow++;
+        col.nextCharTime = now + col.charDelay;
+      }
 
-      if (col.currentRow >= rows) {
+      // Stream fully exited — begin post-exit pause.
+      // Check tail (headRow - streamLen + 1) rather than head so the full stream clears.
+      if (col.headRow - col.streamLen + 1 >= rows) {
+        col.active = false;
         col.pauseUntil = now + t.rand(t.MATRIX_RAIN_RESET_MIN_MS, t.MATRIX_RAIN_RESET_MAX_MS);
-        col.currentRow = 0;
-        // charDelay is NOT re-rolled — each column keeps its assigned speed for the full duration.
+        continue;
       }
 
-      col.nextCharTime = now + col.charDelay;
+      // Draw stream — head at headRow, trail going upward (j=0 is head).
+      // Characters re-randomize every frame for flicker effect.
+      for (let j = 0; j < col.streamLen; j++) {
+        const row = col.headRow - j;
+        if (row < 0 || row >= rows) { continue; }
+
+        let opacity;
+        if (j < TRAIL_OPACITIES.length) {
+          opacity = TRAIL_OPACITIES[j];
+        } else {
+          // Linear taper: 0.2 at TRAIL_OPACITIES.length → 0 at stream tail.
+          const tailLen = col.streamLen - TRAIL_OPACITIES.length;
+          opacity = tailLen > 0 ? 0.2 * (1 - (j - TRAIL_OPACITIES.length) / tailLen) : 0;
+        }
+        if (opacity <= 0) { continue; }
+
+        const y = (row + 1) * FONT_SIZE;
+        ctx.globalAlpha = opacity;
+
+        if (Math.random() < t.MATRIX_EMOJI_FREQUENCY) {
+          // 2% of characters are emoji — natural OS color, no filter applied.
+          ctx.fillText(
+            MATRIX_EMOJIS[Math.floor(Math.random() * MATRIX_EMOJIS.length)],
+            col.x, y
+          );
+        } else {
+          ctx.fillText(
+            MATRIX_CHARS[Math.floor(Math.random() * MATRIX_CHARS.length)],
+            col.x, y
+          );
+        }
+      }
     }
 
-    // Redraw identity lines at full brightness each frame so the fade overlay
-    // doesn't dim them while they're still being typed.
-    // Y positions recalculate from canvas.height on each frame so a resize
-    // mid-sequence doesn't leave lines at stale vertical positions.
+    // Restore defaults before drawing identity lines.
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = MATRIX_COLOR;
+
+    // Redraw identity lines at full brightness each frame so they're always
+    // visible over the streaming rain. Y positions recalculate from canvas.height
+    // on each frame so a resize mid-sequence doesn't leave lines at stale positions.
     if (identityPhase !== 'waiting' && identityTypedLines.length > 0) {
       const startY = canvas.height * t.MATRIX_IDENTITY_START_Y_PCT;
       const lineHeight = FONT_SIZE * 1.6;
-
-      ctx.font = FONT_SIZE + 'px "Courier New", monospace';
-      ctx.fillStyle = MATRIX_COLOR;
 
       for (let li = 0; li < identityTypedLines.length; li++) {
         if (!identityTypedLines[li]) { continue; }
@@ -1337,7 +1374,8 @@ window.APC.boot = (function () {
         if (Math.random() > 0.6) { continue; }
         var px  = col.x + FONT_SIZE / 2;
         // Distribute rows relative to column's live rain-head position.
-        var row = (col.currentRow + ri) % gridRows;
+        // Clamp negative headRow values (above-canvas streams) to 0.
+        var row = (Math.max(0, col.headRow) + ri) % gridRows;
         var py  = (row + 1) * FONT_SIZE;
         var dx  = px - cx;
         var dy  = py - cy;
