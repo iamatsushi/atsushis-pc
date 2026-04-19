@@ -54,8 +54,6 @@
 
     // Rain column typing pace — per-column typing reveal model.
     // Columns advance one character at a time at a randomised speed.
-    MATRIX_RAIN_CHAR_MIN_MS:          40,  // fastest column (programmer typing speed)
-    MATRIX_RAIN_CHAR_MAX_MS:         180,  // slowest column
     MATRIX_RAIN_RESET_MIN_MS:        800,  // pause after column fills before reset to top
     MATRIX_RAIN_RESET_MAX_MS:       2500,
     MATRIX_RAIN_STAGGER_MAX_MS:     2000,  // max random start delay per column on init
@@ -65,6 +63,8 @@
     MATRIX_COL_SPEED_MIN_PCT:       0.80,  // per-column speed floor (80% of base velocity)
     MATRIX_COL_SPEED_MAX_PCT:       1.00,  // per-column speed ceiling (100% of base velocity)
     MATRIX_EMOJI_FREQUENCY:         0.02,  // 2% of all characters are emoji (natural color)
+    MATRIX_STREAM_LEN_MIN:             8,  // min visible characters per column stream
+    MATRIX_STREAM_LEN_MAX:            20,  // max visible characters per column stream
     MATRIX_CURSOR_BLINK_MS:          530,  // terminal prompt cursor blink interval (matches CSS)
     MATRIX_SESSION_TTL_MS:       3600000,  // 1 hour — localStorage skip-to-desktop TTL
 

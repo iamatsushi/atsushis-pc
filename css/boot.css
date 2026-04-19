@@ -37,6 +37,8 @@
   user-select: none;
   opacity: 0;
   transition: opacity 300ms ease;
+  background: rgba(0, 0, 0, 0.75);
+  padding: 6px 12px;
 }
 
 /* Reveal class added by JS after identity line sequence completes */
