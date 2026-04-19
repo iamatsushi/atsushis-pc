@@ -204,6 +204,25 @@
     RECYCLEBIN_PROGRESS_STEP_MS:     50, // setInterval tick for progress bar update
 
     // -------------------------------------------------------------------------
+    // HDD Audio — boot sequence ambient sound
+    //
+    // hdd-poweron.mp3: plays once on power button click (10s, no loop)
+    //   Contains: power button click sound + HDD spin-up whirr
+    //   Trigger: power button click in boot-scene.js via window.APC.boot.playHddAudio()
+    //
+    // hdd-chatter.mp3: loops from crossfade point through entire session (41s, loop=true)
+    //   Contains: steady white noise HDD chatter, clean loop point
+    //   Start: HDD_POWERON_DURATION_MS - HDD_CHATTER_CROSSFADE_MS = 9950ms after power click
+    //   Ends: never — fades to HDD_CHATTER_SETTLE_VOL after startup.mp3 chime ends
+    // -------------------------------------------------------------------------
+
+    HDD_POWERON_DURATION_MS:  10000,  // hdd-poweron.mp3 file length in ms
+    HDD_CHATTER_CROSSFADE_MS:    50,  // chatter starts this many ms before poweron ends
+                                      // overlap masks the seam — both in steady noise by this point
+    HDD_CHATTER_SETTLE_MS:     2000,  // duration of volume fade after startup.mp3 ends (ms)
+    HDD_CHATTER_SETTLE_VOL:     0.6,  // target background volume — HDD still spinning, quieter
+
+    // -------------------------------------------------------------------------
     // Boot sequence — five-screen state machine (#89–#94)
     // Placeholder values; final tuning in issue #95.
     // -------------------------------------------------------------------------
@@ -237,7 +256,6 @@
       WINDOORS_BLOCK_SPEED_BURST_MS:   300, // blocks 17–19 (85–100%, fast finish)
 
       DESKTOP_FADE_MS:                1200, // #boot-sequence fade-out duration
-      HDD_CHATTER_FADE_MS:             300, // hdd-chatter volume fade-out duration
     },
 
     // -------------------------------------------------------------------------
