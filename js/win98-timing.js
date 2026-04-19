@@ -246,7 +246,9 @@
     // -------------------------------------------------------------------------
 
     BOOT_SCENE_FADE_IN_MS:              600, // desk scene canvas fade-in duration
-    BOOT_SCENE_FADE_OUT_MS:             400, // desk scene canvas fade-out after CRT sequence
+    BOOT_SCENE_FADE_OUT_MS:             400, // desk scene canvas fade-out after zoom completes
+    DESK_ZOOM_MS:                      3000, // zoom-into-monitor animation duration (#124)
+    DESK_ZOOM_SCALE:                      8, // scale factor — monitor fills viewport at end
 
     CRT_FLASH_MS:                        80, // step 1: CRT screen white flash duration
     CRT_DIM_MS:                         120, // step 2: dims to #1A1A1A

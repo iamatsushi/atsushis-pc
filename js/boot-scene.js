@@ -333,6 +333,10 @@ var POWER_X1  = 875, POWER_Y1  = 715, POWER_X2  = 930, POWER_Y2  = 775;
     // Power indicator turns on immediately.
     powerOn = true;
 
+    // Refresh matrixCanvas reference — after the wormhole the rain rAF was
+    // restarted (PR #123), so the element is live and animating in the DOM.
+    matrixCanvas = document.getElementById('matrix-canvas');
+
     // Power button flash (visual response — CRT screen stays dark).
     crtState = 'btn_flash';
 
@@ -367,31 +371,59 @@ var POWER_X1  = 875, POWER_Y1  = 715, POWER_X2  = 930, POWER_Y2  = 775;
   }
 
   // --- Fade out and teardown --------------------------------------------------
+  //
+  // Two-phase exit (#124):
+  //   Phase 1 — zoom in toward monitor center over DESK_ZOOM_MS (3000ms)
+  //   Phase 2 — fade opacity 1→0 over BOOT_SCENE_FADE_OUT_MS (400ms)
+  //
+  // All plain setTimeout — must NOT be cancellable by clearAllTimeouts().
+  // Fix 2 (#124): clear any existing transition before setting the zoom
+  // transition so a lingering fade-in transition doesn't override it.
 
   function fadeOutAndComplete() {
-    var t = window.APC.timing;
-    sceneCanvas.style.transition = 'opacity ' + t.BOOT_SCENE_FADE_OUT_MS + 'ms ease';
-    sceneCanvas.style.opacity    = '0';
+    var t  = window.APC.timing;
+    var sr = screenRegion;
 
-    // Plain setTimeout — must NOT be cancellable by clearAllTimeouts().
-    // Once the CRT sequence commits to handoff, destroy() and onComplete()
-    // must always fire in the right order.
+    // Anchor the CSS transform origin to the center of the monitor screen region.
+    var cx = sr.x + sr.w / 2;
+    var cy = sr.y + sr.h / 2;
+    sceneCanvas.style.transformOrigin = cx + 'px ' + cy + 'px';
+
+    // Clear any lingering transition (e.g. from fade-in phase) so the zoom
+    // transition takes effect cleanly on the next frame.
+    sceneCanvas.style.transition = 'none';
+    void sceneCanvas.offsetHeight; // force reflow
+
+    // Phase 1: zoom in toward monitor center.
+    sceneCanvas.style.transition = 'transform ' + t.DESK_ZOOM_MS + 'ms ease-in';
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        sceneCanvas.style.transform = 'scale(' + t.DESK_ZOOM_SCALE + ')';
+      });
+    });
+
+    // Phase 2: after zoom, fade out then hand off.
     setTimeout(function () {
-      // Clear stale Matrix rain pixels so they don't bleed through boot screens.
-      var mc = document.getElementById('matrix-canvas');
-      if (mc) { mc.getContext('2d').clearRect(0, 0, mc.width, mc.height); }
+      sceneCanvas.style.transition = 'opacity ' + t.BOOT_SCENE_FADE_OUT_MS + 'ms ease';
+      sceneCanvas.style.opacity    = '0';
 
-      // Fully hide gate screen (inline opacity overrides any lingering CSS).
-      var gs = document.getElementById('gate-screen');
-      if (gs) {
-        gs.style.opacity    = '0';
-        gs.style.transition = 'none';
-        gs.classList.add('gate-screen--hidden');
-      }
+      setTimeout(function () {
+        // Clear stale Matrix rain pixels so they don't bleed through boot screens.
+        var mc = document.getElementById('matrix-canvas');
+        if (mc) { mc.getContext('2d').clearRect(0, 0, mc.width, mc.height); }
 
-      destroy();
-      if (onComplete) { onComplete(); }
-    }, t.BOOT_SCENE_FADE_OUT_MS);
+        // Fully hide gate screen (inline opacity overrides any lingering CSS).
+        var gs = document.getElementById('gate-screen');
+        if (gs) {
+          gs.style.opacity    = '0';
+          gs.style.transition = 'none';
+          gs.classList.add('gate-screen--hidden');
+        }
+
+        destroy();
+        if (onComplete) { onComplete(); }
+      }, t.BOOT_SCENE_FADE_OUT_MS);
+    }, t.DESK_ZOOM_MS);
   }
 
   // --- Public API -------------------------------------------------------------
