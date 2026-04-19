@@ -54,8 +54,6 @@
 
     // Rain column typing pace — per-column typing reveal model.
     // Columns advance one character at a time at a randomised speed.
-    MATRIX_RAIN_CHAR_MIN_MS:          40,  // fastest column (programmer typing speed)
-    MATRIX_RAIN_CHAR_MAX_MS:         180,  // slowest column
     MATRIX_RAIN_RESET_MIN_MS:        800,  // pause after column fills before reset to top
     MATRIX_RAIN_RESET_MAX_MS:       2500,
     MATRIX_RAIN_STAGGER_MAX_MS:     2000,  // max random start delay per column on init

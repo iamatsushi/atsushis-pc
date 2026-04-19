@@ -2,7 +2,7 @@
 // Sequence: gate → keypress → POST → IBS_SPLASH → DOS_LOG → WINDOORS_LOGO → DESKTOP_ARRIVAL → COMPLETE
 // Namespaced under window.APC per project conventions.
 // All timing values sourced from window.APC.timing (js/win98-timing.js).
-// Issues implemented: #86, #87, #89, #90, #91, #92, #93, #94.
+// Issues implemented: #86, #87, #89, #90, #91, #92, #93, #94, #141.
 
 window.APC = window.APC || {};
 
