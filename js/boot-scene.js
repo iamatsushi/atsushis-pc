@@ -318,6 +318,11 @@ var POWER_X1  = 882, POWER_Y1  = 723, POWER_X2  = 927, POWER_Y2  = 738;
   //
   // Five steps driven by chained timeouts. The rAF loop reads crtState each frame.
   // All timing from window.APC.timing — no hardcoded values.
+  //
+  // IMPORTANT: all post-click timeouts use plain setTimeout, NOT addTimeout.
+  // addTimeout() tracks into pendingTimeouts which clearAllTimeouts() can cancel.
+  // Once the power button is clicked the CRT sequence must run to completion
+  // regardless of any other teardown path — it must not be cancellable.
 
   function startCRTSequence() {
     if (powerClicked) { return; }
@@ -332,32 +337,32 @@ var POWER_X1  = 882, POWER_Y1  = 723, POWER_X2  = 927, POWER_Y2  = 738;
     crtState = 'btn_flash';
 
     // Step 1: CRT white flash starts after button flash.
-    addTimeout(function () { crtState = 'flash'; }, t.POWER_BTN_FLASH_MS);
+    setTimeout(function () { crtState = 'flash'; }, t.POWER_BTN_FLASH_MS);
 
     // Step 2: dim.
-    addTimeout(function () { crtState = 'dim'; },
+    setTimeout(function () { crtState = 'dim'; },
       t.POWER_BTN_FLASH_MS + t.CRT_FLASH_MS);
 
     // Step 3: scanlines.
-    addTimeout(function () { crtState = 'scanlines'; },
+    setTimeout(function () { crtState = 'scanlines'; },
       t.POWER_BTN_FLASH_MS + t.CRT_FLASH_MS + t.CRT_DIM_MS);
 
     // Step 4: phosphor glow.
-    addTimeout(function () { crtState = 'glow'; },
+    setTimeout(function () { crtState = 'glow'; },
       t.POWER_BTN_FLASH_MS + t.CRT_FLASH_MS + t.CRT_DIM_MS + t.CRT_SCANLINE_MS);
 
     // Step 5: rain visible.
-    addTimeout(function () { crtState = 'rain_on'; },
+    setTimeout(function () { crtState = 'rain_on'; },
       t.POWER_BTN_FLASH_MS + t.CRT_FLASH_MS + t.CRT_DIM_MS +
       t.CRT_SCANLINE_MS + t.CRT_GLOW_MS);
 
     // After step 5 completes, fade out desk scene and hand off.
-    addTimeout(function () {
+    var totalCRTDuration = t.POWER_BTN_FLASH_MS + t.CRT_FLASH_MS + t.CRT_DIM_MS +
+                           t.CRT_SCANLINE_MS + t.CRT_GLOW_MS + t.CRT_CONTENT_FADE_MS;
+    setTimeout(function () {
       crtState = 'done';
       fadeOutAndComplete();
-    },
-      t.POWER_BTN_FLASH_MS + t.CRT_FLASH_MS + t.CRT_DIM_MS +
-      t.CRT_SCANLINE_MS + t.CRT_GLOW_MS + t.CRT_CONTENT_FADE_MS);
+    }, totalCRTDuration);
   }
 
   // --- Fade out and teardown --------------------------------------------------
