@@ -333,6 +333,14 @@ var POWER_X1  = 875, POWER_Y1  = 715, POWER_X2  = 930, POWER_Y2  = 775;
     // Power indicator turns on immediately.
     powerOn = true;
 
+    // Start HDD audio: poweron.mp3 plays immediately, chatter.mp3 starts at crossfade
+    // offset (9950ms). Audio-before-visual — same as a real PC powering on.
+    // Guard: defensive check in case boot.js is not yet loaded or playHddAudio was
+    // not exposed on the public API.
+    if (window.APC.boot && typeof window.APC.boot.playHddAudio === 'function') {
+      window.APC.boot.playHddAudio();
+    }
+
     // Refresh matrixCanvas reference — after the wormhole the rain rAF was
     // restarted (PR #123), so the element is live and animating in the DOM.
     matrixCanvas = document.getElementById('matrix-canvas');
