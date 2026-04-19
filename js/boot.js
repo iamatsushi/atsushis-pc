@@ -1386,6 +1386,7 @@ window.APC.boot = (function () {
           ctx.globalAlpha = 1;
           ctx.drawImage(bitmap, bmpOffX, bmpOffY, bmpW * bmpScale, bmpH * bmpScale);
           cancelAnimationFrame(wormRafId);
+
           // Restart Matrix rain so it animates behind the desk scene.
           // The PNG's transparent CRT region reveals live rain. animFrame is
           // cancelled later in the bootScene onComplete callback when the power
