@@ -337,22 +337,22 @@ var POWER_X1  = 882, POWER_Y1  = 723, POWER_X2  = 927, POWER_Y2  = 738;
     crtState = 'btn_flash';
 
     // Step 1: CRT white flash starts after button flash.
-    setTimeout(function () { crtState = 'flash'; }, t.POWER_BTN_FLASH_MS);
+    setTimeout(function () { console.log('[CRT] flash');     crtState = 'flash';     }, t.POWER_BTN_FLASH_MS);
 
     // Step 2: dim.
-    setTimeout(function () { crtState = 'dim'; },
+    setTimeout(function () { console.log('[CRT] dim');       crtState = 'dim';       },
       t.POWER_BTN_FLASH_MS + t.CRT_FLASH_MS);
 
     // Step 3: scanlines.
-    setTimeout(function () { crtState = 'scanlines'; },
+    setTimeout(function () { console.log('[CRT] scanlines'); crtState = 'scanlines'; },
       t.POWER_BTN_FLASH_MS + t.CRT_FLASH_MS + t.CRT_DIM_MS);
 
     // Step 4: phosphor glow.
-    setTimeout(function () { crtState = 'glow'; },
+    setTimeout(function () { console.log('[CRT] glow');      crtState = 'glow';      },
       t.POWER_BTN_FLASH_MS + t.CRT_FLASH_MS + t.CRT_DIM_MS + t.CRT_SCANLINE_MS);
 
     // Step 5: rain visible.
-    setTimeout(function () { crtState = 'rain_on'; },
+    setTimeout(function () { console.log('[CRT] rain_on');   crtState = 'rain_on';   },
       t.POWER_BTN_FLASH_MS + t.CRT_FLASH_MS + t.CRT_DIM_MS +
       t.CRT_SCANLINE_MS + t.CRT_GLOW_MS);
 
@@ -360,6 +360,7 @@ var POWER_X1  = 882, POWER_Y1  = 723, POWER_X2  = 927, POWER_Y2  = 738;
     var totalCRTDuration = t.POWER_BTN_FLASH_MS + t.CRT_FLASH_MS + t.CRT_DIM_MS +
                            t.CRT_SCANLINE_MS + t.CRT_GLOW_MS + t.CRT_CONTENT_FADE_MS;
     setTimeout(function () {
+      console.log('[CRT] done — fadeOutAndComplete');
       crtState = 'done';
       fadeOutAndComplete();
     }, totalCRTDuration);
@@ -372,7 +373,22 @@ var POWER_X1  = 882, POWER_Y1  = 723, POWER_X2  = 927, POWER_Y2  = 738;
     sceneCanvas.style.transition = 'opacity ' + t.BOOT_SCENE_FADE_OUT_MS + 'ms ease';
     sceneCanvas.style.opacity    = '0';
 
-    addTimeout(function () {
+    // Plain setTimeout — must NOT be cancellable by clearAllTimeouts().
+    // Once the CRT sequence commits to handoff, destroy() and onComplete()
+    // must always fire in the right order.
+    setTimeout(function () {
+      // Clear stale Matrix rain pixels so they don't bleed through boot screens.
+      var mc = document.getElementById('matrix-canvas');
+      if (mc) { mc.getContext('2d').clearRect(0, 0, mc.width, mc.height); }
+
+      // Fully hide gate screen (inline opacity overrides any lingering CSS).
+      var gs = document.getElementById('gate-screen');
+      if (gs) {
+        gs.style.opacity    = '0';
+        gs.style.transition = 'none';
+        gs.classList.add('gate-screen--hidden');
+      }
+
       destroy();
       if (onComplete) { onComplete(); }
     }, t.BOOT_SCENE_FADE_OUT_MS);
