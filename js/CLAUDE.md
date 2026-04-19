@@ -127,6 +127,15 @@ boot.js was fully rewritten in PR #97. The old single-screen Win98 progress bar 
 - `desktop.init()` called during the fade — desktop is visible behind it
 - `startup.mp3` fires at COMPLETE. `sessionStorage.boot_complete = '1'` set at COMPLETE.
 
+**Wormhole transition** (gate keypress → desk scene, #106) — fires before POST, ~5s total
+- `window.APC.boot.startWormhole(bitmap, bitmapParams, onComplete)` — public API on boot.js
+- Cancels matrix rain rAF, takes over `#matrix-canvas` for all four phases
+- Phase 1 `WORMHOLE_DISTURBANCE_MS` (1500ms): characters drift tangentially (±30px), angle updated each frame for smooth Phase 2 handoff
+- Phase 2 `WORMHOLE_SPIRAL_MS` (2000ms): radius = `initRadius * (1 − easedT)²` — deterministic, characters arrive at center exactly at phase end; rotation speed increases with `easedT`; glow 0 → 120px
+- Phase 3 `WORMHOLE_COLLAPSE_MS` (500ms): glow pulse — hold 120px (first 40%), contract to 20px (last 60%)
+- Phase 4 `WORMHOLE_REVEAL_MS` (2000ms): desk scene bitmap revealed via `ctx.arc` + `clip()` from pinhole outward; cubic ease; glow fades
+- On complete: `boot-scene.js` snaps sceneCanvas to `opacity:1` (no transition) and starts its rAF loop
+
 **Boot audio files** (all preloaded on gate interact, never before):
 - `hdd-chatter.mp3` — Screen 1 entry, fades on Screen 5
 - `post-beep.mp3` — RAM counter completion

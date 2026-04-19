@@ -1198,6 +1198,225 @@ window.APC.boot = (function () {
     document.body.appendChild(overlay);
   }
 
-  return { init: init, restart: restart, shutdown: shutdown };
+  // --- Wormhole transition (#106) --------------------------------------
+  //
+  // Takes control of the Matrix rain canvas and runs a four-phase animation:
+  //   Phase 1 (0–1.5s)  — characters drift laterally (disturbance)
+  //   Phase 2 (1.5–3.5s) — characters spiral inward toward center
+  //   Phase 3 (3.5–4.0s) — glow pulse (expand then contract)
+  //   Phase 4 (4.0–5.0s) — desk scene revealed via circular clip
+  //
+  // bitmap     — processedBitmap from boot-scene.js (chroma-keyed desk PNG)
+  // bitmapParams — { offsetX, offsetY, scale, assetW, assetH }
+  // onComplete — fired when Phase 4 finishes (desk scene fully revealed)
+  //
+  // All timing from window.APC.timing — no hardcoded values.
+
+  function startWormhole(bitmap, bitmapParams, onComplete) {
+    var t = window.APC.timing;
+
+    // Cancel the matrix rain rAF — wormhole takes over the canvas.
+    if (animFrame) {
+      cancelAnimationFrame(animFrame);
+      animFrame = null;
+    }
+
+    // Hide the gate prompt so it doesn't float over the wormhole animation.
+    var gatePrompt = document.getElementById('gate-prompt');
+    if (gatePrompt) {
+      gatePrompt.style.opacity    = '0';
+      gatePrompt.style.transition = 'none';
+    }
+
+    var w  = canvas.width;
+    var h  = canvas.height;
+    var cx = w / 2;
+    var cy = h / 2;
+
+    var bmpOffX  = bitmapParams.offsetX;
+    var bmpOffY  = bitmapParams.offsetY;
+    var bmpScale = bitmapParams.scale;
+    var bmpW     = bitmapParams.assetW;
+    var bmpH     = bitmapParams.assetH;
+
+    var DIST_MS      = t.WORMHOLE_DISTURBANCE_MS;
+    var SPIRAL_MS    = t.WORMHOLE_SPIRAL_MS;
+    var COLLAPSE_MS  = t.WORMHOLE_COLLAPSE_MS;
+    var REVEAL_MS    = t.WORMHOLE_REVEAL_MS;
+    var GLOW_MAX_R   = t.WORMHOLE_GLOW_MAX_RADIUS;
+    var GLOW_PULSE_R = t.WORMHOLE_GLOW_PULSE_RADIUS;
+
+    // --- Snapshot live Matrix rain columns ---
+    // Build wormChars from the actual columns array so the animation starts
+    // from the real rain state (column x-positions, current row as anchor).
+    // ~60% density keeps frame cost reasonable on large viewports.
+    var gridRows = Math.floor(h / FONT_SIZE);
+    var wormChars = [];
+
+    for (var ci = 0; ci < columns.length; ci++) {
+      var col = columns[ci];
+      for (var ri = 0; ri < gridRows; ri++) {
+        if (Math.random() > 0.6) { continue; }
+        var px  = col.x + FONT_SIZE / 2;
+        // Distribute rows relative to column's live rain-head position.
+        var row = (col.currentRow + ri) % gridRows;
+        var py  = (row + 1) * FONT_SIZE;
+        var dx  = px - cx;
+        var dy  = py - cy;
+        var dist = Math.sqrt(dx * dx + dy * dy);
+        wormChars.push({
+          origX:      px,
+          origY:      py,
+          initRadius: dist || 1,       // avoid 0-division at exact center
+          angle:      Math.atan2(dy, dx),
+          driftDir:   Math.random() > 0.5 ? 1 : -1,
+          char:       MATRIX_CHARS[Math.floor(Math.random() * MATRIX_CHARS.length)]
+        });
+      }
+    }
+
+    var startTime = null;
+    var prevTime  = null;
+    var wormRafId = null;
+
+    function drawGlow(glowRadius) {
+      if (glowRadius <= 0) { return; }
+      var grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, glowRadius);
+      grd.addColorStop(0,   'rgba(0,255,65,0.9)');
+      grd.addColorStop(0.4, 'rgba(0,255,65,0.4)');
+      grd.addColorStop(1,   'rgba(0,255,65,0)');
+      ctx.globalAlpha = 1;
+      ctx.fillStyle   = grd;
+      ctx.fillRect(cx - glowRadius, cy - glowRadius, glowRadius * 2, glowRadius * 2);
+    }
+
+    function wormFrame(now) {
+      if (startTime === null) { startTime = now; prevTime = now; }
+      var elapsed   = now - startTime;
+      var deltaTime = now - prevTime;
+      prevTime = now;
+
+      // Black canvas base.
+      ctx.globalAlpha = 1;
+      ctx.fillStyle   = '#000';
+      ctx.fillRect(0, 0, w, h);
+
+      ctx.font      = FONT_SIZE + 'px "Courier New", monospace';
+      ctx.fillStyle = MATRIX_COLOR;
+
+      var i, c, glowRadius;
+
+      // --- Phase 1: Disturbance (0 → DIST_MS) ---
+      if (elapsed < DIST_MS) {
+        var prog     = elapsed / DIST_MS;
+        var maxDrift = 30; // px — matches spec
+
+        for (i = 0; i < wormChars.length; i++) {
+          c = wormChars[i];
+          // Drift perpendicular to radial direction (tangential).
+          var perpX = -Math.sin(c.angle);
+          var perpY =  Math.cos(c.angle);
+          var drift = prog * maxDrift * c.driftDir;
+          var dpx   = c.origX + perpX * drift;
+          var dpy   = c.origY + perpY * drift;
+
+          // Keep angle updated so Phase 2 starts from drifted position.
+          var ddx = dpx - cx;
+          var ddy = dpy - cy;
+          if (ddx !== 0 || ddy !== 0) { c.angle = Math.atan2(ddy, ddx); }
+
+          ctx.globalAlpha = 1;
+          ctx.fillText(c.char, dpx, dpy);
+        }
+
+      // --- Phase 2: Spiral (DIST_MS → DIST_MS + SPIRAL_MS) ---
+      } else if (elapsed < DIST_MS + SPIRAL_MS) {
+        var phaseElapsed = elapsed - DIST_MS;
+        var tNorm        = phaseElapsed / SPIRAL_MS;
+        var easedT       = tNorm * tNorm; // ease-in: slow start, fast finish
+
+        // Angular velocity increases as radius tightens.
+        var rotIncrement = 0.003 * (1 + easedT * 3) * deltaTime;
+
+        // Glow grows 0 → GLOW_MAX using smoothstep.
+        var glowProg = tNorm * tNorm * (3 - 2 * tNorm);
+        glowRadius   = glowProg * GLOW_MAX_R;
+
+        for (i = 0; i < wormChars.length; i++) {
+          c = wormChars[i];
+          // Radius formula: initRadius → 0 as easedT → 1 (position-based, no per-frame decay).
+          var newRadius = c.initRadius * Math.pow(1 - easedT, 2);
+          c.angle      += rotIncrement;
+          var spx       = cx + Math.cos(c.angle) * newRadius;
+          var spy       = cy + Math.sin(c.angle) * newRadius;
+
+          // Fade over last 40% of travel distance.
+          var fadeStart = c.initRadius * 0.4;
+          var opacity   = newRadius < fadeStart ? (newRadius / fadeStart) : 1;
+
+          ctx.globalAlpha = Math.max(0, opacity);
+          ctx.fillText(c.char, spx, spy);
+        }
+
+        drawGlow(glowRadius);
+
+      // --- Phase 3: Collapse (DIST_MS + SPIRAL_MS → … + COLLAPSE_MS) ---
+      } else if (elapsed < DIST_MS + SPIRAL_MS + COLLAPSE_MS) {
+        var phaseElapsed = elapsed - DIST_MS - SPIRAL_MS;
+        var prog         = phaseElapsed / COLLAPSE_MS;
+
+        // Characters all converged to center in Phase 2 — Phase 3 is pure glow pulse.
+        // First 40% (200ms): hold at GLOW_MAX. Next 60% (300ms): contract to GLOW_PULSE.
+        var EXPAND_FRAC = 0.4;
+        if (prog < EXPAND_FRAC) {
+          glowRadius = GLOW_MAX_R;
+        } else {
+          var contractProg = (prog - EXPAND_FRAC) / (1 - EXPAND_FRAC);
+          glowRadius = GLOW_MAX_R - (GLOW_MAX_R - GLOW_PULSE_R) * contractProg;
+        }
+
+        drawGlow(glowRadius);
+
+      // --- Phase 4: Reveal (… + COLLAPSE_MS → … + REVEAL_MS) ---
+      } else {
+        var phaseElapsed = elapsed - DIST_MS - SPIRAL_MS - COLLAPSE_MS;
+
+        if (phaseElapsed >= REVEAL_MS) {
+          // Fully revealed — draw complete bitmap then hand off.
+          ctx.globalAlpha = 1;
+          ctx.drawImage(bitmap, bmpOffX, bmpOffY, bmpW * bmpScale, bmpH * bmpScale);
+          cancelAnimationFrame(wormRafId);
+          if (onComplete) { onComplete(); }
+          return;
+        }
+
+        // Held glow fades as desk scene reveals.
+        glowRadius = GLOW_PULSE_R * (1 - phaseElapsed / REVEAL_MS);
+        drawGlow(glowRadius);
+
+        // Radial clip reveal: slow start, fast finish (cubic ease).
+        var tNorm  = phaseElapsed / REVEAL_MS;
+        var easedT = tNorm < 0.5
+          ? 2 * tNorm * tNorm
+          : -1 + (4 - 2 * tNorm) * tNorm;
+        var revealRadius = easedT * Math.max(w, h);
+
+        ctx.globalAlpha = 1;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(cx, cy, revealRadius, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.drawImage(bitmap, bmpOffX, bmpOffY, bmpW * bmpScale, bmpH * bmpScale);
+        ctx.restore();
+      }
+
+      ctx.globalAlpha = 1;
+      wormRafId = requestAnimationFrame(wormFrame);
+    }
+
+    wormRafId = requestAnimationFrame(wormFrame);
+  }
+
+  return { init: init, restart: restart, shutdown: shutdown, startWormhole: startWormhole };
 
 }());

@@ -25,10 +25,10 @@ var ASSET_W = 1024;
 var ASSET_H = 1172;
   
 var SCREEN_X1 = 201, SCREEN_Y1 = 205, SCREEN_X2 = 654, SCREEN_Y2 = 600;
-var POWER_X1  = 882, POWER_Y1  = 723, POWER_X2  = 927, POWER_Y2  = 738;
+var POWER_X1  = 875, POWER_Y1  = 715, POWER_X2  = 930, POWER_Y2  = 775;
 
   // Power indicator light (adjacent to power button in asset coordinates).
-  var INDICATOR_AX = 873, INDICATOR_AY = 680;
+  var INDICATOR_AX = 875, INDICATOR_AY = 710;
   var INDICATOR_SIZE_PX = 4; // unscaled size
 
   // Chroma key colors (exact — no tolerance).
@@ -413,7 +413,8 @@ var POWER_X1  = 882, POWER_Y1  = 723, POWER_X2  = 927, POWER_Y2  = 738;
       'z-index:100;',
       'opacity:0;',
       'display:block;',
-      'background:transparent;'
+      'background:transparent;',
+      'pointer-events:none;'
     ].join('');
     document.body.appendChild(sceneCanvas);
     sceneCtx = sceneCanvas.getContext('2d');
@@ -439,23 +440,26 @@ var POWER_X1  = 882, POWER_Y1  = 723, POWER_X2  = 927, POWER_Y2  = 738;
     });
     img.addEventListener('load', function () {
       processAsset(img, function () {
-        // Start the rAF loop and fade in the scene.
-        drawFrame();
-
-        // Fade in over BOOT_SCENE_FADE_IN_MS.
-        var t = window.APC.timing;
-        sceneCanvas.style.transition = 'opacity ' + t.BOOT_SCENE_FADE_IN_MS + 'ms ease';
-        // Double-rAF to ensure the initial opacity:0 has been painted before transition starts.
-        requestAnimationFrame(function () {
-          requestAnimationFrame(function () {
-            if (sceneCanvas) { sceneCanvas.style.opacity = '1'; }
-          });
+        // Wormhole transition (#106): matrix rain spirals into desk scene.
+        // startWormhole takes control of #matrix-canvas, runs four phases,
+        // then calls onComplete when the desk scene is fully revealed.
+        window.APC.boot.startWormhole(processedBitmap, {
+          offsetX: offsetX,
+          offsetY: offsetY,
+          scale:   scale,
+          assetW:  ASSET_W,
+          assetH:  ASSET_H
+        }, function () {
+          // Wormhole complete — snap scene canvas visible and start rAF.
+          if (!sceneCanvas) { return; }
+          sceneCanvas.style.transition    = 'none';
+          sceneCanvas.style.opacity       = '1';
+          sceneCanvas.style.pointerEvents = '';
+          drawFrame();
+          sceneCanvas.addEventListener('mousemove', onMouseMove);
+          sceneCanvas.addEventListener('click', onCanvasClick);
+          window.addEventListener('resize', onResize);
         });
-
-        // Attach interaction listeners.
-        sceneCanvas.addEventListener('mousemove', onMouseMove);
-        sceneCanvas.addEventListener('click', onCanvasClick);
-        window.addEventListener('resize', onResize);
       });
     });
     img.src = 'assets/images/desk-scene_edited.png';
