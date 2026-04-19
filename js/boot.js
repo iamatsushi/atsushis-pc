@@ -510,6 +510,7 @@ window.APC.boot = (function () {
 
   function preloadBootAudio() {
     bootAudio = {
+      hddPoweron: new Audio('assets/audio/hdd-poweron.mp3'),
       hddChatter: new Audio('assets/audio/hdd-chatter.mp3'),
       postBeep:   new Audio('assets/audio/post-beep.mp3'),
       floppySeek: new Audio('assets/audio/floppy-read.mp3'),
@@ -517,8 +518,9 @@ window.APC.boot = (function () {
       chime:      new Audio('assets/audio/startup.mp3')
     };
 
-    // hdd-chatter does NOT loop — plays once, 59s straight through.
-    bootAudio.hddChatter.loop = false;
+    // hdd-chatter loops seamlessly — 41s clean loop point.
+    // hdd-poweron plays once (10s click + spin-up), no loop needed.
+    bootAudio.hddChatter.loop = true;
 
     // Suppress load errors silently — boot must continue regardless of audio failure.
     Object.keys(bootAudio).forEach(function (key) {
@@ -545,6 +547,47 @@ window.APC.boot = (function () {
         if (cb) { cb(); }
       }
     }, stepMs);
+  }
+
+  // Fade audio volume to a target level over durationMs.
+  // Works for fade-up or fade-down to any target volume.
+  // Does NOT pause the audio — it keeps playing at the target volume.
+  // Safe to call with null audio.
+  function fadeAudioTo(audio, targetVol, durationMs) {
+    if (!audio) { return; }
+    var startVol = audio.volume;
+    var stepMs = 16;
+    var steps = Math.max(1, Math.ceil(durationMs / stepMs));
+    var step = 0;
+    var timer = setInterval(function () {
+      step++;
+      audio.volume = startVol + (targetVol - startVol) * (step / steps);
+      if (step >= steps) {
+        clearInterval(timer);
+        audio.volume = targetVol;
+      }
+    }, stepMs);
+  }
+
+  // Called by boot-scene.js on power button click via window.APC.boot.playHddAudio().
+  // Starts hdd-poweron.mp3 immediately (plays once).
+  // Starts hdd-chatter.mp3 at the crossfade point (HDD_POWERON_DURATION_MS - HDD_CHATTER_CROSSFADE_MS).
+  // Guard: if chatter is already playing (.paused === false), no-op — prevents double-start.
+  function playHddAudio() {
+    if (!bootAudio) { return; }
+    var t = window.APC.timing;
+
+    // Poweron plays immediately — click + spin-up, once only.
+    try { bootAudio.hddPoweron.play().catch(function () {}); } catch (e) {}
+
+    // Chatter starts at crossfade offset so it overlaps the end of poweron.
+    // Both files are in steady white noise by this point — seam is inaudible.
+    var chatterDelay = t.HDD_POWERON_DURATION_MS - t.HDD_CHATTER_CROSSFADE_MS;
+    setTimeout(function () {
+      if (!bootAudio || !bootAudio.hddChatter) { return; }
+      if (!bootAudio.hddChatter.paused) { return; } // already playing — no-op
+      try { bootAudio.hddChatter.play().catch(function () {}); } catch (e) {}
+    }, chatterDelay);
   }
 
   // --- Gate teardown ---------------------------------------------------
@@ -617,8 +660,10 @@ window.APC.boot = (function () {
     ].join('');
     container.appendChild(output);
 
-    // hdd-chatter plays immediately — spin-up sound is baked into its opening seconds.
-    if (bootAudio) {
+    // Safety net only: starts chatter if desk scene was skipped (asset load failure path).
+    // Normal path: chatter is already playing from power button click via playHddAudio().
+    // The .paused guard makes this a true no-op if chatter is already running.
+    if (bootAudio && bootAudio.hddChatter && bootAudio.hddChatter.paused) {
       try { bootAudio.hddChatter.play().catch(function () {}); } catch (e) {}
     }
 
@@ -1006,11 +1051,6 @@ window.APC.boot = (function () {
     // Set base styles explicitly — container may have inherited from Screen 4.
     container.style.cssText = 'position:fixed;inset:0;background:#000;z-index:9000;opacity:1;';
 
-    // Fade hdd-chatter volume to 0 and stop — simultaneous with the container fade.
-    if (bootAudio && bootAudio.hddChatter) {
-      fadeAudioOut(bootAudio.hddChatter, bs.HDD_CHATTER_FADE_MS, null);
-    }
-
     // Reveal desktop behind boot-sequence container before starting fade.
     const desktop = document.getElementById('desktop');
     if (desktop) { desktop.classList.remove('desktop--hidden'); }
@@ -1058,6 +1098,17 @@ window.APC.boot = (function () {
 
     // Fire startup chime the moment desktop is fully visible.
     if (bootAudio && bootAudio.chime) {
+      // When startup chime finishes (~5s), fade chatter from 1.0 to background level.
+      // { once: true } — listener self-removes after first fire, safe across soft restarts.
+      bootAudio.chime.addEventListener('ended', function () {
+        if (bootAudio && bootAudio.hddChatter) {
+          fadeAudioTo(
+            bootAudio.hddChatter,
+            window.APC.timing.HDD_CHATTER_SETTLE_VOL,
+            window.APC.timing.HDD_CHATTER_SETTLE_MS
+          );
+        }
+      }, { once: true });
       try { bootAudio.chime.play().catch(function () {}); } catch (e) {}
     }
 
@@ -1423,6 +1474,6 @@ window.APC.boot = (function () {
     wormRafId = requestAnimationFrame(wormFrame);
   }
 
-  return { init: init, restart: restart, shutdown: shutdown, startWormhole: startWormhole };
+  return { init: init, restart: restart, shutdown: shutdown, startWormhole: startWormhole, playHddAudio: playHddAudio };
 
 }());
