@@ -60,6 +60,14 @@
     MATRIX_RAIN_RESET_MAX_MS:       2500,
     MATRIX_RAIN_STAGGER_MAX_MS:     2000,  // max random start delay per column on init
 
+    MATRIX_DURATION_MIN_MS:         3000,  // minimum rain duration before prompt appears
+    MATRIX_DURATION_MAX_MS:        12000,  // maximum rain duration
+    MATRIX_COL_SPEED_MIN_PCT:       0.80,  // per-column speed floor (80% of base velocity)
+    MATRIX_COL_SPEED_MAX_PCT:       1.00,  // per-column speed ceiling (100% of base velocity)
+    MATRIX_EMOJI_FREQUENCY:         0.02,  // 2% of all characters are emoji (natural color)
+    MATRIX_CURSOR_BLINK_MS:          530,  // terminal prompt cursor blink interval (matches CSS)
+    MATRIX_SESSION_TTL_MS:       3600000,  // 1 hour — localStorage skip-to-desktop TTL
+
     // -------------------------------------------------------------------------
     // Boot Screen sequence
     // Fixed choreography — not latency simulation.

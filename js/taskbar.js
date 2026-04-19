@@ -835,10 +835,9 @@ window.APC.taskbar = (function () {
     }
     // ~100ms tick lets the Umami call dispatch before state is cleared.
     setTimeout(function () {
-      // Remove only the keys this restart flow owns. sessionStorage.clear()
-      // would wipe unrelated state (audio unlock, resume gate) and conflicts
-      // with boot.restart() which also removes these keys explicitly.
-      sessionStorage.removeItem('boot_complete');
+      // Remove only the keys this restart flow owns. boot.restart() also
+      // removes these explicitly — belt-and-suspenders for safety.
+      localStorage.removeItem('boot_complete_ts');
       sessionStorage.removeItem('ne_history');
       if (window.APC.boot && typeof window.APC.boot.restart === 'function') {
         window.APC.boot.restart();
