@@ -88,6 +88,40 @@ Never call `sessionStorage.clear()`. Use targeted `removeItem()` only.
 
 ---
 
+## Matrix Rain (boot.js)
+
+The Matrix rain canvas runs inside `boot.js` under the `window.APC.boot` namespace. There is no separate `matrix.js`.
+
+**Session persistence — localStorage TTL:**
+- On boot completion: `localStorage.setItem('boot_complete_ts', Date.now())`
+- On page load (`init()`): if `boot_complete_ts` exists and is < 1 hour old (`MATRIX_SESSION_TTL_MS`), skip rain + boot, go straight to desktop
+- Bypass with `window.APC.boot.init({ force: true })` — used by `restart()` and taskbar `doRestart()`
+- Do NOT use `sessionStorage` for boot-skip logic. `sessionStorage.boot_complete` is removed.
+
+**Rain duration — randomized at init time:**
+- `rainDuration = rand(MATRIX_DURATION_MIN_MS, MATRIX_DURATION_MAX_MS)` (3–12s)
+- Chosen once in `init()`, stored in `rainDuration`, reset to 0 on `restart()`
+- `rainStartTime` set on first `drawFrame()` call
+- When `Date.now() - rainStartTime >= rainDuration`: cancel rAF, call `revealPrompt()`
+
+**Per-column fixed speed:**
+- Base velocity: 100ms per character step (documented in `initColumns()` comment)
+- Each column gets `speedFactor = rand(MATRIX_COL_SPEED_MIN_PCT, MATRIX_COL_SPEED_MAX_PCT)` (0.80–1.00)
+- `col.charDelay = Math.round(100 / speedFactor)` → range 100–125ms
+- charDelay is NOT re-rolled when a column resets to the top — speed is fixed for the full duration
+
+**Emoji rendering — natural color, no filter:**
+- Frequency: exactly `MATRIX_EMOJI_FREQUENCY` (2%) — fixed, not re-rolled per character
+- Emojis render in natural OS color. No CSS filter. Do not add a filter.
+- Do NOT use the old `ctx.filter = 'brightness(0) saturate(100%)...'` hack — it is removed
+- Emoji list is defined in `MATRIX_EMOJIS` const in boot.js
+
+**`init(options)` signature:**
+- `options.force = true` bypasses the localStorage TTL check
+- No argument (or `{}`) = normal path with TTL check
+
+---
+
 ## Boot Sequence State Machine (boot.js)
 
 boot.js was fully rewritten in PR #97. The old single-screen Win98 progress bar is gone — do not restore it.

@@ -13,8 +13,7 @@ window.APC.boot = (function () {
 
   const MATRIX_COLOR = '#00FF41';
   const FONT_SIZE = 14;
-  const MATRIX_EMOJI_FREQUENCY_MIN = 0.01; // emoji appears in 1–5% of characters,
-  const MATRIX_EMOJI_FREQUENCY_MAX = 0.05; // re-rolled per draw call
+  // Emoji frequency is fixed at MATRIX_EMOJI_FREQUENCY (2%) — no per-draw re-roll.
 
   // Exact character set from CLAUDE.md spec — half-width katakana + ASCII + symbols.
   const MATRIX_CHARS = [
@@ -24,11 +23,12 @@ window.APC.boot = (function () {
     '@#$%*+-=:<>/\\|'
   ];
 
-  // Curated emoji set — interests and themes personal to Atsushi's PC.
+  // Curated emoji set — renders in natural OS color, no filter applied.
   const MATRIX_EMOJIS = [
-    '🎾', '⛳', '🎣', '🍜', '🍕', '🎮', '✈️', '🌍', '🌱',
-    '💾', '🖥️', '🔌', '🛠️', '🎭', '🧩', '🧠', '⚙️', '🔍',
-    '♟️', '🌉', '📦', '🧨', '📊', '🧭'
+    '💩', '👾', '👍', '🧳', '🛜', '♻️', '🌐', '❤️', '✏️', '🙈',
+    '🎉', '🎥', '📺', '🕹', '⛰', '🚲', '🛻', '🎳', '🎼', '🚴‍♂️',
+    '🏀', '🎾', '🎱', '🛹', '🏌️‍♂️', '🍺', '🧀', '🍕', '🥨', '🥦',
+    '🍓', '🍋', '⚡️', '🌧', '🌞', '🦖', '🌲'
   ];
 
   // --- Boot state enum (#89) -------------------------------------------
@@ -78,6 +78,11 @@ window.APC.boot = (function () {
 
   let canvas, ctx, columns, animFrame;
   let hasStarted = false;
+
+  // Rain duration — randomized once per init(), cleared on restart.
+  // Range: MATRIX_DURATION_MIN_MS–MATRIX_DURATION_MAX_MS (3–12s).
+  let rainDuration = 0;
+  let rainStartTime = null;
 
   // Identity lines state.
   let identityPhase = 'waiting'; // waiting | line1_instant | line1_hold | typing | pause | done
@@ -230,19 +235,32 @@ window.APC.boot = (function () {
 
   // --- Boot init -------------------------------------------------------
 
-  function init() {
+  function init(options) {
+    const force = options && options.force === true;
+
     // Hard gate: WinDoors 98 does not run on mobile or touch devices.
     if (isMobileOrTouch()) {
       showMobileInterstitial();
       return;
     }
 
-    // Skip gate and boot sequence if already completed this session.
-    if (sessionStorage.getItem('boot_complete')) {
-      hideGate();
-      goToDesktop(true);
-      return;
+    // localStorage TTL check — skip rain + boot if visited within the last hour.
+    // Bypass with { force: true } (Restart flow).
+    if (!force) {
+      const ts = localStorage.getItem('boot_complete_ts');
+      const elapsed = ts ? Date.now() - parseInt(ts, 10) : Infinity;
+      if (elapsed < window.APC.timing.MATRIX_SESSION_TTL_MS) {
+        hideGate();
+        goToDesktop(true);
+        return;
+      }
     }
+
+    // Roll rain duration once — stays fixed for this run.
+    const t = window.APC.timing;
+    rainDuration = t.MATRIX_DURATION_MIN_MS +
+      Math.random() * (t.MATRIX_DURATION_MAX_MS - t.MATRIX_DURATION_MIN_MS);
+    rainStartTime = null; // set on first drawFrame call
 
     canvas = document.getElementById('matrix-canvas');
     ctx = canvas.getContext('2d');
@@ -354,13 +372,19 @@ window.APC.boot = (function () {
     const t = window.APC.timing;
     const count = Math.floor(canvas.width / FONT_SIZE);
     const rows = Math.floor(canvas.height / FONT_SIZE);
+    // Base velocity: 100ms per character step — tuned for readability at 1080p desktop.
+    // Each column's charDelay = BASE_CHAR_DELAY_MS / speedFactor, giving a fixed
+    // 100–125ms range (MATRIX_COL_SPEED_MIN_PCT 0.80 → 125ms, MAX 1.00 → 100ms).
+    const BASE_CHAR_DELAY_MS = 100;
     columns = [];
     for (let i = 0; i < count; i++) {
+      const speedFactor = t.MATRIX_COL_SPEED_MIN_PCT +
+        Math.random() * (t.MATRIX_COL_SPEED_MAX_PCT - t.MATRIX_COL_SPEED_MIN_PCT);
       columns.push({
         x: i * FONT_SIZE,
         currentRow: Math.floor(Math.random() * rows),
         nextCharTime: Date.now() + Math.floor(Math.random() * t.MATRIX_RAIN_STAGGER_MAX_MS),
-        charDelay: t.rand(t.MATRIX_RAIN_CHAR_MIN_MS, t.MATRIX_RAIN_CHAR_MAX_MS),
+        charDelay: Math.round(BASE_CHAR_DELAY_MS / speedFactor), // fixed for duration — no re-roll
         pauseUntil: 0
       });
     }
@@ -373,9 +397,18 @@ window.APC.boot = (function () {
   // redrawn at full brightness each frame so the fade overlay doesn't dim them.
 
   function drawFrame() {
-    animFrame = requestAnimationFrame(drawFrame);
-
     const now = Date.now();
+
+    // Duration check — stop rain and reveal prompt when time is up.
+    if (rainStartTime === null) { rainStartTime = now; }
+    if (!hasStarted && (now - rainStartTime) >= rainDuration) {
+      cancelAnimationFrame(animFrame);
+      animFrame = null;
+      revealPrompt();
+      return;
+    }
+
+    animFrame = requestAnimationFrame(drawFrame);
     const rows = Math.floor(canvas.height / FONT_SIZE);
     const t = window.APC.timing;
 
@@ -393,22 +426,14 @@ window.APC.boot = (function () {
 
       const y = (col.currentRow + 1) * FONT_SIZE;
 
-      // Emoji frequency re-rolled per character: random threshold between 1–5%.
-      const emojiThreshold = MATRIX_EMOJI_FREQUENCY_MIN +
-        Math.random() * (MATRIX_EMOJI_FREQUENCY_MAX - MATRIX_EMOJI_FREQUENCY_MIN);
-      const isEmoji = Math.random() < emojiThreshold;
+      // 2% of characters are emoji — natural OS color, no filter applied.
+      const isEmoji = Math.random() < t.MATRIX_EMOJI_FREQUENCY;
 
       if (isEmoji) {
-        // CSS emoji color filter hack: collapses emoji's native colors to black
-        // via brightness(0), then rebuilds to #00FF41 green through the filter chain.
-        ctx.filter =
-          'brightness(0) saturate(100%) invert(57%) sepia(99%) ' +
-          'saturate(400%) hue-rotate(85deg) brightness(110%)';
         ctx.fillText(
           MATRIX_EMOJIS[Math.floor(Math.random() * MATRIX_EMOJIS.length)],
           col.x, y
         );
-        ctx.filter = 'none';
       } else {
         ctx.fillStyle = MATRIX_COLOR;
         ctx.fillText(
@@ -422,7 +447,7 @@ window.APC.boot = (function () {
       if (col.currentRow >= rows) {
         col.pauseUntil = now + t.rand(t.MATRIX_RAIN_RESET_MIN_MS, t.MATRIX_RAIN_RESET_MAX_MS);
         col.currentRow = 0;
-        col.charDelay = t.rand(t.MATRIX_RAIN_CHAR_MIN_MS, t.MATRIX_RAIN_CHAR_MAX_MS);
+        // charDelay is NOT re-rolled — each column keeps its assigned speed for the full duration.
       }
 
       col.nextCharTime = now + col.charDelay;
@@ -436,7 +461,6 @@ window.APC.boot = (function () {
       const startY = canvas.height * t.MATRIX_IDENTITY_START_Y_PCT;
       const lineHeight = FONT_SIZE * 1.6;
 
-      ctx.filter = 'none'; // ensure no leftover filter from emoji columns
       ctx.font = FONT_SIZE + 'px "Courier New", monospace';
       ctx.fillStyle = MATRIX_COLOR;
 
@@ -1112,15 +1136,16 @@ window.APC.boot = (function () {
       try { bootAudio.chime.play().catch(function () {}); } catch (e) {}
     }
 
-    // Mark session as booted and fire analytics.
-    sessionStorage.setItem('boot_complete', '1');
+    // Record completion timestamp — used by localStorage TTL check on next page load.
+    // Return visits within 1 hour skip straight to desktop. After 1 hour: full experience replays.
+    localStorage.setItem('boot_complete_ts', Date.now());
     if (window.umami) { window.umami.track('boot_complete'); }
   }
 
-  // --- Desktop handoff (session restore path only) ---------------------
+  // --- Desktop handoff (localStorage TTL skip path only) --------------
   //
-  // Called when sessionStorage.boot_complete is already set — boot.js was never
-  // fully run this session, so bootAudio is null. Audio may not play (no gesture).
+  // Called when localStorage.boot_complete_ts is within the 1-hour TTL.
+  // bootAudio is null here — no gesture occurred. Audio may not play.
 
   function goToDesktop(skipDelay) {
     var chime = new Audio('assets/audio/startup.mp3');
@@ -1149,6 +1174,8 @@ window.APC.boot = (function () {
     identityPhase = 'waiting';
     identityTypedLines = [];
     currentLineIdx = 0;
+    rainDuration = 0;
+    rainStartTime = null;
     if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null; }
 
     // Invalidate any in-flight boot screen callbacks.
@@ -1171,8 +1198,8 @@ window.APC.boot = (function () {
       window.APC.widgets.reset();
     }
 
-    // Clear session keys so init() runs the full sequence.
-    sessionStorage.removeItem('boot_complete');
+    // Clear localStorage TTL so init({ force:true }) replays the full experience.
+    localStorage.removeItem('boot_complete_ts');
     sessionStorage.removeItem('ne_history');
 
     // Reset DOM — hide desktop, clear open windows and taskbar buttons.
@@ -1215,8 +1242,8 @@ window.APC.boot = (function () {
       gatePrompt.style.top = '';
     }
 
-    // Re-run the boot init — sets up canvas, rain, and gate listeners.
-    init();
+    // Re-run the boot init — force:true bypasses localStorage TTL check.
+    init({ force: true });
   }
 
   // --- Shutdown screen -------------------------------------------------
