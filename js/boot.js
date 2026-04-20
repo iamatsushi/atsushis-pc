@@ -90,6 +90,11 @@ window.APC.boot = (function () {
   let identityTypedLines = [];   // array of typed strings, one per line revealed so far
   let currentLineIdx = 0;        // index of line currently being typed (0-based)
 
+  // Dissolution state — tracks unwriting animation after keypress.
+  let dissolveStart  = null;  // timestamp when dissolution began
+  let dissolveChars  = [];    // per-line character counts being unwritten (copy of typed lines)
+  let dissolveActive = false; // true while lines are being unwritten
+
   // Boot state machine (#89) — generation counter prevents stale callbacks
   // from a dismissed screen from firing in the context of a later screen.
   let bootGen = 0;
@@ -500,7 +505,44 @@ window.APC.boot = (function () {
 
     ctx.globalAlpha = 1;
 
-    if (identityPhase !== 'waiting' && identityTypedLines.length > 0) {
+    if (identityPhase === 'dissolving' && dissolveActive) {
+      // Dissolution: lines unwrite right-to-left, bottom line first, 80ms stagger.
+      ctx.font = '20px "Courier New", monospace';
+      var startY     = canvas.height * t.MATRIX_IDENTITY_START_Y_PCT;
+      var lineHeight = 20 * 1.8;
+      var dElapsed   = Date.now() - dissolveStart;
+      var totalLines = dissolveChars.length;
+
+      for (var li = 0; li < totalLines; li++) {
+        // Bottom line (highest index) dissolves first — reverse stagger.
+        var lineIdx     = totalLines - 1 - li;
+        var lineDelay   = li * 80;  // 80ms stagger between lines
+        var lineElapsed = Math.max(0, dElapsed - lineDelay);
+        var fullLen     = dissolveChars[lineIdx] || 0;
+        if (fullLen === 0) { continue; }
+
+        // 15ms per character to unwrite
+        var charsRemoved = Math.min(fullLen, Math.floor(lineElapsed / 15));
+        var charsVisible = fullLen - charsRemoved;
+        if (charsVisible <= 0) { continue; }
+
+        var visibleText = (IDENTITY_LINES[lineIdx] && dissolveChars[lineIdx] > 0) ? IDENTITY_LINES[lineIdx].slice(0, charsVisible) : '';
+        if (!visibleText) { continue; }
+
+        var lineY    = startY + lineIdx * lineHeight;
+        var measured = ctx.measureText(visibleText).width;
+        var lineX    = (canvas.width / 2) - (measured / 2);
+
+        // Fade out as line dissolves
+        ctx.globalAlpha = Math.max(0.1, charsVisible / fullLen);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(lineX - 8, lineY - 17, measured + 16, 26);
+        ctx.fillStyle = '#CCFFCC';
+        ctx.fillText(visibleText, lineX, lineY);
+      }
+      ctx.globalAlpha = 1;
+
+    } else if (identityPhase !== 'waiting' && identityTypedLines.length > 0) {
       ctx.font = '20px "Courier New", monospace';
       var startY     = canvas.height * t.MATRIX_IDENTITY_START_Y_PCT;
       var lineHeight = 20 * 1.8;
@@ -509,10 +551,8 @@ window.APC.boot = (function () {
         var lineY    = startY + li * lineHeight;
         var measured = ctx.measureText(identityTypedLines[li]).width;
         var lineX    = (canvas.width / 2) - (measured / 2);
-        // Dark backdrop so text reads clearly over the rain
         ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
         ctx.fillRect(lineX - 8, lineY - 17, measured + 16, 26);
-        // Bright white-green text
         ctx.fillStyle = '#CCFFCC';
         ctx.fillText(identityTypedLines[li], lineX, lineY);
       }
@@ -540,47 +580,45 @@ window.APC.boot = (function () {
     }
     if (hasStarted) { return; }
     hasStarted = true;
-    rainAware = true; // rain is now aware — dissolution and wormhole sequence begins
+    rainAware = true;
 
     // Clean up gate listeners.
     document.getElementById('gate-screen').removeEventListener('click', onGateInteract);
     document.removeEventListener('keydown', onDocKeyDown);
     window.removeEventListener('resize', resizeCanvas);
 
-    // Fire analytics event.
     if (window.umami) { window.umami.track('click_to_start'); }
 
-    // Preload all boot audio assets — user gesture has now satisfied autoplay policy.
     preloadBootAudio();
 
-    // Roll screech decision once (#92, #93). Stored at module level so both
-    // Screen 3 and Screen 4 read the same decision — they do not re-roll.
     screechFires = Math.random() < 0.6;
     screechScreen = screechFires
       ? (Math.random() < 0.5 ? 'dos_log' : 'windoors_logo')
       : null;
 
-    const gate = document.getElementById('gate-screen');
-    gate.classList.add('gate-screen--fade');
+    // Begin dissolution — lines unwrite bottom-first, right-to-left.
+    // Snapshot typed line lengths — dissolution reads from this, not live identityTypedLines.
+    dissolveChars  = identityTypedLines.map(function(l) { return (l && l.length) ? l.length : 0; });
+    dissolveStart  = Date.now();
+    dissolveActive = true;
+    identityPhase  = 'dissolving';
+
     setTimeout(function () {
-      // Clear identity text so drawFrame stops rendering it behind the desk scene.
-      identityPhase = 'waiting';
+      dissolveActive  = false;
+      identityPhase   = 'waiting';
       identityTypedLines = [];
 
-      // Lower gate-screen below the desk scene canvas (z-index:100) and restore
-      // opacity instantly so Matrix rain stays visible through transparent PNG areas.
-      gate.style.zIndex     = '98';
-      gate.style.opacity    = '1';
-      gate.style.transition = 'none';
-      gate.classList.remove('gate-screen--fade');
+      // Lower gate below desk scene canvas so rain stays visible through transparent areas.
+      var gate = document.getElementById('gate-screen');
+      if (gate) {
+        gate.style.zIndex     = '98';
+        gate.style.opacity    = '1';
+        gate.style.transition = 'none';
+      }
 
-      // Hand off to boot scene. onComplete fires after the CRT sequence + fade-out.
       window.APC.bootScene.init(function () {
         cancelAnimationFrame(animFrame);
         hideGate();
-        // Guard: preloadBootAudio() should have fired in onGateInteract, but if
-        // bootAudio is somehow null (e.g. soft restart race), preload it now so
-        // renderPostScreen() can always play hdd-chatter.
         if (!bootAudio) { preloadBootAudio(); }
         advanceBootState(BOOT_STATE.POST);
       });
@@ -1228,6 +1266,9 @@ window.APC.boot = (function () {
     identityPhase = 'waiting';
     identityTypedLines = [];
     currentLineIdx = 0;
+    dissolveStart  = null;
+    dissolveChars  = [];
+    dissolveActive = false;
     rainDuration = 0;
     rainStartTime = null;
     if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null; }
