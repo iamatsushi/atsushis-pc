@@ -342,8 +342,6 @@ window.APC.boot = (function () {
 
   function revealPrompt() {
     if (hasStarted) { return; }
-    // Cancel the rain rAF — prompt is visible, rain is no longer needed.
-    if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null; }
     identityPhase = 'done';
     const prompt = document.getElementById('gate-prompt');
     if (prompt) {
@@ -410,13 +408,10 @@ window.APC.boot = (function () {
   function drawFrame() {
     const now = Date.now();
 
-    // Duration check — stop rain and reveal prompt when time is up.
+    // Duration check — reveal prompt when time is up. Rain keeps running.
     if (rainStartTime === null) { rainStartTime = now; }
-    if (!hasStarted && (now - rainStartTime) >= rainDuration) {
-      cancelAnimationFrame(animFrame);
-      animFrame = null;
+    if (!hasStarted && rainStartTime !== null && (now - rainStartTime) >= rainDuration && identityPhase !== 'done') {
       revealPrompt();
-      return;
     }
 
     animFrame = requestAnimationFrame(drawFrame);
