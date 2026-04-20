@@ -1,3 +1,15 @@
+/* --- MatrixCode font — MIT licensed, self-hosted, approved exception to system-fonts-only rule.
+   Source: Rezmason/matrix (github.com/Rezmason/matrix), assets/Matrix-Code.ttf.
+   Used exclusively by boot.js canvas rain via ctx.font. Not used in HTML/CSS elements.
+   Do not apply to #gate-terminal or any HTML element — Courier New only for DOM text. --- */
+@font-face {
+  font-family: 'MatrixCode';
+  src: url('../assets/fonts/Matrix-Code.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: block;
+}
+
 /* ============================================================
    boot.css — Gate screen styles (Matrix rain + Click to Start)
    Scope: #gate-screen and children only. No Win98 chrome here.

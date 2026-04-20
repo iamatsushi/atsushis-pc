@@ -295,6 +295,9 @@ Degrade to `'--'` on failure — never crash.
 - **New `ie-` prefixed files or classes** — wrong. Use `netescape-` prefix.
 - **Calling proxy APIs directly from client** — wrong. All API calls go through Caddy routes.
 - **Importing external fonts or icon libraries** — wrong. System fonts only, assets self-hosted.
+  Exception: `MatrixCode` (`assets/fonts/Matrix-Code.ttf`) is approved for Canvas rain use only.
+  It is MIT licensed (Rezmason/matrix), self-hosted on Pi, and declared in `css/boot.css` via `@font-face`.
+  Do NOT apply MatrixCode to any HTML element or CSS font-family stack — Canvas `ctx.font` only.
 - **`hddChatter.loop = false`** — wrong. Chatter must loop indefinitely.
 - **`fadeAudioOut(hddChatter, ...)`** — wrong. Chatter never stops; use `fadeAudioTo()` only.
 - **`setTimeout(() => hddChatter.play(), delay)`** — wrong. Blocked by browser autoplay policy.
