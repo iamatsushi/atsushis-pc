@@ -49,7 +49,7 @@
     MATRIX_LINE1_HOLD_MS:             600,  // hold after line 1 before lines 2–8 begin
     MATRIX_POST_LINES_PAUSE_MS:       800,  // pause after line 8 before prompt fades in
     MATRIX_PROMPT_FADE_MS:            300,  // prompt opacity fade-in duration
-    MATRIX_PROMPT_CANVAS_Y_PCT:      0.84,  // prompt vertical position (84% of canvas height)
+    MATRIX_PROMPT_CANVAS_Y_PCT:      0.70,  // prompt vertical position (84% of canvas height)
     MATRIX_IDENTITY_START_Y_PCT:     0.30,  // identity lines top anchor (30% of canvas height)
 
     // Rain column typing pace — per-column typing reveal model.
