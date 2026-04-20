@@ -944,7 +944,7 @@ window.APC.netescape = (function () {
 
     const sub = document.createElement('p');
     sub.className = 'netescape-guestbook__subtitle';
-    sub.textContent = 'Leave a message and say hello!';
+    sub.textContent = 'Sign the book to say hello — or request a copy of the resume.';
 
     header.appendChild(h1);
     header.appendChild(sub);
@@ -958,6 +958,15 @@ window.APC.netescape = (function () {
     formTitle.className = 'netescape-guestbook__section-title';
     formTitle.textContent = 'Sign the Book';
     formSection.appendChild(formTitle);
+
+    // Resume-context banner: shown only when arriving via resume_FINAL_v3.exe (?resume=1)
+    if (currentParams.resume === '1') {
+      var resumeBanner = document.createElement('p');
+      resumeBanner.className = 'netescape-guestbook__resume-banner';
+      resumeBanner.textContent =
+        'You found it. Sign the guestbook below and I\'ll email you the resume directly.';
+      formSection.appendChild(resumeBanner);
+    }
 
     // formArea holds error + form; on success its contents are replaced
     const formArea = document.createElement('div');
@@ -1130,8 +1139,10 @@ window.APC.netescape = (function () {
         const successEl = document.createElement('p');
         successEl.className = 'netescape-guestbook__success';
         successEl.textContent =
-          'Thanks for signing the guestbook! Your message will appear within 24 hours ' +
-          'after review. If you requested a resume, I will email it to you directly.';
+          'Thanks! Your message will appear within 24 hours after review. ' +
+          (resumeCheckbox.checked
+            ? 'Resume request received — I will email it to you directly.'
+            : '');
         formArea.appendChild(successEl);
       })
       .catch(function (err) {

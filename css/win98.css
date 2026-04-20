@@ -1611,3 +1611,19 @@
 .desktop-icon__hint--visible {
   opacity: 1;
 }
+
+/* -------------------------------------------------------------------------
+   Guestbook resume-context banner (P0-2)
+   Shown only when arriving via resume_FINAL_v3.exe (?resume=1)
+   ------------------------------------------------------------------------- */
+
+.netescape-guestbook__resume-banner {
+  font-family: 'MS Sans Serif', Tahoma, sans-serif;
+  font-size: 11px;
+  color: #000080;
+  background: #FFF8E1;
+  border-left: 3px solid #000080;
+  padding: 6px 10px;
+  margin: 0 0 12px 0;
+  font-weight: bold;
+}
