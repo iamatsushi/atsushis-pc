@@ -13,10 +13,8 @@ window.APC.boot = (function () {
 
   const MATRIX_COLOR = '#00FF41';
   const FONT_SIZE = 14;
-  // Trail opacity by stream position (j=0 is head, j=1 next, etc.).
-  // Positions beyond this array taper linearly from 0.2 toward 0 at stream tail.
-  const TRAIL_OPACITIES = [1.0, 0.8, 0.6, 0.4, 0.2];
-  // Emoji frequency is fixed at MATRIX_EMOJI_FREQUENCY (2%) — no per-draw re-roll.
+  // Emoji columns: 1% of columns are emoji-only (emojiStream flag set in initColumns).
+  // The remaining 99% are katakana/ASCII only — no per-character emoji roll.
 
   // Exact character set from CLAUDE.md spec — half-width katakana + ASCII + symbols.
   const MATRIX_CHARS = [
@@ -374,11 +372,12 @@ window.APC.boot = (function () {
   function initColumns() {
     const t = window.APC.timing;
     const count = Math.floor(canvas.width / FONT_SIZE);
-    // Base velocity: 100ms per head advance — tuned for readability at 1080p desktop.
+    const rows = Math.floor(canvas.height / FONT_SIZE);
+    // Base velocity: MATRIX_STREAM_BASE_DELAY_MS per head advance (125ms — 25% slower than original).
     // Each column's charDelay = BASE_CHAR_DELAY_MS / speedFactor, giving a fixed
-    // 100–125ms range (MATRIX_COL_SPEED_MIN_PCT 0.80 → 125ms, MAX 1.00 → 100ms).
+    // 125–156ms range (MATRIX_COL_SPEED_MIN_PCT 0.80 → 156ms, MAX 1.00 → 125ms).
     // charDelay is NOT re-rolled when a stream resets — speed is fixed for the full duration.
-    const BASE_CHAR_DELAY_MS = 100;
+    const BASE_CHAR_DELAY_MS = t.MATRIX_STREAM_BASE_DELAY_MS;
     columns = [];
     for (let i = 0; i < count; i++) {
       const speedFactor = t.MATRIX_COL_SPEED_MIN_PCT +
@@ -386,8 +385,9 @@ window.APC.boot = (function () {
       const streamLen = t.rand(t.MATRIX_STREAM_LEN_MIN, t.MATRIX_STREAM_LEN_MAX);
       columns.push({
         x:            i * FONT_SIZE,
-        headRow:      -Math.floor(Math.random() * streamLen), // stagger: head starts above canvas
-        streamLen:    streamLen,                               // fixed for duration — not re-rolled on reset
+        headRow:      t.rand(0, rows - 1),  // start within canvas — overdraw trail builds from frame 1
+        streamLen:    streamLen,             // kept from streaming model; does not affect overdraw trail
+        emojiStream:  Math.random() < t.MATRIX_EMOJI_STREAM_CHANCE, // decided once at init, never re-rolled
         speedFactor:  speedFactor,
         charDelay:    Math.round(BASE_CHAR_DELAY_MS / speedFactor), // fixed for duration
         nextCharTime: Date.now() + t.rand(0, t.MATRIX_RAIN_STAGGER_MAX_MS),
@@ -399,11 +399,12 @@ window.APC.boot = (function () {
 
   // --- Matrix rain render loop -----------------------------------------
   //
-  // Column stream model: each column maintains a full visible stream of
-  // N characters (8–20) falling together as a unit. The head advances one
-  // row per tick; the trail follows above it, fading by position. Characters
-  // re-randomize every frame (flicker effect). clearRect replaces overdraw —
-  // all active cells are re-drawn explicitly each frame.
+  // Overdraw trail model: each frame, fill the canvas with a low-alpha black
+  // to gradually dim previous characters (phosphor glow effect). Then draw
+  // only the head character for each active column at full brightness. The
+  // visible comet trail is formed by the per-frame fade, not explicit position
+  // opacities. At MATRIX_TRAIL_OVERDRAW_ALPHA 0.05 (~60fps): a character
+  // fades to ~5% brightness after ~57 frames (~1s) — roughly 8 visible rows.
 
   function drawFrame() {
     const now = Date.now();
@@ -418,9 +419,10 @@ window.APC.boot = (function () {
     const rows = Math.floor(canvas.height / FONT_SIZE);
     const t = window.APC.timing;
 
-    // Clear full canvas each frame — streaming model re-draws all active cells explicitly.
-    // Replaces the old rgba(0,0,0,0.15) overdraw; canvas background shows through cleared cells.
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // Per-frame overdraw — dims all previous content by MATRIX_TRAIL_OVERDRAW_ALPHA each frame.
+    // Lower alpha = longer visible trail (0.05 → ~57 frames before fading to 5% brightness).
+    ctx.fillStyle = 'rgba(0, 0, 0, ' + t.MATRIX_TRAIL_OVERDRAW_ALPHA + ')';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     ctx.font = FONT_SIZE + 'px "Courier New", monospace';
     ctx.fillStyle = MATRIX_COLOR;
@@ -443,55 +445,34 @@ window.APC.boot = (function () {
         col.nextCharTime = now + col.charDelay;
       }
 
-      // Stream fully exited — begin post-exit pause.
-      // Check tail (headRow - streamLen + 1) rather than head so the full stream clears.
-      if (col.headRow - col.streamLen + 1 >= rows) {
+      // Head fully exited — begin post-exit pause.
+      if (col.headRow >= rows) {
         col.active = false;
         col.pauseUntil = now + t.rand(t.MATRIX_RAIN_RESET_MIN_MS, t.MATRIX_RAIN_RESET_MAX_MS);
         continue;
       }
 
-      // Draw stream — head at headRow, trail going upward (j=0 is head).
-      // Characters re-randomize every frame for flicker effect.
-      for (let j = 0; j < col.streamLen; j++) {
-        const row = col.headRow - j;
-        if (row < 0 || row >= rows) { continue; }
+      if (col.headRow < 0) { continue; } // head still above canvas
 
-        let opacity;
-        if (j < TRAIL_OPACITIES.length) {
-          opacity = TRAIL_OPACITIES[j];
-        } else {
-          // Linear taper: 0.2 at TRAIL_OPACITIES.length → 0 at stream tail.
-          const tailLen = col.streamLen - TRAIL_OPACITIES.length;
-          opacity = tailLen > 0 ? 0.2 * (1 - (j - TRAIL_OPACITIES.length) / tailLen) : 0;
-        }
-        if (opacity <= 0) { continue; }
-
-        const y = (row + 1) * FONT_SIZE;
-        ctx.globalAlpha = opacity;
-
-        if (Math.random() < t.MATRIX_EMOJI_FREQUENCY) {
-          // 2% of characters are emoji — natural OS color, no filter applied.
-          ctx.fillText(
-            MATRIX_EMOJIS[Math.floor(Math.random() * MATRIX_EMOJIS.length)],
-            col.x, y
-          );
-        } else {
-          ctx.fillText(
-            MATRIX_CHARS[Math.floor(Math.random() * MATRIX_CHARS.length)],
-            col.x, y
-          );
-        }
+      // Draw head character at full brightness. Trail is formed by per-frame overdraw fade.
+      // emojiStream columns draw only emojis; all other columns draw only katakana/ASCII.
+      const y = (col.headRow + 1) * FONT_SIZE;
+      if (col.emojiStream) {
+        ctx.fillText(
+          MATRIX_EMOJIS[Math.floor(Math.random() * MATRIX_EMOJIS.length)],
+          col.x, y
+        );
+      } else {
+        ctx.fillText(
+          MATRIX_CHARS[Math.floor(Math.random() * MATRIX_CHARS.length)],
+          col.x, y
+        );
       }
     }
 
-    // Restore defaults before drawing identity lines.
-    ctx.globalAlpha = 1;
-    ctx.fillStyle = MATRIX_COLOR;
-
     // Redraw identity lines at full brightness each frame so they're always
-    // visible over the streaming rain. Y positions recalculate from canvas.height
-    // on each frame so a resize mid-sequence doesn't leave lines at stale positions.
+    // visible over the rain. Y positions recalculate from canvas.height on each
+    // frame so a resize mid-sequence doesn't leave lines at stale positions.
     if (identityPhase !== 'waiting' && identityTypedLines.length > 0) {
       const startY = canvas.height * t.MATRIX_IDENTITY_START_Y_PCT;
       const lineHeight = FONT_SIZE * 1.6;
