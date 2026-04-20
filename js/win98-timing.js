@@ -230,8 +230,8 @@
     HDD_POWERON_DURATION_MS:  10000,  // hdd-poweron.mp3 file length in ms
     HDD_CHATTER_CROSSFADE_MS:    50,  // chatter starts this many ms before poweron ends
                                       // overlap masks the seam — both in steady noise by this point
-    HDD_CHATTER_SETTLE_MS:     2000,  // duration of volume fade after startup.mp3 ends (ms)
-    HDD_CHATTER_SETTLE_VOL:     0.6,  // target background volume — HDD still spinning, quieter
+    HDD_CHATTER_SETTLE_MS:     3000,  // duration of volume fade after startup.mp3 ends (ms)
+    HDD_CHATTER_SETTLE_VOL:     0.5,  // target background volume — HDD still spinning, quieter
 
     // -------------------------------------------------------------------------
     // Boot sequence — five-screen state machine (#89–#94)

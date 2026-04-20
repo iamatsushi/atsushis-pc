@@ -1218,13 +1218,18 @@ window.APC.boot = (function () {
       // When startup chime finishes (~5s), fade chatter from 1.0 to background level.
       // { once: true } — listener self-removes after first fire, safe across soft restarts.
       bootAudio.chime.addEventListener('ended', function () {
-        if (bootAudio && bootAudio.hddChatter) {
-          fadeAudioTo(
-            bootAudio.hddChatter,
-            window.APC.timing.HDD_CHATTER_SETTLE_VOL,
-            window.APC.timing.HDD_CHATTER_SETTLE_MS
-          );
-        }
+        // Wait 2s after chime ends, fade to 50% over 3s, then continue to 20% over 5s.
+        setTimeout(function () {
+          if (!bootAudio || !bootAudio.hddChatter) { return; }
+          // Stage 1: fade to 50%
+          fadeAudioTo(bootAudio.hddChatter, 0.5, 3000);
+          // Stage 2: after stage 1 completes, fade to 20%
+          setTimeout(function () {
+            if (bootAudio && bootAudio.hddChatter) {
+              fadeAudioTo(bootAudio.hddChatter, 0.2, 5000);
+            }
+          }, 3000);
+        }, 2000);
       }, { once: true });
       try { bootAudio.chime.play().catch(function () {}); } catch (e) {}
     }
