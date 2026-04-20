@@ -497,17 +497,21 @@ window.APC.boot = (function () {
     }
 
     ctx.globalAlpha = 1;
-    ctx.fillStyle   = MATRIX_COLOR;
-    ctx.font        = FONT_SIZE + 'px "Courier New", monospace';
 
     if (identityPhase !== 'waiting' && identityTypedLines.length > 0) {
+      ctx.font = '20px "Courier New", monospace';
       var startY     = canvas.height * t.MATRIX_IDENTITY_START_Y_PCT;
-      var lineHeight = FONT_SIZE * 1.6;
+      var lineHeight = 20 * 1.8;
       for (var li = 0; li < identityTypedLines.length; li++) {
         if (!identityTypedLines[li]) { continue; }
         var lineY    = startY + li * lineHeight;
         var measured = ctx.measureText(identityTypedLines[li]).width;
         var lineX    = (canvas.width / 2) - (measured / 2);
+        // Dark backdrop so text reads clearly over the rain
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(lineX - 8, lineY - 17, measured + 16, 26);
+        // Bright white-green text
+        ctx.fillStyle = '#CCFFCC';
         ctx.fillText(identityTypedLines[li], lineX, lineY);
       }
     }
