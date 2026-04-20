@@ -12,14 +12,13 @@ window.APC.boot = (function () {
   // --- Constants -------------------------------------------------------
 
   const MATRIX_COLOR  = '#00FF41';
-  const CURSOR_COLOR  = '#CCFFCC'; // near-white head — Rezmason cursor tip color
-  const FONT_SIZE = 14;
+  const FONT_SIZE = 12;
   // Emoji columns: 1% of columns are emoji-only (emojiStream flag set in initColumns).
   // The remaining 99% are katakana/ASCII only — no per-character emoji roll.
 
   // Exact character set from CLAUDE.md spec — half-width katakana + ASCII + symbols.
   const MATRIX_CHARS = [
-    ...'ｦｧｨｩｪｫｬｭｮｯｰｱｲｳｴｵｶｷｸｹｺｻｼｽｾｿﾀﾁﾂﾃﾄﾅﾆﾇﾈﾉﾊﾋﾌﾍﾎﾏﾐﾑﾒﾓﾔﾕﾖﾗﾘﾙﾚﾛﾜﾝ' +
+    ...'゠ァアィイゥウェエォオカガキギクグケゲコゴサザシジスズセゼソゾタダチヂッツヅテデトドナニヌネノハバパヒビピフブプヘベペホボポマミムメモャヤュユョヨラリルレロヮワヰヱヲンヴヵヶー' +
     'ABCDEFGHIJKLMNOPQRSTUVWXYZ' +
     '0123456789' +
     '@#$%*+-=:<>/\\|'
@@ -258,10 +257,7 @@ window.APC.boot = (function () {
       }
     }
 
-    // Gate on MatrixCode font load before starting rain — prevents blank-glyph
-    // rendering on slow loads. .finally() ensures rain starts regardless of
-    // whether the font loaded successfully. Never block the boot experience on a font.
-    document.fonts.load(FONT_SIZE + 'px MatrixCode').finally(_startRain);
+    _startRain();
   }
 
   function _startRain() {
@@ -400,109 +396,118 @@ window.APC.boot = (function () {
         charDelay:    Math.round(BASE_CHAR_DELAY_MS / speedFactor), // fixed for duration
         nextCharTime: Date.now() + t.rand(0, t.MATRIX_RAIN_STAGGER_MAX_MS),
         active:       true,
+        trailLen:     Math.floor(Math.random() * 20) + 12,
+        chars:        Array.from({length: 120}, function() { return MATRIX_CHARS[Math.floor(Math.random() * MATRIX_CHARS.length)]; }),
+        mirrored:     Array.from({length: 120}, function() { return Math.random() < 0.7; }),
+        emojis:       Array.from({length: 120}, function() { return MATRIX_EMOJIS[Math.floor(Math.random() * MATRIX_EMOJIS.length)]; }),
         pauseUntil:   0
       });
     }
   }
 
-  // --- Matrix rain render loop -----------------------------------------
-  //
-  // Overdraw trail model: each frame, fill the canvas with a low-alpha black
-  // to gradually dim previous characters (phosphor glow effect). Then draw
-  // only the head character for each active column at full brightness. The
-  // visible comet trail is formed by the per-frame fade, not explicit position
-  // opacities. At MATRIX_TRAIL_OVERDRAW_ALPHA 0.05 (~60fps): a character
-  // fades to ~5% brightness after ~57 frames (~1s) — roughly 8 visible rows.
-
   function drawFrame() {
-    const now = Date.now();
+    var now = Date.now();
 
-    // Duration check — reveal prompt when time is up. Rain keeps running.
     if (rainStartTime === null) { rainStartTime = now; }
     if (!hasStarted && rainStartTime !== null && (now - rainStartTime) >= rainDuration && identityPhase !== 'done') {
       revealPrompt();
     }
 
     animFrame = requestAnimationFrame(drawFrame);
-    const rows = Math.floor(canvas.height / FONT_SIZE);
-    const t = window.APC.timing;
+    var rows = Math.floor(canvas.height / FONT_SIZE);
+    var t = window.APC.timing;
 
-    // Per-frame overdraw — dims all previous content by MATRIX_TRAIL_OVERDRAW_ALPHA each frame.
-    // Lower alpha = longer visible trail (0.05 → ~57 frames before fading to 5% brightness).
-    ctx.fillStyle = 'rgba(0, 0, 0, ' + t.MATRIX_TRAIL_OVERDRAW_ALPHA + ')';
+    ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.font = '11px "Courier New", monospace';
+    ctx.font = '11px "Courier New", monospace';
 
-    ctx.font = FONT_SIZE + 'px MatrixCode, "Courier New", monospace';
-    ctx.fillStyle = MATRIX_COLOR;
-
-    for (let i = 0; i < columns.length; i++) {
-      const col = columns[i];
+    for (var i = 0; i < columns.length; i++) {
+      var col = columns[i];
 
       if (!col.active) {
         if (now >= col.pauseUntil) {
-          col.active = true;
-          col.headRow = 0;
+          col.active   = true;
+          col.headRow  = 0;
           col.nextCharTime = now;
+          col.chars    = Array.from({length: 120}, function() { return MATRIX_CHARS[Math.floor(Math.random() * MATRIX_CHARS.length)]; });
+          col.mirrored = Array.from({length: 120}, function() { return Math.random() < 0.7; });
+          col.emojis   = Array.from({length: 120}, function() { return MATRIX_EMOJIS[Math.floor(Math.random() * MATRIX_EMOJIS.length)]; });
         }
         continue;
       }
 
-      // Advance head one row per tick.
       if (now >= col.nextCharTime) {
         col.headRow++;
         col.nextCharTime = now + col.charDelay;
       }
 
-      // Head fully exited — begin post-exit pause.
       if (col.headRow >= rows) {
-        col.active = false;
+        col.active     = false;
         col.pauseUntil = now + t.rand(t.MATRIX_RAIN_RESET_MIN_MS, t.MATRIX_RAIN_RESET_MAX_MS);
         continue;
       }
 
-      if (col.headRow < 0) { continue; } // head still above canvas
+      if (col.headRow < 0) { continue; }
 
-      // Draw head character at full brightness. Trail is formed by per-frame overdraw fade.
-      // emojiStream columns draw only emojis; all other columns draw only katakana/ASCII.
-      const y = (col.headRow + 1) * FONT_SIZE;
       if (col.emojiStream) {
-        // Isolate emoji draw — ctx.save/restore prevents fillStyle state leakage
-        // in both directions. Emoji are color glyphs that ignore fillStyle on most
-        // browsers, but isolation is correct and defensive.
-        ctx.save();
-        ctx.fillText(
-          MATRIX_EMOJIS[Math.floor(Math.random() * MATRIX_EMOJIS.length)],
-          col.x, y
-        );
-        ctx.restore();
+        // Draw emoji trail using fixed buffer — same emoji per row, no flickering.
+        var eTLen = col.trailLen;
+        for (var etr = eTLen - 1; etr >= 0; etr--) {
+          var eRow = col.headRow - etr;
+          if (eRow < 0 || eRow >= rows) { continue; }
+          var ey      = (eRow + 1) * FONT_SIZE;
+          var eBufIdx = Math.min(eRow, col.emojis.length - 1);
+          var fade    = etr === 0 ? 1 : Math.max(0.03, Math.pow(1 - (etr / eTLen), 2.2));
+          ctx.globalAlpha = fade;
+          ctx.fillText(col.emojis[eBufIdx], col.x, ey);
+        }
+        // Reset after trail draw — next block must not re-enter emoji path
+        ctx.globalAlpha = 1;
       } else {
-        // Every character drawn IS the head at this moment — col.headRow is always
-        // the leading cell. CURSOR_COLOR gives the bright tip; the phosphor trail
-        // behind it fades via per-frame overdraw.
-        ctx.fillStyle = CURSOR_COLOR;
-        ctx.fillText(
-          MATRIX_CHARS[Math.floor(Math.random() * MATRIX_CHARS.length)],
-          col.x, y
-        );
+        var tLen = col.trailLen;
+        for (var tr = tLen - 1; tr >= 0; tr--) {
+          var trailRow = col.headRow - tr;
+          if (trailRow < 0 || trailRow >= rows) { continue; }
+          var ty = (trailRow + 1) * FONT_SIZE;
+
+          if (tr === 0) {
+            ctx.globalAlpha = 1;
+            ctx.fillStyle   = '#CCFFCC';
+          } else {
+            var fade = Math.pow(1 - (tr / tLen), 2.2);
+            ctx.globalAlpha = Math.max(0.03, fade);
+            ctx.fillStyle   = MATRIX_COLOR;
+          }
+
+          var bufIdx = Math.min(trailRow, col.chars.length - 1);
+          var ch     = col.chars[bufIdx];
+
+          if (col.mirrored[bufIdx]) {
+            ctx.save();
+            ctx.translate(col.x + FONT_SIZE, ty);
+            ctx.scale(-1, 1);
+            ctx.fillText(ch, 0, 0);
+            ctx.restore();
+          } else {
+            ctx.fillText(ch, col.x, ty);
+          }
+        }
       }
     }
 
-    // Identity lines render in Courier New — prose, not Matrix glyphs.
-    // Reset font explicitly so they are unaffected by the MatrixCode ctx.font above.
-    ctx.font = FONT_SIZE + 'px "Courier New", monospace';
+    ctx.globalAlpha = 1;
+    ctx.fillStyle   = MATRIX_COLOR;
+    ctx.font        = FONT_SIZE + 'px "Courier New", monospace';
 
-    // Redraw identity lines at full brightness each frame so they're always
-    // visible over the rain. Y positions recalculate from canvas.height on each
-    // frame so a resize mid-sequence doesn't leave lines at stale positions.
     if (identityPhase !== 'waiting' && identityTypedLines.length > 0) {
-      const startY = canvas.height * t.MATRIX_IDENTITY_START_Y_PCT;
-      const lineHeight = FONT_SIZE * 1.6;
-
-      for (let li = 0; li < identityTypedLines.length; li++) {
+      var startY     = canvas.height * t.MATRIX_IDENTITY_START_Y_PCT;
+      var lineHeight = FONT_SIZE * 1.6;
+      for (var li = 0; li < identityTypedLines.length; li++) {
         if (!identityTypedLines[li]) { continue; }
-        const lineY = startY + li * lineHeight;
-        const measured = ctx.measureText(identityTypedLines[li]).width;
-        const lineX = (canvas.width / 2) - (measured / 2);
+        var lineY    = startY + li * lineHeight;
+        var measured = ctx.measureText(identityTypedLines[li]).width;
+        var lineX    = (canvas.width / 2) - (measured / 2);
         ctx.fillText(identityTypedLines[li], lineX, lineY);
       }
     }

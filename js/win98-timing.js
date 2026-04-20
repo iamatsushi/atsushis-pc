@@ -56,16 +56,16 @@
     // Columns advance one character at a time at a randomised speed.
     MATRIX_RAIN_RESET_MIN_MS:          0,  // no pause between streams — columns restart immediately
     MATRIX_RAIN_RESET_MAX_MS:          0,
-    MATRIX_RAIN_STAGGER_MAX_MS:     2000,  // max random start delay per column on init
+    MATRIX_RAIN_STAGGER_MAX_MS:      500,  // max random start delay per column on init
 
     MATRIX_DURATION_MIN_MS:         3000,  // minimum rain duration before prompt appears
     MATRIX_DURATION_MAX_MS:        12000,  // maximum rain duration
-    MATRIX_COL_SPEED_MIN_PCT:       0.80,  // per-column speed floor (80% of base velocity)
-    MATRIX_COL_SPEED_MAX_PCT:       1.00,  // per-column speed ceiling (100% of base velocity)
+    MATRIX_COL_SPEED_MIN_PCT:       0.40,  // per-column speed floor (80% of base velocity)
+    MATRIX_COL_SPEED_MAX_PCT:       1.30,  // per-column speed ceiling (100% of base velocity)
     MATRIX_EMOJI_FREQUENCY:         0.02,  // superseded by emojiStream column model — kept for reference
     MATRIX_EMOJI_STREAM_CHANCE:     0.01,  // 1% of columns are emoji-only; remaining 99% never produce emojis
-    MATRIX_TRAIL_OVERDRAW_ALPHA:    0.05,  // per-frame canvas fade alpha; lower = longer visible trail
-    MATRIX_STREAM_BASE_DELAY_MS:     125,  // base ms per head advance (was hardcoded 100 — 25% slower)
+    MATRIX_TRAIL_OVERDRAW_ALPHA:    0.04,  // per-frame canvas fade alpha; lower = longer visible trail
+    MATRIX_STREAM_BASE_DELAY_MS:     160,  // base ms per head advance (was hardcoded 100 — 25% slower)
     MATRIX_STREAM_LEN_MIN:            15,  // min visible characters per column stream
     MATRIX_STREAM_LEN_MAX:            80,  // max — exceeds screen rows; tail clips naturally at canvas edge
     MATRIX_CURSOR_BLINK_MS:          530,  // terminal prompt cursor blink interval (matches CSS)
