@@ -126,6 +126,13 @@ The Matrix rain canvas runs inside `boot.js` under the `window.APC.boot` namespa
 - Do NOT use `clearRect` — it removes the trail entirely. Do NOT draw multiple positions per column — it defeats the overdraw fade
 - Do NOT add `ctx.globalAlpha` management to the column draw loop — head is always full brightness
 
+**Head character color — cursor tip (PR #155):**
+- `CURSOR_COLOR = '#CCFFCC'` — near-white green, matches the Rezmason Matrix cursor tip color
+- The head character (the leading cell of each katakana/ASCII column) draws in `CURSOR_COLOR`, not `MATRIX_COLOR`
+- The phosphor trail behind it fades from `CURSOR_COLOR` → `MATRIX_COLOR` naturally via the per-frame overdraw model
+- Do NOT change the head draw to use `MATRIX_COLOR` — the bright tip is intentional and visually correct
+- `CURSOR_COLOR` applies to katakana/ASCII columns only. Emoji columns are unaffected — they render in natural OS color
+
 **Emoji rendering — natural color, no filter:**
 - 1% of columns are `emojiStream: true` — every character in that column is an emoji
 - Remaining 99% are katakana/ASCII only — no emojis mixed in
@@ -133,6 +140,7 @@ The Matrix rain canvas runs inside `boot.js` under the `window.APC.boot` namespa
 - Emojis render in natural OS color. No CSS filter. Do not add a filter.
 - Do NOT use the old `ctx.filter = 'brightness(0) saturate(100%)...'` hack — it is removed
 - Emoji list is defined in `MATRIX_EMOJIS` const in boot.js
+- Emoji draw is wrapped in `ctx.save()`/`ctx.restore()` to prevent fillStyle state leakage — do not remove
 
 **Prompt legibility:**
 - `#gate-prompt` has `background: rgba(0,0,0,0.75)` and `padding: 6px 12px` in `css/boot.css`
@@ -303,3 +311,4 @@ Degrade to `'--'` on failure — never crash.
 - **`setTimeout(() => hddChatter.play(), delay)`** — wrong. Blocked by browser autoplay policy.
   Always start `.play()` within the user gesture context (volume=0 trick).
 - **Removing `playHddAudio` from boot.js return object** — wrong. boot-scene.js depends on it.
+- **Drawing head character in `MATRIX_COLOR`** — wrong. Head draws in `CURSOR_COLOR` (`#CCFFCC`). Do not change this.
