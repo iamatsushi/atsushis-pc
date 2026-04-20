@@ -11,7 +11,8 @@ window.APC.boot = (function () {
 
   // --- Constants -------------------------------------------------------
 
-  const MATRIX_COLOR = '#00FF41';
+  const MATRIX_COLOR  = '#00FF41';
+  const CURSOR_COLOR  = '#CCFFCC'; // near-white head — Rezmason cursor tip color
   const FONT_SIZE = 14;
   // Emoji columns: 1% of columns are emoji-only (emojiStream flag set in initColumns).
   // The remaining 99% are katakana/ASCII only — no per-character emoji roll.
@@ -465,11 +466,20 @@ window.APC.boot = (function () {
       // emojiStream columns draw only emojis; all other columns draw only katakana/ASCII.
       const y = (col.headRow + 1) * FONT_SIZE;
       if (col.emojiStream) {
+        // Isolate emoji draw — ctx.save/restore prevents fillStyle state leakage
+        // in both directions. Emoji are color glyphs that ignore fillStyle on most
+        // browsers, but isolation is correct and defensive.
+        ctx.save();
         ctx.fillText(
           MATRIX_EMOJIS[Math.floor(Math.random() * MATRIX_EMOJIS.length)],
           col.x, y
         );
+        ctx.restore();
       } else {
+        // Every character drawn IS the head at this moment — col.headRow is always
+        // the leading cell. CURSOR_COLOR gives the bright tip; the phosphor trail
+        // behind it fades via per-frame overdraw.
+        ctx.fillStyle = CURSOR_COLOR;
         ctx.fillText(
           MATRIX_CHARS[Math.floor(Math.random() * MATRIX_CHARS.length)],
           col.x, y
