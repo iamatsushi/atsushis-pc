@@ -101,6 +101,9 @@ window.APC.boot = (function () {
   let screechFires = false;
   let screechScreen = null;
 
+  // Impatience flag — set when user interacts during typing. Accelerates to 0ms, never skips.
+  let impatient = false;
+
   // --- Public API ------------------------------------------------------
 
   // --- Mobile detection ------------------------------------------------
@@ -326,19 +329,15 @@ window.APC.boot = (function () {
     if (typed.length < targetLine.length) {
       // Advance one character.
       identityTypedLines[lineIdx] = targetLine.slice(0, typed.length + 1);
-      setTimeout(typeNextChar,
-        t.rand(t.MATRIX_IDENTITY_CHAR_DELAY_MIN_MS, t.MATRIX_IDENTITY_CHAR_DELAY_MAX_MS));
+      setTimeout(typeNextChar, impatient ? 8 : t.rand(t.MATRIX_IDENTITY_CHAR_DELAY_MIN_MS, t.MATRIX_IDENTITY_CHAR_DELAY_MAX_MS));
     } else if (lineIdx < IDENTITY_LINES.length - 1) {
-      // This line complete — advance to next line.
       currentLineIdx = lineIdx + 1;
       identityTypedLines[currentLineIdx] = '';
-      // Inter-line gap uses the same char delay range — keeps rhythm consistent.
-      setTimeout(typeNextChar,
-        t.rand(t.MATRIX_IDENTITY_CHAR_DELAY_MIN_MS, t.MATRIX_IDENTITY_CHAR_DELAY_MAX_MS));
+      setTimeout(typeNextChar, impatient ? 8 : t.rand(t.MATRIX_IDENTITY_CHAR_DELAY_MIN_MS, t.MATRIX_IDENTITY_CHAR_DELAY_MAX_MS));
     } else {
       // All 8 lines complete — pause then fade-in prompt.
       identityPhase = 'pause';
-      setTimeout(revealPrompt, t.MATRIX_POST_LINES_PAUSE_MS);
+      setTimeout(revealPrompt, impatient ? 0 : t.MATRIX_POST_LINES_PAUSE_MS);
     }
   }
 
@@ -525,6 +524,17 @@ window.APC.boot = (function () {
   }
 
   function onGateInteract() {
+    // Accelerate typing if lines still in progress — never skip.
+    if (!hasStarted && (identityPhase === 'waiting' || identityPhase === 'line1_hold' || identityPhase === 'typing')) {
+      impatient = true;
+      return;
+    }
+    // Skip post-lines pause if still waiting.
+    if (!hasStarted && identityPhase === 'pause') {
+      impatient = true;
+      revealPrompt();
+      return;
+    }
     if (hasStarted) { return; }
     hasStarted = true;
 
@@ -1225,6 +1235,7 @@ window.APC.boot = (function () {
     bootAudio = null;
     screechFires = false;
     screechScreen = null;
+    impatient = false;
 
     // Reset other module state.
     if (window.APC.session) { window.APC.session.isConnected = false; }
