@@ -257,6 +257,13 @@ window.APC.boot = (function () {
       }
     }
 
+    // Gate on MatrixCode font load before starting rain — prevents blank-glyph
+    // rendering on slow loads. .finally() ensures rain starts regardless of
+    // whether the font loaded successfully. Never block the boot experience on a font.
+    document.fonts.load(FONT_SIZE + 'px MatrixCode').finally(_startRain);
+  }
+
+  function _startRain() {
     // Roll rain duration once — stays fixed for this run.
     const t = window.APC.timing;
     rainDuration = t.MATRIX_DURATION_MIN_MS +
@@ -424,7 +431,7 @@ window.APC.boot = (function () {
     ctx.fillStyle = 'rgba(0, 0, 0, ' + t.MATRIX_TRAIL_OVERDRAW_ALPHA + ')';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    ctx.font = FONT_SIZE + 'px "Courier New", monospace';
+    ctx.font = FONT_SIZE + 'px MatrixCode, "Courier New", monospace';
     ctx.fillStyle = MATRIX_COLOR;
 
     for (let i = 0; i < columns.length; i++) {
@@ -469,6 +476,10 @@ window.APC.boot = (function () {
         );
       }
     }
+
+    // Identity lines render in Courier New — prose, not Matrix glyphs.
+    // Reset font explicitly so they are unaffected by the MatrixCode ctx.font above.
+    ctx.font = FONT_SIZE + 'px "Courier New", monospace';
 
     // Redraw identity lines at full brightness each frame so they're always
     // visible over the rain. Y positions recalculate from canvas.height on each
@@ -1388,7 +1399,7 @@ window.APC.boot = (function () {
       ctx.fillStyle   = '#000';
       ctx.fillRect(0, 0, w, h);
 
-      ctx.font      = FONT_SIZE + 'px "Courier New", monospace';
+      ctx.font      = FONT_SIZE + 'px MatrixCode, "Courier New", monospace';
       ctx.fillStyle = MATRIX_COLOR;
 
       var i, c, glowRadius;
