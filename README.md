@@ -9,7 +9,7 @@ The machine being simulated is specific: an IBM Aptiva SE7. Pentium II. The beig
 
 ## What's in here
 
-**A boot sequence.** Matrix rain in `#00FF41` — full-width katakana, ASCII, and the occasional emoji column, because the internet absorbed everything eventually. Characters fall in fixed streams with variable-length trails: near-white head fading through green to black. 70% of glyphs are horizontally mirrored per the Rezmason reference. A terminal prompt blinks. You click. Windows 98 loads.
+**A boot sequence.** Matrix rain in `#00FF41` — full-width katakana, ASCII, and the occasional emoji column. Characters fall in fixed streams with variable-length trails: near-white head fading through green to black, 70% of glyphs horizontally mirrored. Eight identity lines type out, then a terminal prompt blinks. Press a key and the lines unwrite themselves bottom-to-top, right-to-left — dissolving back into the rain — as a wormhole spiral pulls everything inward and the desk scene reveals through a green phosphor glow. You click. Windows 98 loads.
 
 **A desktop.** Teal wallpaper. Beveled chrome. A taskbar with a working clock, live Portland weather, and a RAM gauge pulling from the actual Raspberry Pi running the site. Draggable windows. A Start Menu with a cascade bug that took longer to fix than anything else in this project.
 
@@ -82,7 +82,7 @@ git pull origin main
 | #39 | Real content for My Thoughts and About Me | Ready |
 | #40 | Accessibility audit — WAVE/axe, zero critical errors | Pre-launch gate |
 
-46 issues closed. The screensaver, Recycle Bin, Start Menu cascade, tray balloons, NetEscape, boot sequence, System Properties, Matrix rain overhaul, and a 28-issue bug sprint are all shipped.
+46 issues closed. The screensaver, Recycle Bin, Start Menu cascade, tray balloons, NetEscape, boot sequence, System Properties, Matrix rain overhaul, cinematic gate transition, and a 28-issue bug sprint are all shipped.
 
 ---
 
