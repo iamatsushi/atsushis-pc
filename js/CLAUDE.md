@@ -92,11 +92,31 @@ Never call `sessionStorage.clear()`. Use targeted `removeItem()` only.
 
 The Matrix rain canvas runs inside `boot.js` under the `window.APC.boot` namespace. There is no separate `matrix.js`.
 
+**No custom font — Courier New only:**
+- MatrixCode TTF was trialled and abandoned. It rendered glyphs with a solid background box, incompatible with canvas compositing.
+- The rain uses `11px "Courier New", monospace` for all glyph rendering. Do NOT reintroduce MatrixCode or any external font for canvas use.
+- The `@font-face` declaration for MatrixCode remains in `css/boot.css` but is not referenced in `boot.js`.
+
+**Character set — full-width katakana + ASCII + symbols:**
+- `MATRIX_CHARS` uses full-width katakana (U+30A0–U+30FF range) — `゠ァアィイゥウェエォオカガ...` etc.
+- Do NOT use half-width katakana (ｦｧｨｩ... U+FF65–FF9F) — they render at ~7px in Courier New, invisible in a 12px cell.
+- ASCII uppercase + digits + symbols (`@#$%*+-=:<>/\|`) are included.
+- Emoji are handled separately via `MATRIX_EMOJIS` and the `emojiStream` column flag.
+
+**Cell and font size:**
+- `FONT_SIZE = 12` — column width and row height in pixels.
+- Glyphs render at `11px` — one pixel smaller than cell — so characters breathe without touching neighbors.
+- Do NOT change `FONT_SIZE` without also updating the `ctx.font` string in `drawFrame()`.
+
 **Session persistence — localStorage TTL (disabled):**
 - `MATRIX_SESSION_TTL_MS` is `0` — the TTL skip is permanently unreachable. Every visit gets the full gate → boot experience.
-- `boot_complete_ts` is no longer written to localStorage. The read in `init()` still exists but the skip condition (`elapsed < 0`) is never true.
+- `boot_complete_ts` is no longer written to localStorage.
 - `init({ force: true })` still works correctly — bypasses the TTL check, used by `restart()`.
 - Do NOT restore the `localStorage.setItem('boot_complete_ts', ...)` call. Do NOT set `MATRIX_SESSION_TTL_MS` above 0.
+
+**Rain startup — direct `_startRain()` call:**
+- `init()` calls `_startRain()` directly. There is no font-load gate.
+- Do NOT add `document.fonts.load(...)` back. It caused the MatrixCode rendering bugs and is not needed for Courier New.
 
 **Rain duration — randomized at init time:**
 - `rainDuration = rand(MATRIX_DURATION_MIN_MS, MATRIX_DURATION_MAX_MS)` (3–12s)
@@ -104,61 +124,63 @@ The Matrix rain canvas runs inside `boot.js` under the `window.APC.boot` namespa
 - `rainStartTime` set on first `drawFrame()` call
 - When `Date.now() - rainStartTime >= rainDuration` and `identityPhase !== 'done'`: call `revealPrompt()` — rain keeps running
 
-**Column data model (PRs #141, #143, #147):**
-- `col.headRow` — current row of the stream head (was `col.currentRow` before PR #141 — do not use the old name)
-- `col.streamLen` — set once at `initColumns()`, not re-rolled on reset; retained in the object but does not affect the overdraw trail model
-- `col.emojiStream` — `true` for ~1% of columns (decided by `MATRIX_EMOJI_STREAM_CHANCE`); never re-rolled. `true` = emoji-only column; `false` = katakana/ASCII only, no emojis
+**Column data model:**
+- `col.headRow` — current row of the stream head
+- `col.trailLen` — random trail length per column (8–20 chars), set at init and on reset
+- `col.chars` — fixed character buffer, 120 slots, one char per row; assigned at init and refreshed on reset. Do NOT pick random chars at draw time — this causes shimmer/flicker.
+- `col.mirrored` — fixed boolean buffer, 120 slots; `true` = draw that row's char horizontally mirrored. Assigned at init and refreshed on reset. Do NOT re-roll at draw time.
+- `col.emojis` — fixed emoji buffer, 120 slots; used by `emojiStream` columns. Same rules as `col.chars`.
+- `col.emojiStream` — `true` for ~1% of columns (decided by `MATRIX_EMOJI_STREAM_CHANCE`); never re-rolled
 - `col.active` — `false` during post-exit pause; `col.pauseUntil` is the resume timestamp
-- On resume: `active = true`, `headRow = 0`, `nextCharTime = now`
-- Exit condition: `col.headRow >= rows` (head exits the bottom — no virtual tail travel)
+- On resume: `active = true`, `headRow = 0`, `nextCharTime = now`, all three buffers refreshed
+- Exit condition: `col.headRow >= rows`
 
 **Per-column fixed speed:**
-- Base velocity: `MATRIX_STREAM_BASE_DELAY_MS` (125ms) per head advance
-- Each column gets `speedFactor = rand(MATRIX_COL_SPEED_MIN_PCT, MATRIX_COL_SPEED_MAX_PCT)` (0.80–1.00)
-- `col.charDelay = Math.round(125 / speedFactor)` → range 125–156ms
-- charDelay is NOT re-rolled when a stream resets — speed is fixed for the full duration
+- Base velocity: `MATRIX_STREAM_BASE_DELAY_MS` (160ms) per head advance
+- Each column gets a random `speedFactor` in range `MATRIX_COL_SPEED_MIN_PCT` (0.40) to `MATRIX_COL_SPEED_MAX_PCT` (1.30)
+- `col.charDelay = Math.round(BASE / speedFactor)` — wide variance makes some columns visibly faster than others
+- charDelay is NOT re-rolled when a stream resets
 
-**Render model — overdraw trail (PR #147):**
-- Each frame: `ctx.fillStyle = 'rgba(0, 0, 0, ' + MATRIX_TRAIL_OVERDRAW_ALPHA + ')'; ctx.fillRect(...)` dims all previous content
-- Then draw only the **head character** for each active column at full brightness
-- The comet trail is formed by previous frames fading — not explicit position opacities
-- At `MATRIX_TRAIL_OVERDRAW_ALPHA: 0.05` (~60fps): character fades to ~5% brightness in ~57 frames (~1s), giving ~8 visible rows of trail
-- Do NOT use `clearRect` — it removes the trail entirely. Do NOT draw multiple positions per column — it defeats the overdraw fade
-- Do NOT add `ctx.globalAlpha` management to the column draw loop — head is always full brightness
+**Render model — explicit trail (current):**
+- Each frame: `ctx.fillStyle = '#000'; ctx.fillRect(...)` clears to pure black. No overdraw accumulation.
+- For each active column, draw `col.trailLen` characters from tail to head (painter's order — head drawn last).
+- **Head character** (trail index 0, `trailRow === headRow`): drawn at `globalAlpha = 1`, `fillStyle = '#CCFFCC'` (near-white green).
+- **Trail characters** (indices 1+): drawn at `fillStyle = MATRIX_COLOR` (`#00FF41`) with exponential fade: `opacity = Math.pow(1 - (tr / tLen), 2.2)`, minimum 0.03.
+- Character at each row comes from `col.chars[trailRow]` — fixed for the stream's lifetime.
+- Mirror decision at each row comes from `col.mirrored[trailRow]` — fixed for the stream's lifetime.
+- Do NOT use the overdraw model (`rgba(0,0,0,alpha)` fillRect) — it creates visible horizontal banding with Courier New.
+- Do NOT pick random chars or re-roll mirror per frame — causes shimmer.
 
-**Head character color — cursor tip (PR #155):**
-- `CURSOR_COLOR = '#CCFFCC'` — near-white green, matches the Rezmason Matrix cursor tip color
-- The head character (the leading cell of each katakana/ASCII column) draws in `CURSOR_COLOR`, not `MATRIX_COLOR`
-- The phosphor trail behind it fades from `CURSOR_COLOR` → `MATRIX_COLOR` naturally via the per-frame overdraw model
-- Do NOT change the head draw to use `MATRIX_COLOR` — the bright tip is intentional and visually correct
-- `CURSOR_COLOR` applies to katakana/ASCII columns only. Emoji columns are unaffected — they render in natural OS color
+**Mirroring — 70/30 split:**
+- 70% of character slots are mirrored horizontally via `ctx.save(); ctx.translate(col.x + FONT_SIZE, ty); ctx.scale(-1, 1); ctx.fillText(ch, 0, 0); ctx.restore()`.
+- 30% are drawn normally: `ctx.fillText(ch, col.x, ty)`.
+- The decision is stored in `col.mirrored[bufIdx]` — fixed at column init, not re-rolled.
+- This evokes the authentic Matrix aesthetic without a custom font.
 
-**Emoji rendering — natural color, no filter:**
-- 1% of columns are `emojiStream: true` — every character in that column is an emoji
-- Remaining 99% are katakana/ASCII only — no emojis mixed in
-- `MATRIX_EMOJI_FREQUENCY` is superseded by the `emojiStream` model — do not use it for drawing decisions
-- Emojis render in natural OS color. No CSS filter. Do not add a filter.
-- Do NOT use the old `ctx.filter = 'brightness(0) saturate(100%)...'` hack — it is removed
-- Emoji list is defined in `MATRIX_EMOJIS` const in boot.js
-- Emoji draw is wrapped in `ctx.save()`/`ctx.restore()` to prevent fillStyle state leakage — do not remove
+**Emoji columns:**
+- 1% of columns are `emojiStream: true` — every character is an emoji from `MATRIX_EMOJIS`.
+- Emoji columns draw a trail exactly like katakana columns but use `col.emojis[bufIdx]` for characters.
+- Head emoji at full opacity; trail fades using the same exponential formula.
+- No mirroring on emoji columns — emojis are color glyphs and mirroring breaks their rendering.
+- Do NOT re-roll emoji per frame — assign from `col.emojis` buffer.
 
 **Prompt legibility:**
-- `#gate-prompt` has `background: rgba(0,0,0,0.75)` and `padding: 6px 12px` in `css/boot.css`
-- Do not remove these — the rain runs behind the prompt
+- `#gate-prompt` has `background: rgba(0,0,0,0.75)` and `padding: 6px 12px` in `css/boot.css`.
+- Do not remove these — the rain runs behind the prompt.
 
 **`revealPrompt()`:**
-- Sets `identityPhase = 'done'` and adds `gate-prompt--visible` — that is all it does
-- Does NOT cancel rAF. Rain runs continuously behind the prompt until the user interacts
-- rAF is cancelled only by `startWormhole()` when the user clicks or presses a key
+- Sets `identityPhase = 'done'` and adds `gate-prompt--visible` — that is all it does.
+- Does NOT cancel rAF. Rain runs continuously behind the prompt until the user interacts.
+- rAF is cancelled only by `startWormhole()` when the user clicks or presses a key.
 
 **Wormhole compatibility (`startWormhole()`):**
-- Snapshots `col.headRow` (not `col.currentRow`) when building `wormChars`
-- Clamp negative headRow values to 0: `Math.max(0, col.headRow)` (columns init within canvas now, so this is a safety guard)
-- Everything else in `startWormhole()` is unaffected
+- Snapshots `col.headRow` (not `col.currentRow`) when building `wormChars`.
+- Clamp negative headRow values to 0: `Math.max(0, col.headRow)`.
+- Everything else in `startWormhole()` is unaffected.
 
 **`init(options)` signature:**
-- `options.force = true` bypasses the localStorage TTL check
-- No argument (or `{}`) = normal path with TTL check
+- `options.force = true` bypasses the localStorage TTL check.
+- No argument (or `{}`) = normal path with TTL check.
 
 ---
 
@@ -302,13 +324,15 @@ Degrade to `'--'` on failure — never crash.
 - **Hardcoded ms values** — wrong. Always `window.APC.timing.*`.
 - **New `ie-` prefixed files or classes** — wrong. Use `netescape-` prefix.
 - **Calling proxy APIs directly from client** — wrong. All API calls go through Caddy routes.
-- **Importing external fonts or icon libraries** — wrong. System fonts only, assets self-hosted.
-  Exception: `MatrixCode` (`assets/fonts/Matrix-Code.ttf`) is approved for Canvas rain use only.
-  It is MIT licensed (Rezmason/matrix), self-hosted on Pi, and declared in `css/boot.css` via `@font-face`.
-  Do NOT apply MatrixCode to any HTML element or CSS font-family stack — Canvas `ctx.font` only.
+- **Importing external fonts for canvas rain** — wrong. Courier New only. MatrixCode TTF is present in assets but NOT used in boot.js. Do not add `document.fonts.load(...)` or any `ctx.font` referencing MatrixCode.
+- **Using half-width katakana (ｦｧｨｩ...)** — wrong. They render at ~7px in Courier New, invisible in a 12px cell. Use full-width katakana only.
+- **Picking random chars at draw time** — wrong. Always read from `col.chars[bufIdx]`. Random picks per frame cause shimmer.
+- **Re-rolling mirror decision at draw time** — wrong. Always read from `col.mirrored[bufIdx]`. Re-rolling per frame causes flicker.
+- **Re-rolling emoji at draw time** — wrong. Always read from `col.emojis[bufIdx]`.
+- **Using overdraw model (`rgba(0,0,0,alpha)` fillRect)** — wrong. Creates horizontal banding with Courier New. Use explicit trail: clear to `#000` each frame, draw N chars per column at explicit opacities.
 - **`hddChatter.loop = false`** — wrong. Chatter must loop indefinitely.
 - **`fadeAudioOut(hddChatter, ...)`** — wrong. Chatter never stops; use `fadeAudioTo()` only.
 - **`setTimeout(() => hddChatter.play(), delay)`** — wrong. Blocked by browser autoplay policy.
   Always start `.play()` within the user gesture context (volume=0 trick).
 - **Removing `playHddAudio` from boot.js return object** — wrong. boot-scene.js depends on it.
-- **Drawing head character in `MATRIX_COLOR`** — wrong. Head draws in `CURSOR_COLOR` (`#CCFFCC`). Do not change this.
+- **Drawing head character in `MATRIX_COLOR`** — wrong. Head draws in `#CCFFCC` (near-white green). Trail draws in `MATRIX_COLOR` (`#00FF41`). Do not change this.
