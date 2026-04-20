@@ -622,7 +622,7 @@ window.APC.boot = (function () {
         if (!bootAudio) { preloadBootAudio(); }
         advanceBootState(BOOT_STATE.POST);
       });
-    }, window.APC.timing.GATE_FADE_MS);
+    }, 400);
   }
 
   // --- Audio -----------------------------------------------------------
