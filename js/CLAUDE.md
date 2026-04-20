@@ -143,7 +143,7 @@ Snapshot captures the ACTUAL visible trail state. Same glyphs, positions, opacit
 - Opacity: `tr === 0 ? 1.0 : Math.pow(1 - (tr/tLen), 2.2)`.
 - Mirror: `col.mirrored[bufIdx]` (katakana); `false` (emoji).
 - Fill: `'#CCFFCC'` (head); `MATRIX_COLOR` (trail).
-- Do NOT use `Math.random() > 0.6` random skip or `(col.headRow + ri) % gridRows` — old model, creates mismatch.
+- Do NOT use `Math.random() > 0.6` random skip or `(col.headRow + ri) % gridRows` — old model.
 
 ---
 
@@ -202,22 +202,53 @@ Do NOT revert these to original values (2120/2200/2300/1400/3000).
 **Screen 2 — IBS Splash** (`#102046`): IBS logotype, floppy-seek 800–1000ms, 6000ms duration.
 **Screen 3 — DOS Log:** 13 bootlog lines verbatim, 160–300ms intervals, screech 60% of boots.
 **Screen 4 — WinDoors Logo:** 20-block bar, stalls 3500ms at 60%, 2000ms at 85%.
-**Screen 5 — Desktop Arrival:** chatter continues, startup chime at COMPLETE, fadeAudioTo(0.6) after chime.
+**Screen 5 — Desktop Arrival:** chatter continues, startup chime at COMPLETE, then staged fade (see HDD Audio).
 
 **Wormhole:** Phase 1 drift (1500ms) → Phase 2 spiral+glow (2000ms) → Phase 3 collapse (500ms) → Phase 4 reveal+phosphor (1000ms). Restart rain before `onComplete`.
 
 ---
 
-## HDD Audio Design
+## HDD Audio Design (boot.js + boot-scene.js)
+
+Two-file system. Both files preloaded in `preloadBootAudio()` on gate interact.
 
 | File | Duration | Loop | Trigger | Ends |
 |---|---|---|---|---|
 | `hdd-poweron.mp3` | 10s | No | Power button (immediate) | Naturally |
-| `hdd-chatter.mp3` | 41s | Yes | Power button (at 9950ms) | Never — fades to 0.6 |
+| `hdd-chatter.mp3` | 41s | Yes | Power button (at 9950ms) | Never — staged fade after chime |
 
 Start chatter at `volume=0` immediately (autoplay policy). Ramp to 1.0 at 9950ms.
 
-**Critical:** `hddChatter.loop=true`. Never `fadeAudioOut(hddChatter)`. `playHddAudio` stays on public API. Keep POST safety net.
+**Chatter lifecycle:**
+1. Power button click → starts at `volume = 0`
+2. At 9950ms → `fadeAudioTo(hddChatter, 1.0, 200ms)` — ramps up
+3. Runs through all boot screens at 1.0 (with 0.7 dips during WinDoors stalls)
+4. Desktop Arrival — chatter continues, does NOT stop
+5. COMPLETE — `startup.mp3` chime fires
+6. Chime `ended` → wait 2s → `fadeAudioTo(hddChatter, 0.5, 3000ms)` — stage 1: fade to 50%
+7. After stage 1 completes (3s) → `fadeAudioTo(hddChatter, 0.2, 5000ms)` — stage 2: fade to 20%
+8. Loops at 0.2 indefinitely as ambient background
+
+**Do NOT:**
+- Call `fadeAudioOut()` on `hddChatter` — it should never stop
+- Collapse stages 1 and 2 into a single fade — the two-stage drop is intentional
+- Remove the 2s delay before stage 1 — it lets the desktop moment breathe
+- Set `hddChatter.loop = false`
+
+**Timing tokens (flat on `window.APC.timing`):**
+- `HDD_POWERON_DURATION_MS`: 10000
+- `HDD_CHATTER_CROSSFADE_MS`: 50
+- `HDD_CHATTER_SETTLE_MS`: 3000 — stage 1 fade duration
+- `HDD_CHATTER_SETTLE_VOL`: 0.5 — stage 1 target (50%)
+- Stage 2 values are hardcoded in boot.js: `fadeAudioTo(hddChatter, 0.2, 5000)`
+
+**`fadeAudioTo(audio, targetVol, durationMs)`** — fades to any target, does NOT pause. Distinct from `fadeAudioOut()` which fades to 0 and pauses.
+
+**Critical rules:**
+- `hddChatter.loop` must stay `true`
+- Never `fadeAudioOut(hddChatter)` — use `fadeAudioTo()` only
+- `playHddAudio` must stay on public API return object
+- Do not remove POST safety net (`if hddChatter.paused`)
 
 ---
 
@@ -254,9 +285,11 @@ Start chatter at `volume=0` immediately (autoplay policy). Ramp to 1.0 at 9950ms
 - **Removing phosphor glow from wormFrame Phase 4** — wrong. Intentional.
 - **Random wormhole snapshot** — wrong. Use actual trail positions/chars/opacity/mirroring.
 - **`(col.headRow+ri)%gridRows` in snapshot** — wrong. Use `col.headRow-tr`.
-- **Altering identity line copy** — wrong. Verbatim only. Copy was written by Don Draper and the Wachowskis.
+- **Altering identity line copy** — wrong. Verbatim only. Copy written by Don Draper and the Wachowskis.
 - **Reverting CRT/zoom timings to original** — wrong. Current values are 50% faster by design.
-- **`hddChatter.loop=false`** — wrong.
 - **`fadeAudioOut(hddChatter)`** — wrong. `fadeAudioTo()` only.
+- **`hddChatter.loop=false`** — wrong.
+- **Collapsing staged chatter fade into one step** — wrong. Two-stage drop (1.0→0.5→0.2) is intentional.
+- **Removing 2s delay before chatter fade** — wrong. Intentional breathing room after chime.
 - **`setTimeout(()=>hddChatter.play(),delay)`** — wrong. Start within user gesture.
 - **Removing `playHddAudio` from return object** — wrong.
