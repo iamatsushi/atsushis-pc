@@ -103,6 +103,9 @@ window.APC.boot = (function () {
 
   // Impatience flag — set when user interacts during typing. Accelerates to 0ms, never skips.
   let impatient = false;
+  // Rain awareness flag — set the moment the user presses a key at the prompt.
+  // No visual change. Foundation for dissolution and wormhole overlap timing.
+  let rainAware = false;
 
   // --- Public API ------------------------------------------------------
 
@@ -537,6 +540,7 @@ window.APC.boot = (function () {
     }
     if (hasStarted) { return; }
     hasStarted = true;
+    rainAware = true; // rain is now aware — dissolution and wormhole sequence begins
 
     // Clean up gate listeners.
     document.getElementById('gate-screen').removeEventListener('click', onGateInteract);
@@ -1236,6 +1240,7 @@ window.APC.boot = (function () {
     screechFires = false;
     screechScreen = null;
     impatient = false;
+    rainAware = false;
 
     // Reset other module state.
     if (window.APC.session) { window.APC.session.isConnected = false; }
@@ -1541,6 +1546,18 @@ window.APC.boot = (function () {
         ctx.arc(cx, cy, revealRadius, 0, Math.PI * 2);
         ctx.clip();
         ctx.drawImage(bitmap, bmpOffX, bmpOffY, bmpW * bmpScale, bmpH * bmpScale);
+        ctx.restore();
+        // Phosphor glow on the reveal edge — CRT writing the world into existence.
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(cx, cy, revealRadius, 0, Math.PI * 2);
+        ctx.strokeStyle = '#00FF41';
+        ctx.lineWidth   = 3;
+        ctx.shadowColor = '#00FF41';
+        ctx.shadowBlur  = 24;
+        ctx.globalAlpha = Math.max(0, 1 - (phaseElapsed / REVEAL_MS));
+        ctx.stroke();
+        ctx.shadowBlur  = 0;
         ctx.restore();
       }
 
