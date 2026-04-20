@@ -110,6 +110,7 @@ window.APC.widgets = (function () {
   // or while Protected Path is active (window.APC.session.protectedPathActive).
 
   var isBalloonVisible = false;    // prevents overlapping balloons
+  var firstBalloonFired = false;    // true after first balloon has shown; switches to normal interval
   var balloonTypeIndex = 0;        // alternates through BALLOON_TYPES
   var currentBalloon = null;       // live DOM element (or null)
   var trayPopupTimer = null;       // inter-balloon schedule timer
@@ -245,15 +246,21 @@ window.APC.widgets = (function () {
 
   function scheduleTrayPopup() {
     var t = window.APC.timing;
+    // First balloon fires after TRAY_FIRST_POPUP_MS (45s) so most visitors see at least one.
+    // Subsequent balloons use the normal TRAY_POPUP_MIN/MAX_MS interval (90–300s).
+    var delay = firstBalloonFired
+      ? t.rand(t.TRAY_POPUP_MIN_MS, t.TRAY_POPUP_MAX_MS)
+      : t.TRAY_FIRST_POPUP_MS;
     trayPopupTimer = setTimeout(function () {
       var session = window.APC && window.APC.session;
       // Skip if a balloon is already up or Protected Path is active
       if (!isBalloonVisible && !(session && session.protectedPathActive)) {
         showTrayBalloon(BALLOON_TYPES[balloonTypeIndex % BALLOON_TYPES.length]);
         balloonTypeIndex++;
+        firstBalloonFired = true;
       }
       scheduleTrayPopup();
-    }, t.rand(t.TRAY_POPUP_MIN_MS, t.TRAY_POPUP_MAX_MS));
+    }, delay);
   }
 
   function showTrayBalloon(spec) {
@@ -446,6 +453,7 @@ window.APC.widgets = (function () {
     }
     isBalloonVisible = false;
     balloonTypeIndex = 0;
+    firstBalloonFired = false;
     if (liveRegion) { liveRegion.textContent = ''; }
   }
 

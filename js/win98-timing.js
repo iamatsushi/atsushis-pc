@@ -186,6 +186,7 @@
     RAM_RENDER_MIN_MS:          200, // delay between fetch and display update
     RAM_RENDER_MAX_MS:          400,
 
+    TRAY_FIRST_POPUP_MS:          45000, // delay before the very first balloon (shorter than repeat interval)
     TRAY_POPUP_MIN_MS:           90000, // min interval between balloon appearances
     TRAY_POPUP_MAX_MS:          300000, // max interval
     TRAY_POPUP_DISPLAY_MS:       10000, // balloon visible duration (XP spec: ~10s)

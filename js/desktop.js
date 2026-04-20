@@ -101,6 +101,7 @@ window.APC.desktop = (function () {
     if (h === 0) { h = 12; }
     const mm = m < 10 ? '0' + m : '' + m;
     el.textContent = month + '/' + day + '/' + year + ' ' + h + ':' + mm + ' ' + ampm;
+    el.title = 'System clock';
   }
 
   // --- Clock easter egg ------------------------------------------------
