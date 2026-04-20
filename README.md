@@ -9,7 +9,11 @@ The machine being simulated is specific: an IBM Aptiva SE7. Pentium II. The beig
 
 ## What's in here
 
-**A boot sequence.** Matrix rain in `#00FF41` — full-width katakana, ASCII, and the occasional emoji column. Characters fall in fixed streams with variable-length trails: near-white head fading through green to black, 70% of glyphs horizontally mirrored. Eight identity lines type out, then a terminal prompt blinks. Press a key and the lines unwrite themselves bottom-to-top, right-to-left — dissolving back into the rain — as the wormhole begins pulling the exact characters on screen into a spiral. The same rain you were watching becomes the vortex. The desk scene reveals through a green phosphor glow. You click. Windows 98 loads.
+**A boot sequence.** Matrix rain in `#00FF41` — full-width katakana, ASCII, and the occasional emoji column. After one second, six identity lines type out:
+
+> *it is 1998. before the cloud. before the stream. before the feed. dial-up internet had just arrived. nobody knew what it was yet. explore it on an IBM Aptiva — Pentium II, 128MB RAM. $3,299 in 1998. that's $6,683 today. dial-up did not respond in milliseconds. it responded in heartbeats. take your time. sound on.*
+
+A terminal prompt blinks. Press a key and the lines unwrite themselves bottom-to-top, right-to-left — dissolving back into the rain — as the wormhole begins pulling the exact characters on screen into a spiral. The same rain you were watching becomes the vortex. The desk scene reveals through a green phosphor glow. You click. Windows 98 loads.
 
 **A desktop.** Teal wallpaper. Beveled chrome. A taskbar with a working clock, live Portland weather, and a RAM gauge pulling from the actual Raspberry Pi running the site. Draggable windows. A Start Menu with a cascade bug that took longer to fix than anything else in this project.
 
@@ -82,7 +86,7 @@ git pull origin main
 | #39 | Real content for My Thoughts and About Me | Ready |
 | #40 | Accessibility audit — WAVE/axe, zero critical errors | Pre-launch gate |
 
-46 issues closed. The screensaver, Recycle Bin, Start Menu cascade, tray balloons, NetEscape, boot sequence, System Properties, Matrix rain overhaul, cinematic gate transition, wormhole match cut, and a 28-issue bug sprint are all shipped.
+46 issues closed. The screensaver, Recycle Bin, Start Menu cascade, tray balloons, NetEscape, boot sequence, System Properties, Matrix rain overhaul, cinematic gate transition, wormhole match cut, identity line rewrite, and a 28-issue bug sprint are all shipped.
 
 ---
 
