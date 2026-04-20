@@ -95,6 +95,19 @@ When a PR changes any spec, timing value, or infrastructure detail, update the r
 
 ---
 
+## Icon Hint System (P0-1, commit 3c4483d)
+
+Desktop icons show a "double-click to open" tooltip after a single click with no follow-up.
+Timing controlled by two tokens in `win98-timing.js`:
+- `ICON_HINT_DELAY_MS` (1200ms) — wait after single click before hint appears
+- `ICON_HINT_DISPLAY_MS` (2500ms) — how long hint stays visible
+
+State lives in `iconHintTimers` in `desktop.js`. Hint is removed from DOM on dismiss (not just hidden).
+Hint never appears if the user double-clicks successfully. `reset()` cancels all in-flight hint timers.
+Zone: Texture Zone.
+
+---
+
 ## Subdirectory CLAUDE.md Files
 
 Claude Code automatically loads these when working in the relevant directory. Do not duplicate rules across files — keep each focused on its context.

@@ -86,7 +86,7 @@ git pull origin main
 | #39 | Real content for My Thoughts and About Me | Ready |
 | #40 | Accessibility audit — WAVE/axe, zero critical errors | Pre-launch gate |
 
-46 issues closed. The screensaver, Recycle Bin, Start Menu cascade, tray balloons, NetEscape, boot sequence, System Properties, Matrix rain overhaul, cinematic gate transition, wormhole match cut, identity line rewrite, and a 28-issue bug sprint are all shipped.
+48 issues closed. The screensaver, Recycle Bin, Start Menu cascade, tray balloons, NetEscape, boot sequence, System Properties, Matrix rain overhaul, cinematic gate transition, wormhole match cut, identity line rewrite, a 28-issue bug sprint, and two P0 usability fixes (double-click discoverability on desktop icons, resume/guestbook conversion path clarity) are all shipped.
 
 ---
 
