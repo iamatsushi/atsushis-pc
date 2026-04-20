@@ -66,7 +66,7 @@
     MATRIX_STREAM_LEN_MIN:            15,  // min visible characters per column stream
     MATRIX_STREAM_LEN_MAX:            80,  // max — exceeds screen rows; tail clips naturally at canvas edge
     MATRIX_CURSOR_BLINK_MS:          530,  // terminal prompt cursor blink interval (matches CSS)
-    MATRIX_SESSION_TTL_MS:       3600000,  // 1 hour — localStorage skip-to-desktop TTL
+    MATRIX_SESSION_TTL_MS:             0,  // TTL disabled — every visit gets the full boot experience
 
     // -------------------------------------------------------------------------
     // Boot Screen sequence

@@ -1168,9 +1168,6 @@ window.APC.boot = (function () {
       try { bootAudio.chime.play().catch(function () {}); } catch (e) {}
     }
 
-    // Record completion timestamp — used by localStorage TTL check on next page load.
-    // Return visits within 1 hour skip straight to desktop. After 1 hour: full experience replays.
-    localStorage.setItem('boot_complete_ts', Date.now());
     if (window.umami) { window.umami.track('boot_complete'); }
   }
 
@@ -1230,8 +1227,6 @@ window.APC.boot = (function () {
       window.APC.widgets.reset();
     }
 
-    // Clear localStorage TTL so init({ force:true }) replays the full experience.
-    localStorage.removeItem('boot_complete_ts');
     sessionStorage.removeItem('ne_history');
 
     // Reset DOM — hide desktop, clear open windows and taskbar buttons.

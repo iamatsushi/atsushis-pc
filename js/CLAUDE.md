@@ -92,11 +92,11 @@ Never call `sessionStorage.clear()`. Use targeted `removeItem()` only.
 
 The Matrix rain canvas runs inside `boot.js` under the `window.APC.boot` namespace. There is no separate `matrix.js`.
 
-**Session persistence — localStorage TTL:**
-- On boot completion: `localStorage.setItem('boot_complete_ts', Date.now())`
-- On page load (`init()`): if `boot_complete_ts` exists and is < 1 hour old (`MATRIX_SESSION_TTL_MS`), skip rain + boot, go straight to desktop
-- Bypass with `window.APC.boot.init({ force: true })` — used by `restart()` and taskbar `doRestart()`
-- Do NOT use `sessionStorage` for boot-skip logic. `sessionStorage.boot_complete` is removed.
+**Session persistence — localStorage TTL (disabled):**
+- `MATRIX_SESSION_TTL_MS` is `0` — the TTL skip is permanently unreachable. Every visit gets the full gate → boot experience.
+- `boot_complete_ts` is no longer written to localStorage. The read in `init()` still exists but the skip condition (`elapsed < 0`) is never true.
+- `init({ force: true })` still works correctly — bypasses the TTL check, used by `restart()`.
+- Do NOT restore the `localStorage.setItem('boot_complete_ts', ...)` call. Do NOT set `MATRIX_SESSION_TTL_MS` above 0.
 
 **Rain duration — randomized at init time:**
 - `rainDuration = rand(MATRIX_DURATION_MIN_MS, MATRIX_DURATION_MAX_MS)` (3–12s)
