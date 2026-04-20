@@ -1424,27 +1424,45 @@ window.APC.boot = (function () {
     // from the real rain state (column x-positions, current row as anchor).
     // ~60% density keeps frame cost reasonable on large viewports.
     var gridRows = Math.floor(h / FONT_SIZE);
+    var gridRows = Math.floor(h / FONT_SIZE);
     var wormChars = [];
 
+    // Match cut: snapshot the ACTUAL visible trail state — same glyphs, positions,
+    // opacity, and mirroring as what is on screen. The wormhole spirals in exactly
+    // what the viewer sees. No random re-population. Pure transformation.
     for (var ci = 0; ci < columns.length; ci++) {
       var col = columns[ci];
-      for (var ri = 0; ri < gridRows; ri++) {
-        if (Math.random() > 0.6) { continue; }
-        var px  = col.x + FONT_SIZE / 2;
-        // Distribute rows relative to column's live rain-head position.
-        // Clamp negative headRow values (above-canvas streams) to 0.
-        var row = (Math.max(0, col.headRow) + ri) % gridRows;
-        var py  = (row + 1) * FONT_SIZE;
-        var dx  = px - cx;
-        var dy  = py - cy;
+      if (!col.active && col.headRow <= 0) { continue; }
+      var tLen = col.trailLen || 8;
+
+      for (var tr = 0; tr < tLen; tr++) {
+        var trailRow = col.headRow - tr;
+        if (trailRow < 0 || trailRow >= gridRows) { continue; }
+
+        var px   = col.x;
+        var py   = (trailRow + 1) * FONT_SIZE;
+        var dx   = px + FONT_SIZE / 2 - cx;
+        var dy   = py - cy;
         var dist = Math.sqrt(dx * dx + dy * dy);
+
+        var trailOpacity = (tr === 0) ? 1.0 : Math.max(0.03, Math.pow(1 - (tr / tLen), 2.2));
+        var bufIdx   = Math.min(trailRow, 119);
+        var ch       = col.emojiStream
+          ? ((col.emojis   || [])[bufIdx] || 'ア')
+          : ((col.chars    || [])[bufIdx] || 'ア');
+        var isMirror = col.emojiStream ? false : !!((col.mirrored || [])[bufIdx]);
+
         wormChars.push({
-          origX:      px,
-          origY:      py,
-          initRadius: dist || 1,       // avoid 0-division at exact center
-          angle:      Math.atan2(dy, dx),
-          driftDir:   Math.random() > 0.5 ? 1 : -1,
-          char:       MATRIX_CHARS[Math.floor(Math.random() * MATRIX_CHARS.length)]
+          origX:     px,
+          origY:     py,
+          initRadius: dist || 1,
+          angle:     Math.atan2(dy, dx),
+          driftDir:  Math.random() > 0.5 ? 1 : -1,
+          char:      ch,
+          opacity:   trailOpacity,
+          mirrored:  isMirror,
+          isEmoji:   !!col.emojiStream,
+          fillColor: (tr === 0) ? '#CCFFCC' : MATRIX_COLOR
         });
       }
     }
@@ -1499,8 +1517,17 @@ window.APC.boot = (function () {
           var ddy = dpy - cy;
           if (ddx !== 0 || ddy !== 0) { c.angle = Math.atan2(ddy, ddx); }
 
-          ctx.globalAlpha = 1;
-          ctx.fillText(c.char, dpx, dpy);
+          ctx.globalAlpha = c.opacity || 1;
+          ctx.fillStyle   = c.fillColor || MATRIX_COLOR;
+          if (c.mirrored) {
+            ctx.save();
+            ctx.translate(dpx + FONT_SIZE, dpy);
+            ctx.scale(-1, 1);
+            ctx.fillText(c.char, 0, 0);
+            ctx.restore();
+          } else {
+            ctx.fillText(c.char, dpx, dpy);
+          }
         }
 
       // --- Phase 2: Spiral (DIST_MS → DIST_MS + SPIRAL_MS) ---
@@ -1528,8 +1555,18 @@ window.APC.boot = (function () {
           var fadeStart = c.initRadius * 0.4;
           var opacity   = newRadius < fadeStart ? (newRadius / fadeStart) : 1;
 
-          ctx.globalAlpha = Math.max(0, opacity);
-          ctx.fillText(c.char, spx, spy);
+          // Combine spiral fade with original trail opacity
+          ctx.globalAlpha = Math.max(0, opacity * (c.opacity || 1));
+          ctx.fillStyle   = c.fillColor || MATRIX_COLOR;
+          if (c.mirrored) {
+            ctx.save();
+            ctx.translate(spx + FONT_SIZE, spy);
+            ctx.scale(-1, 1);
+            ctx.fillText(c.char, 0, 0);
+            ctx.restore();
+          } else {
+            ctx.fillText(c.char, spx, spy);
+          }
         }
 
         drawGlow(glowRadius);
