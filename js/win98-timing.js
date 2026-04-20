@@ -104,6 +104,8 @@
     NE_FREEZE_DELAY_MS:      2500,  // unknown URL: stub renders then freezes before dialog
 
     // -------------------------------------------------------------------------
+    ICON_HINT_DELAY_MS:   1200,  // wait after single click before hint appears
+    // -------------------------------------------------------------------------
     // Start Menu  —  TEXTURE ZONE
     // -------------------------------------------------------------------------
 
@@ -115,6 +117,14 @@
     MENU_ACTION_MAX_MS:       250,
     MENU_FLICKER_CHANCE:      1/12, // probability menu flickers closed on open
     SUBMENU_CLOSE_DELAY_MS:    300, // delay before submenu closes after mouse leaves
+
+    // -------------------------------------------------------------------------
+    // Desktop Icon Hint  —  TEXTURE ZONE
+    // Shown after a single click lands but no second click follows within DBLCLICK_MS.
+    // -------------------------------------------------------------------------
+
+    ICON_HINT_DELAY_MS:   1200,  // wait after single click before hint appears
+    ICON_HINT_DISPLAY_MS: 2500,  // how long hint stays visible before auto-dismiss
 
     // -------------------------------------------------------------------------
     // Desktop App Launches  —  TEXTURE ZONE

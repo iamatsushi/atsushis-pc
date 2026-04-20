@@ -24,6 +24,7 @@ window.APC.desktop = (function () {
   const windows = {};             // id → window state object
   const iconLastClick = {};       // app → timestamp of last click
   const appLaunching = {};        // app → true while launch delay is in-progress (prevents double-launch)
+  const iconHintTimers = {};      // app → { show: timerId, hide: timerId } for double-click hint
 
   // Clock easter egg state
   let clockClickCount = 0;
@@ -221,18 +222,73 @@ window.APC.desktop = (function () {
   }
 
   function onIconClick(icon) {
-    const app = icon.dataset.app;
-    const now = Date.now();
+    var app = icon.dataset.app;
+    var now = Date.now();
 
     clearIconSelection();
     icon.classList.add('desktop-icon--selected');
 
     // Manual double-click: two clicks within DBLCLICK_MS on the same icon
     if (iconLastClick[app] && (now - iconLastClick[app]) < DBLCLICK_MS) {
+      // Confirmed double-click — cancel any pending hint, open the app
       iconLastClick[app] = 0;
+      hideIconHint(icon);
       openIconApp(app);
     } else {
+      // First click — record timestamp and schedule the hint
       iconLastClick[app] = now;
+      // Cancel any previous hint timer for this icon before scheduling a new one
+      hideIconHint(icon);
+      var t = window.APC.timing;
+      iconHintTimers[app] = iconHintTimers[app] || {};
+      iconHintTimers[app].show = setTimeout(function () {
+        showIconHint(icon);
+      }, t.ICON_HINT_DELAY_MS);
+    }
+  }
+
+  // showIconHint — appends a small tooltip below the icon label.
+  // Auto-dismisses after ICON_HINT_DISPLAY_MS. Only one hint per icon at a time.
+  function showIconHint(icon) {
+    var app = icon.dataset.app;
+    var t = window.APC.timing;
+
+    // Remove any existing hint on this icon first
+    hideIconHint(icon);
+
+    var hint = document.createElement('span');
+    hint.className = 'desktop-icon__hint';
+    hint.textContent = 'double-click to open';
+    icon.appendChild(hint);
+
+    // Trigger CSS opacity transition on next frame
+    requestAnimationFrame(function () {
+      hint.classList.add('desktop-icon__hint--visible');
+    });
+
+    // Auto-dismiss after display duration
+    iconHintTimers[app] = iconHintTimers[app] || {};
+    iconHintTimers[app].hide = setTimeout(function () {
+      hideIconHint(icon);
+    }, t.ICON_HINT_DISPLAY_MS);
+  }
+
+  // hideIconHint — cancels all pending hint timers for this icon and removes
+  // any visible hint element from the DOM.
+  function hideIconHint(icon) {
+    var app = icon.dataset.app;
+
+    // Cancel in-flight show and hide timers
+    if (iconHintTimers[app]) {
+      clearTimeout(iconHintTimers[app].show);
+      clearTimeout(iconHintTimers[app].hide);
+      delete iconHintTimers[app];
+    }
+
+    // Remove hint element from DOM entirely (not just hidden)
+    var existing = icon.querySelector('.desktop-icon__hint');
+    if (existing && existing.parentNode) {
+      existing.parentNode.removeChild(existing);
     }
   }
 
@@ -896,9 +952,6 @@ window.APC.desktop = (function () {
   function updateContentHeight(winEl, totalH) {
     const contentEl = winEl.querySelector('.win98-window__content');
     if (!contentEl) { return; }
-    // totalH (border-box) = 2px top border + inner + 2px bottom border
-    // inner = totalH - 4; titlebar occupies TITLEBAR_H (22px) of inner
-    // content height = inner - TITLEBAR_H = totalH - 4 - 22 = totalH - 26
     contentEl.style.height = (totalH - TITLEBAR_H - 4) + 'px';
   }
 
@@ -909,7 +962,6 @@ window.APC.desktop = (function () {
 
     barEl.addEventListener('mousedown', function (e) {
       if (e.button !== 0) { return; }
-      // Clicks on titlebar buttons should not trigger drag
       if (e.target.closest && e.target.closest('.win98-window__btn')) { return; }
 
       const startX = e.clientX;
@@ -923,18 +975,8 @@ window.APC.desktop = (function () {
       function onMove(e) {
         const dx = e.clientX - startX;
         const dy = e.clientY - startY;
-
-        // Keep at least 40px of the window visible on each side
-        const newLeft = Math.max(
-          -(winEl.offsetWidth - 40),
-          Math.min(window.innerWidth - 40, startLeft + dx)
-        );
-        // Titlebar must stay on screen (not go above top or below taskbar)
-        const newTop = Math.max(
-          0,
-          Math.min(window.innerHeight - TASKBAR_HEIGHT - 18, startTop + dy)
-        );
-
+        const newLeft = Math.max(-(winEl.offsetWidth - 40), Math.min(window.innerWidth - 40, startLeft + dx));
+        const newTop  = Math.max(0, Math.min(window.innerHeight - TASKBAR_HEIGHT - 18, startTop + dy));
         winEl.style.left = newLeft + 'px';
         winEl.style.top  = newTop  + 'px';
       }
@@ -974,33 +1016,11 @@ window.APC.desktop = (function () {
     function onMove(e) {
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
-
-      let newW    = startW;
-      let newH    = startH;
-      let newLeft = startLeft;
-      let newTop  = startTop;
-
-      // East edges
-      if (dir === 'e' || dir === 'ne' || dir === 'se') {
-        newW = Math.max(WIN_MIN_WIDTH, startW + dx);
-      }
-      // West edges — move left edge, clamp so width doesn't go below min
-      if (dir === 'w' || dir === 'nw' || dir === 'sw') {
-        const delta = Math.min(dx, startW - WIN_MIN_WIDTH);
-        newW    = startW - delta;
-        newLeft = startLeft + delta;
-      }
-      // South edges
-      if (dir === 's' || dir === 'se' || dir === 'sw') {
-        newH = Math.max(WIN_MIN_HEIGHT, startH + dy);
-      }
-      // North edges — move top edge, clamp so height doesn't go below min
-      if (dir === 'n' || dir === 'ne' || dir === 'nw') {
-        const delta = Math.min(dy, startH - WIN_MIN_HEIGHT);
-        newH   = startH - delta;
-        newTop = startTop + delta;
-      }
-
+      let newW = startW, newH = startH, newLeft = startLeft, newTop = startTop;
+      if (dir === 'e' || dir === 'ne' || dir === 'se') { newW = Math.max(WIN_MIN_WIDTH, startW + dx); }
+      if (dir === 'w' || dir === 'nw' || dir === 'sw') { const d = Math.min(dx, startW - WIN_MIN_WIDTH); newW = startW - d; newLeft = startLeft + d; }
+      if (dir === 's' || dir === 'se' || dir === 'sw') { newH = Math.max(WIN_MIN_HEIGHT, startH + dy); }
+      if (dir === 'n' || dir === 'ne' || dir === 'nw') { const d = Math.min(dy, startH - WIN_MIN_HEIGHT); newH = startH - d; newTop = startTop + d; }
       winEl.style.width  = newW    + 'px';
       winEl.style.height = newH    + 'px';
       winEl.style.left   = newLeft + 'px';
@@ -1021,14 +1041,8 @@ window.APC.desktop = (function () {
 
   function bringToFront(winEl) {
     winEl.style.zIndex = ++zCounter;
-
-    // Inactive state on all windows, remove from newly focused one
-    Object.keys(windows).forEach(function (id) {
-      windows[id].el.classList.add('win98-window--inactive');
-    });
+    Object.keys(windows).forEach(function (id) { windows[id].el.classList.add('win98-window--inactive'); });
     winEl.classList.remove('win98-window--inactive');
-
-    // Track which window id is currently active for taskbar toggle logic
     if (windows[winEl.id]) { activeWindowId = winEl.id; }
   }
 
@@ -1036,8 +1050,7 @@ window.APC.desktop = (function () {
 
   function onTitlebarKeyDown(e, winEl) {
     const STEP = 8;
-    const moves = { ArrowLeft: [-STEP, 0], ArrowRight: [STEP, 0],
-                    ArrowUp: [0, -STEP], ArrowDown: [0, STEP] };
+    const moves = { ArrowLeft: [-STEP, 0], ArrowRight: [STEP, 0], ArrowUp: [0, -STEP], ArrowDown: [0, STEP] };
     if (!moves[e.key]) { return; }
     e.preventDefault();
     winEl.style.left = ((parseInt(winEl.style.left, 10) || 0) + moves[e.key][0]) + 'px';
@@ -1049,33 +1062,21 @@ window.APC.desktop = (function () {
   function addTaskbarButton(state) {
     const container = document.getElementById('taskbar-windows');
     if (!container) { return; }
-
     const btn = document.createElement('button');
     btn.className = 'taskbar-btn taskbar-btn--active';
     btn.textContent = state.title;
     btn.dataset.winId = state.id;
-
     btn.addEventListener('click', function () {
-      if (state.minimized) {
-        restoreWindow(state);
-      } else if (state.id === activeWindowId) {
-        // Clicking focused window's taskbar button minimizes it
-        minimizeWindow(state);
-      } else {
-        bringToFront(state.el);
-        state.el.style.display = '';
-        state.minimized = false;
-      }
+      if (state.minimized) { restoreWindow(state); }
+      else if (state.id === activeWindowId) { minimizeWindow(state); }
+      else { bringToFront(state.el); state.el.style.display = ''; state.minimized = false; }
     });
-
     container.appendChild(btn);
     state.taskbarBtn = btn;
   }
 
   function removeTaskbarButton(state) {
-    if (state.taskbarBtn && state.taskbarBtn.parentNode) {
-      state.taskbarBtn.parentNode.removeChild(state.taskbarBtn);
-    }
+    if (state.taskbarBtn && state.taskbarBtn.parentNode) { state.taskbarBtn.parentNode.removeChild(state.taskbarBtn); }
     state.taskbarBtn = null;
   }
 
@@ -1084,10 +1085,7 @@ window.APC.desktop = (function () {
   function minimizeWindow(state) {
     state.el.style.display = 'none';
     state.minimized = true;
-    if (state.taskbarBtn) {
-      state.taskbarBtn.classList.remove('taskbar-btn--active');
-      state.taskbarBtn.classList.add('taskbar-btn--minimized');
-    }
+    if (state.taskbarBtn) { state.taskbarBtn.classList.remove('taskbar-btn--active'); state.taskbarBtn.classList.add('taskbar-btn--minimized'); }
     if (activeWindowId === state.id) { activeWindowId = null; }
     focusTopWindow();
   }
@@ -1095,16 +1093,12 @@ window.APC.desktop = (function () {
   function restoreWindow(state) {
     state.el.style.display = '';
     state.minimized = false;
-    if (state.taskbarBtn) {
-      state.taskbarBtn.classList.remove('taskbar-btn--minimized');
-      state.taskbarBtn.classList.add('taskbar-btn--active');
-    }
+    if (state.taskbarBtn) { state.taskbarBtn.classList.remove('taskbar-btn--minimized'); state.taskbarBtn.classList.add('taskbar-btn--active'); }
     bringToFront(state.el);
   }
 
   function maximizeWindow(state) {
     if (state.maximized) {
-      // Restore from saved geometry
       if (state.savedGeom) {
         state.el.style.left   = state.savedGeom.left;
         state.el.style.top    = state.savedGeom.top;
@@ -1112,21 +1106,12 @@ window.APC.desktop = (function () {
         state.el.style.height = state.savedGeom.height;
         updateContentHeight(state.el, parseInt(state.savedGeom.height, 10));
       }
-      state.maximized = false;
-      state.savedGeom = null;
+      state.maximized = false; state.savedGeom = null;
     } else {
-      // Save current geometry before maximizing
-      state.savedGeom = {
-        left:   state.el.style.left,
-        top:    state.el.style.top,
-        width:  state.el.style.width,
-        height: state.el.style.height
-      };
+      state.savedGeom = { left: state.el.style.left, top: state.el.style.top, width: state.el.style.width, height: state.el.style.height };
       const maxH = window.innerHeight - TASKBAR_HEIGHT;
-      state.el.style.left   = '0px';
-      state.el.style.top    = '0px';
-      state.el.style.width  = window.innerWidth  + 'px';
-      state.el.style.height = maxH + 'px';
+      state.el.style.left = '0px'; state.el.style.top = '0px';
+      state.el.style.width = window.innerWidth + 'px'; state.el.style.height = maxH + 'px';
       updateContentHeight(state.el, maxH);
       state.maximized = true;
     }
@@ -1134,25 +1119,18 @@ window.APC.desktop = (function () {
   }
 
   function closeWindow(state) {
-    if (state.el.parentNode) {
-      state.el.parentNode.removeChild(state.el);
-    }
+    if (state.el.parentNode) { state.el.parentNode.removeChild(state.el); }
     removeTaskbarButton(state);
     if (activeWindowId === state.id) { activeWindowId = null; }
     delete windows[state.id];
     focusTopWindow();
   }
 
-  // After minimize or close, move focus to the topmost remaining window
   function focusTopWindow() {
-    let topZ = -1;
-    let topState = null;
+    let topZ = -1, topState = null;
     Object.keys(windows).forEach(function (id) {
       const s = windows[id];
-      if (!s.minimized) {
-        const z = parseInt(s.el.style.zIndex, 10) || 0;
-        if (z > topZ) { topZ = z; topState = s; }
-      }
+      if (!s.minimized) { const z = parseInt(s.el.style.zIndex, 10) || 0; if (z > topZ) { topZ = z; topState = s; } }
     });
     if (topState) { bringToFront(topState.el); }
   }
@@ -1163,15 +1141,9 @@ window.APC.desktop = (function () {
     const desktopEl = document.getElementById('desktop');
     if (!desktopEl) { return; }
     desktopEl.addEventListener('contextmenu', function (e) {
-      // Suppress menu when right-clicking inside a window, icon, taskbar, or start menu
       let t = e.target;
       while (t && t !== desktopEl) {
-        if (t.classList && (
-          t.classList.contains('win98-window') ||
-          t.classList.contains('desktop-icon') ||
-          t.id === 'taskbar' ||
-          t.id === 'start-menu'
-        )) { return; }
+        if (t.classList && (t.classList.contains('win98-window') || t.classList.contains('desktop-icon') || t.id === 'taskbar' || t.id === 'start-menu')) { return; }
         t = t.parentNode;
       }
       e.preventDefault();
@@ -1183,7 +1155,6 @@ window.APC.desktop = (function () {
     hideContextMenu();
     const menu = document.createElement('div');
     menu.className = 'desktop-context-menu';
-
     const items = [
       { label: 'Arrange Icons',    action: showArrangeIconsDialog },
       { label: 'Refresh',          action: function () { location.reload(); } },
@@ -1191,129 +1162,70 @@ window.APC.desktop = (function () {
       { sep: true },
       { label: 'Properties',       action: openSystemProperties }
     ];
-
     items.forEach(function (item) {
-      if (item.sep) {
-        const sep = document.createElement('div');
-        sep.className = 'desktop-context-menu__sep';
-        menu.appendChild(sep);
-        return;
-      }
+      if (item.sep) { const sep = document.createElement('div'); sep.className = 'desktop-context-menu__sep'; menu.appendChild(sep); return; }
       const btn = document.createElement('button');
       btn.className = 'desktop-context-menu__item';
       btn.textContent = item.label;
-      (function (action) {
-        btn.addEventListener('click', function () {
-          hideContextMenu();
-          action();
-        });
-      }(item.action));
+      (function (action) { btn.addEventListener('click', function () { hideContextMenu(); action(); }); }(item.action));
       menu.appendChild(btn);
     });
-
-    menu.style.left = x + 'px';
-    menu.style.top  = y + 'px';
+    menu.style.left = x + 'px'; menu.style.top = y + 'px';
     document.body.appendChild(menu);
     contextMenuEl = menu;
-
-    // Edge detection: reposition if menu clips outside viewport
     const rect = menu.getBoundingClientRect();
-    const vw = document.documentElement.clientWidth;
-    const vh = document.documentElement.clientHeight;
-    if (x + rect.width  > vw) { x = vw - rect.width  - 4; }
+    const vw = document.documentElement.clientWidth, vh = document.documentElement.clientHeight;
+    if (x + rect.width > vw) { x = vw - rect.width - 4; }
     if (y + rect.height > vh) { y = vh - rect.height - 4; }
-    if (x < 0) { x = 0; }
-    if (y < 0) { y = 0; }
-    menu.style.left = x + 'px';
-    menu.style.top  = y + 'px';
-
-    // Dismiss on outside click or Escape — setTimeout avoids same-event immediate dismiss
-    const onDocClick = function (e) {
-      if (contextMenuEl && !contextMenuEl.contains(e.target)) { hideContextMenu(); }
-    };
-    const onDocKey = function (e) {
-      if (e.key === 'Escape') { hideContextMenu(); }
-    };
-    setTimeout(function () {
-      document.addEventListener('click', onDocClick);
-      document.addEventListener('keydown', onDocKey);
-    }, 0);
-    menu._dismissClick = onDocClick;
-    menu._dismissKey   = onDocKey;
-
+    if (x < 0) { x = 0; } if (y < 0) { y = 0; }
+    menu.style.left = x + 'px'; menu.style.top = y + 'px';
+    const onDocClick = function (e) { if (contextMenuEl && !contextMenuEl.contains(e.target)) { hideContextMenu(); } };
+    const onDocKey = function (e) { if (e.key === 'Escape') { hideContextMenu(); } };
+    setTimeout(function () { document.addEventListener('click', onDocClick); document.addEventListener('keydown', onDocKey); }, 0);
+    menu._dismissClick = onDocClick; menu._dismissKey = onDocKey;
     const first = menu.querySelector('.desktop-context-menu__item');
     if (first) { first.focus(); }
   }
 
-  // Context menu for a specific icon (My Computer → Open / Properties)
   function showIconContextMenu(x, y, icon) {
     hideContextMenu();
     const menu = document.createElement('div');
     menu.className = 'desktop-context-menu';
-
     const items = [
       { label: 'Open',       action: function () { openIconApp(icon.dataset.app); } },
       { sep: true },
       { label: 'Properties', action: openSystemProperties }
     ];
-
     items.forEach(function (item) {
-      if (item.sep) {
-        const sep = document.createElement('div');
-        sep.className = 'desktop-context-menu__sep';
-        menu.appendChild(sep);
-        return;
-      }
+      if (item.sep) { const sep = document.createElement('div'); sep.className = 'desktop-context-menu__sep'; menu.appendChild(sep); return; }
       const btn = document.createElement('button');
       btn.className = 'desktop-context-menu__item';
       btn.textContent = item.label;
-      (function (action) {
-        btn.addEventListener('click', function () { hideContextMenu(); action(); });
-      }(item.action));
+      (function (action) { btn.addEventListener('click', function () { hideContextMenu(); action(); }); }(item.action));
       menu.appendChild(btn);
     });
-
-    menu.style.left = x + 'px';
-    menu.style.top  = y + 'px';
+    menu.style.left = x + 'px'; menu.style.top = y + 'px';
     document.body.appendChild(menu);
     contextMenuEl = menu;
-
     const rect = menu.getBoundingClientRect();
-    const vw = document.documentElement.clientWidth;
-    const vh = document.documentElement.clientHeight;
-    if (x + rect.width  > vw) { x = vw - rect.width  - 4; }
+    const vw = document.documentElement.clientWidth, vh = document.documentElement.clientHeight;
+    if (x + rect.width > vw) { x = vw - rect.width - 4; }
     if (y + rect.height > vh) { y = vh - rect.height - 4; }
-    if (x < 0) { x = 0; }
-    if (y < 0) { y = 0; }
-    menu.style.left = x + 'px';
-    menu.style.top  = y + 'px';
-
-    const onDocClick = function (e) {
-      if (contextMenuEl && !contextMenuEl.contains(e.target)) { hideContextMenu(); }
-    };
+    if (x < 0) { x = 0; } if (y < 0) { y = 0; }
+    menu.style.left = x + 'px'; menu.style.top = y + 'px';
+    const onDocClick = function (e) { if (contextMenuEl && !contextMenuEl.contains(e.target)) { hideContextMenu(); } };
     const onDocKey = function (e) { if (e.key === 'Escape') { hideContextMenu(); } };
-    setTimeout(function () {
-      document.addEventListener('click', onDocClick);
-      document.addEventListener('keydown', onDocKey);
-    }, 0);
-    menu._dismissClick = onDocClick;
-    menu._dismissKey   = onDocKey;
-
+    setTimeout(function () { document.addEventListener('click', onDocClick); document.addEventListener('keydown', onDocKey); }, 0);
+    menu._dismissClick = onDocClick; menu._dismissKey = onDocKey;
     const first = menu.querySelector('.desktop-context-menu__item');
     if (first) { first.focus(); }
   }
 
   function hideContextMenu() {
     if (!contextMenuEl) { return; }
-    if (contextMenuEl._dismissClick) {
-      document.removeEventListener('click', contextMenuEl._dismissClick);
-    }
-    if (contextMenuEl._dismissKey) {
-      document.removeEventListener('keydown', contextMenuEl._dismissKey);
-    }
-    if (contextMenuEl.parentNode) {
-      contextMenuEl.parentNode.removeChild(contextMenuEl);
-    }
+    if (contextMenuEl._dismissClick) { document.removeEventListener('click', contextMenuEl._dismissClick); }
+    if (contextMenuEl._dismissKey)   { document.removeEventListener('keydown', contextMenuEl._dismissKey); }
+    if (contextMenuEl.parentNode) { contextMenuEl.parentNode.removeChild(contextMenuEl); }
     contextMenuEl = null;
   }
 
@@ -1322,11 +1234,8 @@ window.APC.desktop = (function () {
   function showArrangeIconsDialog() {
     const overlay = document.createElement('div');
     overlay.className = 'win98-msgbox-overlay';
-
     const box = document.createElement('div');
     box.className = 'win98-msgbox';
-
-    // Titlebar (reuse win98-window titlebar classes for authentic look)
     const tb = document.createElement('div');
     tb.className = 'win98-window__titlebar';
     const titleSpan = document.createElement('span');
@@ -1338,11 +1247,7 @@ window.APC.desktop = (function () {
     xBtn.className = 'win98-window__btn';
     xBtn.textContent = '\u00D7';
     xBtn.setAttribute('aria-label', 'Close');
-    ctrls.appendChild(xBtn);
-    tb.appendChild(titleSpan);
-    tb.appendChild(ctrls);
-
-    // Body
+    ctrls.appendChild(xBtn); tb.appendChild(titleSpan); tb.appendChild(ctrls);
     const body = document.createElement('div');
     body.className = 'win98-msgbox__body';
     const msg = document.createElement('p');
@@ -1351,29 +1256,15 @@ window.APC.desktop = (function () {
     const okBtn = document.createElement('button');
     okBtn.className = 'win98-msgbox__ok';
     okBtn.textContent = 'OK';
-    body.appendChild(msg);
-    body.appendChild(okBtn);
-
-    box.appendChild(tb);
-    box.appendChild(body);
-    overlay.appendChild(box);
-    document.body.appendChild(overlay);
-
-    // Unified close handler — cleans up key listener on every exit path
-    const closeOverlay = function () {
-      if (overlay.parentNode) { overlay.parentNode.removeChild(overlay); }
-      document.removeEventListener('keydown', onKey);
-    };
-    const onKey = function (e) {
-      if (e.key === 'Escape') { closeOverlay(); }
-    };
+    body.appendChild(msg); body.appendChild(okBtn);
+    box.appendChild(tb); box.appendChild(body);
+    overlay.appendChild(box); document.body.appendChild(overlay);
+    const closeOverlay = function () { if (overlay.parentNode) { overlay.parentNode.removeChild(overlay); } document.removeEventListener('keydown', onKey); };
+    const onKey = function (e) { if (e.key === 'Escape') { closeOverlay(); } };
     document.addEventListener('keydown', onKey);
     xBtn.addEventListener('click', closeOverlay);
     okBtn.addEventListener('click', closeOverlay);
-    overlay.addEventListener('click', function (e) {
-      if (e.target === overlay) { closeOverlay(); }
-    });
-
+    overlay.addEventListener('click', function (e) { if (e.target === overlay) { closeOverlay(); } });
     okBtn.focus();
   }
 
@@ -1382,14 +1273,9 @@ window.APC.desktop = (function () {
   function cycleWallpaper() {
     const desktopEl = document.getElementById('desktop');
     if (!desktopEl) { return; }
-    // Remove current wallpaper class (index 0 has no class — skip)
-    if (WALLPAPER_CLASSES[wallpaperIndex]) {
-      desktopEl.classList.remove(WALLPAPER_CLASSES[wallpaperIndex]);
-    }
+    if (WALLPAPER_CLASSES[wallpaperIndex]) { desktopEl.classList.remove(WALLPAPER_CLASSES[wallpaperIndex]); }
     wallpaperIndex = (wallpaperIndex + 1) % WALLPAPER_CLASSES.length;
-    if (WALLPAPER_CLASSES[wallpaperIndex]) {
-      desktopEl.classList.add(WALLPAPER_CLASSES[wallpaperIndex]);
-    }
+    if (WALLPAPER_CLASSES[wallpaperIndex]) { desktopEl.classList.add(WALLPAPER_CLASSES[wallpaperIndex]); }
   }
 
   // --- System Properties window -------------------------------------------
@@ -1400,85 +1286,54 @@ window.APC.desktop = (function () {
       else { bringToFront(syspropsState.el); }
       return;
     }
-    const state = createWindow({
-      title: 'System Properties',
-      width: 480,
-      height: 420
-    });
-    // Purple gradient titlebar + hidden resize handles (not resizable per spec)
+    const state = createWindow({ title: 'System Properties', width: 480, height: 420 });
     state.el.classList.add('win98-window--sysprops');
     syspropsState = state;
-
     const closeBtn = state.el.querySelector('[data-action="close"]');
-    if (closeBtn) {
-      closeBtn.addEventListener('click', function () { syspropsState = null; });
-    }
-
-    // Delegate all content building to system-properties.js
+    if (closeBtn) { closeBtn.addEventListener('click', function () { syspropsState = null; }); }
     if (window.APC.systemProperties && window.APC.systemProperties.buildContent) {
       state.contentEl.classList.add('sysprops-content-area');
-      window.APC.systemProperties.buildContent(state.contentEl, function () {
-        closeWindow(state);
-        syspropsState = null;
-      });
+      window.APC.systemProperties.buildContent(state.contentEl, function () { closeWindow(state); syspropsState = null; });
     }
     state.show();
   }
 
   // --- Close all windows -----------------------------------------------
-  // Called by Start Menu Log Off action and by boot.restart().
 
   function closeAll() {
     var ids = Object.keys(windows);
-    ids.forEach(function (id) {
-      if (windows[id]) { closeWindow(windows[id]); }
-    });
+    ids.forEach(function (id) { if (windows[id]) { closeWindow(windows[id]); } });
     syspropsState = null;
   }
 
   // --- Screensaver idle timer -------------------------------------------
-  // Resets on every user input event (mousemove, keydown, mousedown, touchstart).
-  // Fires screensaver after SCREENSAVER_IDLE_MS of inactivity. Guard check
-  // prevents screensaver launching during boot or gate screen.
 
   function startIdleTimer() {
     var t = window.APC.timing;
     clearTimeout(idleTimer);
     idleTimer = setTimeout(function () {
       idleTimer = null;
-      // Only launch if the desktop is fully visible (not during boot/gate).
       var desktopEl = document.getElementById('desktop');
       if (desktopEl && desktopEl.classList.contains('desktop--hidden')) { return; }
-      if (window.APC.apps && window.APC.apps.screensaver) {
-        window.APC.apps.screensaver.start(startIdleTimer);
-      }
+      if (window.APC.apps && window.APC.apps.screensaver) { window.APC.apps.screensaver.start(startIdleTimer); }
     }, t.SCREENSAVER_IDLE_MS);
   }
 
   // --- Module reset (called by boot.restart()) -------------------------
-  // Discards all window references so state is clean when desktop.init()
-  // fires again after the gate/boot sequence replays. DOM cleanup (removing
-  // window-layer and taskbar-windows children) is done by boot.restart().
 
   function reset() {
     Object.keys(windows).forEach(function (id) { delete windows[id]; });
     Object.keys(iconLastClick).forEach(function (k) { delete iconLastClick[k]; });
-    // Cancel any in-flight launch timers before clearing — prevents queued
-    // open() callbacks from creating windows against a freshly reset desktop.
-    Object.keys(appLaunching).forEach(function (k) {
-      clearTimeout(appLaunching[k]);
-      delete appLaunching[k];
+    Object.keys(appLaunching).forEach(function (k) { clearTimeout(appLaunching[k]); delete appLaunching[k]; });
+    // Cancel all pending icon hint timers before clearing state.
+    Object.keys(iconHintTimers).forEach(function (k) {
+      if (iconHintTimers[k]) { clearTimeout(iconHintTimers[k].show); clearTimeout(iconHintTimers[k].hide); }
+      delete iconHintTimers[k];
     });
-    // Stop screensaver and cancel idle timer before state resets.
     clearTimeout(idleTimer);
     idleTimer = null;
-    if (window.APC.apps && window.APC.apps.screensaver) {
-      window.APC.apps.screensaver.stop();
-    }
-    zCounter = 100;
-    winIdCounter = 0;
-    activeWindowId = null;
-    syspropsState = null;
+    if (window.APC.apps && window.APC.apps.screensaver) { window.APC.apps.screensaver.stop(); }
+    zCounter = 100; winIdCounter = 0; activeWindowId = null; syspropsState = null;
   }
 
   // --- Public exports --------------------------------------------------
