@@ -102,10 +102,11 @@ The Matrix rain canvas runs inside `boot.js` under the `window.APC.boot` namespa
 - `rainDuration = rand(MATRIX_DURATION_MIN_MS, MATRIX_DURATION_MAX_MS)` (3–12s)
 - Chosen once in `init()`, stored in `rainDuration`, reset to 0 on `restart()`
 - `rainStartTime` set on first `drawFrame()` call
-- When `Date.now() - rainStartTime >= rainDuration`: cancel rAF, call `revealPrompt()`
+- When `Date.now() - rainStartTime >= rainDuration` and `identityPhase !== 'done'`: call `revealPrompt()` — rain keeps running
 
-**Column stream model (PR #141):**
-- Each column is a full visible stream of 8–20 characters falling as a unit (`col.streamLen`, set once at `initColumns()`, not re-rolled on reset)
+**Column stream model (PR #141, #143):**
+- Each column is a full visible stream of 15–80 characters falling as a unit (`col.streamLen`, set once at `initColumns()`, not re-rolled on reset)
+- `MATRIX_STREAM_LEN_MAX: 80` intentionally exceeds the ~77 rows visible at 1080p — long streams run top-to-bottom with no visible tail end; the inner loop clips at canvas bounds
 - `col.headRow` is the current row of the stream head (was `col.currentRow` before PR #141 — do not use the old name)
 - `col.active = false` during the post-exit pause; `col.pauseUntil` is the resume timestamp
 - Characters re-randomize every frame (flicker effect) — katakana, ASCII, emojis at 2%
@@ -140,8 +141,9 @@ Defined in `TRAIL_OPACITIES` const in boot.js. Set `ctx.globalAlpha = opacity` p
 - Do not remove these — the streaming rain runs behind the prompt
 
 **`revealPrompt()`:**
-- Calls `cancelAnimationFrame(animFrame)` before showing the prompt — rain stops when prompt appears
-- `identityPhase = 'done'` and the `gate-prompt--visible` class are set after the cancel
+- Sets `identityPhase = 'done'` and adds `gate-prompt--visible` — that is all it does
+- Does NOT cancel rAF. Rain runs continuously behind the prompt until the user interacts
+- rAF is cancelled only by `startWormhole()` when the user clicks or presses a key
 
 **Emoji rendering — natural color, no filter:**
 - Frequency: exactly `MATRIX_EMOJI_FREQUENCY` (2%) — fixed, not re-rolled per character
