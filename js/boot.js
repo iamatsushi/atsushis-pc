@@ -47,13 +47,11 @@ window.APC.boot = (function () {
   // --- Identity lines (#86) — 8 lines, verbatim, no alteration ---------
 
   const IDENTITY_LINES = [
-    '> welcome to 1998.',
-    '> you are about to experience the most powerful home computer money could buy.',
-    '> the IBM Aptiva 2139-SE7. Pentium II 450MHz. 128MB RAM.',
-    '> $3,299 in 1998. that\'s $6,683 today.',
-    '> the internet ran on a 56K modem. pages loaded one bit at a time.',
-    '> clicks did not respond in milliseconds. they responded in heartbeats.',
-    '> you could hear the machine work.',
+    '> it is 1998.',
+    '> before the cloud. before the stream. before the feed.',
+    '> dial-up internet had just arrived. nobody knew what it was yet.',
+    '> explore it on an IBM Aptiva — Pentium II, 128MB RAM. $3,299 in 1998. that\'s $6,683 today.',
+    '> dial-up did not respond in milliseconds. it responded in heartbeats.',
     '> take your time. sound on.'
   ];
 

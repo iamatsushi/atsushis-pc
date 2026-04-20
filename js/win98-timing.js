@@ -43,7 +43,7 @@
     // that plays after the rain has established itself.
     // -------------------------------------------------------------------------
 
-    MATRIX_GATE_START_DELAY_MS:      3000,  // rain runs before any text appears
+    MATRIX_GATE_START_DELAY_MS:      1000,  // rain runs before any text appears
     MATRIX_IDENTITY_CHAR_DELAY_MIN_MS: 20, // min ms per character (lines 2–8)
     MATRIX_IDENTITY_CHAR_DELAY_MAX_MS: 30, // max ms per character (lines 2–8)
     MATRIX_LINE1_HOLD_MS:             600,  // hold after line 1 before lines 2–8 begin
@@ -276,14 +276,14 @@
 
     BOOT_SCENE_FADE_IN_MS:              600, // desk scene canvas fade-in duration
     BOOT_SCENE_FADE_OUT_MS:            3000, // desk scene canvas fade-out after zoom completes
-    DESK_ZOOM_MS:                      3000, // zoom-into-monitor animation duration (#124)
+    DESK_ZOOM_MS:                      1500, // zoom-into-monitor animation duration (#124)
     DESK_ZOOM_SCALE:                      8, // scale factor — monitor fills viewport at end
 
     CRT_FLASH_MS:                        80, // step 1: CRT screen white flash duration
-    CRT_DIM_MS:                        2120, // step 2: dims to #1A1A1A
-    CRT_SCANLINE_MS:                   2200, // step 3: alternating scanline rows visible
-    CRT_GLOW_MS:                       2300, // step 4: phosphor green glow fill
-    CRT_CONTENT_FADE_MS:               1400, // step 5: matrix rain fades in at 0.6 opacity
+    CRT_DIM_MS:                        1060, // step 2: dims to #1A1A1A
+    CRT_SCANLINE_MS:                   1100, // step 3: alternating scanline rows visible
+    CRT_GLOW_MS:                       1150, // step 4: phosphor green glow fill
+    CRT_CONTENT_FADE_MS:                700, // step 5: matrix rain fades in at 0.6 opacity
 
     POWER_BTN_FLASH_MS:                 100, // power button white flash on click
 
