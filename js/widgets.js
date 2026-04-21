@@ -125,8 +125,8 @@ window.APC.widgets = (function () {
   function handleLowDiskClick() {
     clearTimeout(diskReappearTimer);
     diskReappearTimer = null;
-    if (window.APC.apps && window.APC.apps.diskCleanup && typeof window.APC.apps.diskCleanup.open === 'function') {
-      window.APC.apps.diskCleanup.open();
+    if (window.APC.apps && window.APC.apps.diskcleanup && typeof window.APC.apps.diskcleanup.open === 'function') {
+      window.APC.apps.diskcleanup.open();
     }
     if (window.umami) {
       window.umami.track('tray_balloon_action', { balloon_type: 'low_disk_space' });

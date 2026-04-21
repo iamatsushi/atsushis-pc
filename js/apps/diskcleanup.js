@@ -11,7 +11,7 @@
 // On completion fires: window.dispatchEvent(new CustomEvent('diskcleanup:complete'))
 // Consumed by widgets.js — suppresses Low Disk Space balloon for the session.
 //
-// Public API: window.APC.apps.diskCleanup = { open() }
+// Public API: window.APC.apps.diskcleanup = { open() }
 
 (function () {
   'use strict';
@@ -268,7 +268,7 @@
   // -----------------------------------------------------------------------
   // Public API
   // -----------------------------------------------------------------------
-  window.APC.apps.diskCleanup = {
+  window.APC.apps.diskcleanup = {
     open: function () {
       if (isOpen) {
         var win = document.getElementById('diskcleanup-window');
