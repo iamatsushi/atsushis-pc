@@ -326,6 +326,15 @@
 
     TRAY_DISK_REAPPEAR_MS: 120000,  // ms before Low Disk Space re-shows after ❌ dismiss
 
+    // -------------------------------------------------------------------------
+    // Disk Cleanup  —  PROTECTED PATH
+    // Launch: 0ms, no failure. Simulated latency is internal to the app only.
+    // -------------------------------------------------------------------------
+
+    DISK_CLEANUP_SCAN_MS:          3000,  // total scan phase duration (category sweep)
+    DISK_CLEANUP_CLEAN_MS:         2500,  // total cleanup phase duration (progress fill)
+    DISK_CLEANUP_TICKER_INTERVAL_MS: 400, // ms between sparse file ticker updates
+
   };
 
 }());
