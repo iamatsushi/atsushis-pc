@@ -1641,3 +1641,25 @@
   margin: 0 0 12px 0;
   font-weight: bold;
 }
+
+/* =============================================
+   Desktop Icon Dragging
+   ============================================= */
+
+.desktop-icon--dragging {
+    opacity: 0.5;
+    cursor: move !important;
+    z-index: 9999;
+    position: absolute;
+    pointer-events: none;
+}
+
+.desktop-icon--drag-placeholder {
+    position: absolute;
+    width: 72px;
+    height: 72px;
+    border: 1px dotted #ffffff;
+    pointer-events: none;
+    z-index: 9998;
+    opacity: 0.5;
+}

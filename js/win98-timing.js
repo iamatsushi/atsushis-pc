@@ -314,6 +314,12 @@
     WORMHOLE_GLOW_MAX_RADIUS:    120,  // peak glow radius in px (pre-scale)
     WORMHOLE_GLOW_PULSE_RADIUS:   20,  // contracted radius after collapse pulse
 
+    // -------------------------------------------------------------------------
+    // Desktop Icon Dragging — TEXTURE ZONE
+    // -------------------------------------------------------------------------
+
+    ICON_DRAG_THRESHOLD_PX: 5,  // px of movement before a desktop icon drag begins
+
   };
 
 }());

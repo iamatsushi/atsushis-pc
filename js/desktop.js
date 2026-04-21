@@ -1353,3 +1353,258 @@ window.APC.desktop = (function () {
   };
 
 }());
+
+
+// =============================================
+// Desktop Icon Dragging
+// Feature spec: Feature 1 — Desktop Icon Dragging
+// =============================================
+
+(function initIconDrag() {
+  const GRID_W = 80;
+  const GRID_H = 80;
+  const STORAGE_KEY = 'desktop_icon_positions';
+
+  function getThreshold() {
+    return (window.APC && window.APC.timing && typeof window.APC.timing.ICON_DRAG_THRESHOLD_PX === 'number')
+      ? window.APC.timing.ICON_DRAG_THRESHOLD_PX
+      : 5;
+  }
+
+  function getDesktopEl() {
+    return document.getElementById('desktop') || document.querySelector('.desktop');
+  }
+
+  function getTaskbarHeight() {
+    const tb = document.getElementById('taskbar') || document.querySelector('.taskbar');
+    return tb ? tb.offsetHeight : 40;
+  }
+
+  function getGridDimensions() {
+    const d = getDesktopEl();
+    if (!d) return { cols: 10, rows: 10 };
+    const tbh = getTaskbarHeight();
+    return {
+      cols: Math.floor(d.offsetWidth / GRID_W),
+      rows: Math.floor((d.offsetHeight - tbh) / GRID_H)
+    };
+  }
+
+  function getAllIcons() {
+    const d = getDesktopEl();
+    if (!d) return [];
+    return Array.from(d.querySelectorAll('.desktop-icon'));
+  }
+
+  function loadPositions() {
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function savePositions(positions) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(positions));
+    } catch (e) {}
+  }
+
+  function applyGridPosition(icon, gridX, gridY) {
+    const tbh = getTaskbarHeight();
+    icon.style.position = 'absolute';
+    icon.style.left = (gridX * GRID_W) + 'px';
+    icon.style.top = (gridY * GRID_H + tbh) + 'px';
+    icon.dataset.gridX = gridX;
+    icon.dataset.gridY = gridY;
+  }
+
+  function getOccupied(excludeIcon) {
+    const occupied = new Set();
+    getAllIcons().forEach(ic => {
+      if (ic === excludeIcon) return;
+      const x = parseInt(ic.dataset.gridX, 10);
+      const y = parseInt(ic.dataset.gridY, 10);
+      if (!isNaN(x) && !isNaN(y)) occupied.add(x + ',' + y);
+    });
+    return occupied;
+  }
+
+  function nearestFreeCell(preferX, preferY, excludeIcon) {
+    const occupied = getOccupied(excludeIcon);
+    const { cols, rows } = getGridDimensions();
+
+    // Clamp preferred position to grid bounds
+    preferX = Math.max(0, Math.min(cols - 1, preferX));
+    preferY = Math.max(0, Math.min(rows - 1, preferY));
+
+    if (!occupied.has(preferX + ',' + preferY)) {
+      return { gridX: preferX, gridY: preferY };
+    }
+
+    // Scan right then down from preferred position
+    for (let y = preferY; y < rows; y++) {
+      const startX = (y === preferY) ? preferX : 0;
+      for (let x = startX; x < cols; x++) {
+        if (!occupied.has(x + ',' + y)) {
+          return { gridX: x, gridY: y };
+        }
+      }
+    }
+
+    // Fallback — scan from origin
+    for (let y = 0; y < rows; y++) {
+      for (let x = 0; x < cols; x++) {
+        if (!occupied.has(x + ',' + y)) {
+          return { gridX: x, gridY: y };
+        }
+      }
+    }
+
+    return { gridX: preferX, gridY: preferY };
+  }
+
+  function setDefaultLayout() {
+    const icons = getAllIcons();
+    const occupied = new Set();
+    const { rows } = getGridDimensions();
+    let col = 0, row = 0;
+
+    icons.forEach(icon => {
+      while (occupied.has(col + ',' + row)) {
+        row++;
+        if (row >= rows) { row = 0; col++; }
+      }
+      applyGridPosition(icon, col, row);
+      occupied.add(col + ',' + row);
+      row++;
+      if (row >= rows) { row = 0; col++; }
+    });
+  }
+
+  function restoreLayout() {
+    const positions = loadPositions();
+    const icons = getAllIcons();
+    let anyRestored = false;
+
+    icons.forEach(icon => {
+      const id = icon.dataset.app || icon.id;
+      if (id && positions[id]) {
+        applyGridPosition(icon, positions[id].gridX, positions[id].gridY);
+        anyRestored = true;
+      }
+    });
+
+    if (!anyRestored) setDefaultLayout();
+  }
+
+  function attachDrag(icon) {
+    let startMouseX = 0, startMouseY = 0;
+    let startLeft = 0, startTop = 0;
+    let dragging = false;
+    let dragStarted = false;
+    let placeholder = null;
+
+    function onMouseDown(e) {
+      if (e.button !== 0) return;
+      startMouseX = e.clientX;
+      startMouseY = e.clientY;
+      const rect = icon.getBoundingClientRect();
+      startLeft = rect.left;
+      startTop = rect.top;
+      dragging = true;
+      dragStarted = false;
+
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+      e.preventDefault();
+    }
+
+    function onMouseMove(e) {
+      if (!dragging) return;
+      const dx = e.clientX - startMouseX;
+      const dy = e.clientY - startMouseY;
+
+      if (!dragStarted) {
+        if (Math.abs(dx) < getThreshold() && Math.abs(dy) < getThreshold()) return;
+        dragStarted = true;
+
+        // Cancel any hint timer — drag suppresses hint
+        if (typeof hideIconHint === 'function') hideIconHint();
+
+        // Show ghost placeholder at original position
+        placeholder = document.createElement('div');
+        placeholder.className = 'desktop-icon--drag-placeholder';
+        placeholder.style.left = (parseInt(icon.dataset.gridX, 10) * GRID_W) + 'px';
+        placeholder.style.top = (parseInt(icon.dataset.gridY, 10) * GRID_H + getTaskbarHeight()) + 'px';
+        getDesktopEl().appendChild(placeholder);
+
+        icon.classList.add('desktop-icon--dragging');
+        document.body.style.cursor = 'move';
+      }
+
+      icon.style.left = (startLeft + dx) + 'px';
+      icon.style.top = (startTop + dy) + 'px';
+    }
+
+    function onMouseUp(e) {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+
+      if (!dragStarted) {
+        dragging = false;
+        return;
+      }
+
+      dragging = false;
+      dragStarted = false;
+
+      // Remove placeholder and dragging class
+      if (placeholder && placeholder.parentNode) placeholder.parentNode.removeChild(placeholder);
+      placeholder = null;
+      icon.classList.remove('desktop-icon--dragging');
+      document.body.style.cursor = '';
+
+      // Calculate grid cell from drop position
+      const tbh = getTaskbarHeight();
+      const dropX = parseInt(icon.style.left, 10);
+      const dropY = parseInt(icon.style.top, 10) - tbh;
+      const preferX = Math.round(dropX / GRID_W);
+      const preferY = Math.round(dropY / GRID_H);
+
+      const { gridX, gridY } = nearestFreeCell(preferX, preferY, icon);
+      applyGridPosition(icon, gridX, gridY);
+
+      // Persist
+      const positions = loadPositions();
+      const id = icon.dataset.app || icon.id;
+      if (id) positions[id] = { gridX, gridY };
+      savePositions(positions);
+
+      // Umami analytics
+      if (window.umami) {
+        window.umami.track('desktop_icon_drag', { icon: id, gridX, gridY });
+      }
+    }
+
+    icon.addEventListener('mousedown', onMouseDown);
+  }
+
+  // Init on DOMContentLoaded or immediately if already loaded
+  function init() {
+    restoreLayout();
+    getAllIcons().forEach(attachDrag);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    // Desktop may render icons after boot — wait for desktop:ready or fallback to timeout
+    if (typeof window.APC !== 'undefined' && window.APC.desktop) {
+      init();
+    } else {
+      document.addEventListener('desktop:ready', init);
+      setTimeout(init, 3000); // safety net
+    }
+  }
+})();
