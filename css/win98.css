@@ -352,7 +352,7 @@
   display: none;
   position: absolute;
   left: 100%;
-  top: 0;
+  top: -4px;
   background: #C0C0C0;
   border: 2px solid;
   border-color: #FFFFFF #808080 #808080 #FFFFFF;
@@ -403,6 +403,21 @@
 .start-menu__submenu-item--has-submenu {
   position: relative;
   overflow: visible;
+}
+
+/* Pull sub-submenu up to align its top edge with the parent submenu container.
+   Compensates for submenu top-padding (2px) + top-border (2px) accumulated
+   per nesting level. Without this each cascade level drops ~4px causing
+   diagonal travel to fail — user must move down to reach the next level. */
+.start-menu__submenu-item--has-submenu > .start-menu__submenu {
+  top: -4px;
+}
+
+/* Sub-submenu (Accessories level) — pulled 4px left to eliminate the
+   gap between Programs submenu border and Accessories submenu edge.
+   Without this the mouse falls into the gap during diagonal travel. */
+.start-menu__submenu-item--has-submenu > .start-menu__submenu {
+  left: calc(100% - 4px);
 }
 
 /* Highlights the cascade item while its sub-submenu is open */

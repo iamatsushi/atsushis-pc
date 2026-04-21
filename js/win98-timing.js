@@ -116,7 +116,7 @@
     MENU_ACTION_MIN_MS:       100,  // item click → action fires
     MENU_ACTION_MAX_MS:       250,
     MENU_FLICKER_CHANCE:      1/12, // probability menu flickers closed on open
-    SUBMENU_CLOSE_DELAY_MS:    300, // delay before submenu closes after mouse leaves
+    SUBMENU_CLOSE_DELAY_MS:    600, // delay before submenu closes after mouse leaves — 600ms needed for diagonal travel to sub-submenu
 
     // -------------------------------------------------------------------------
     // Desktop Icon Hint  —  TEXTURE ZONE

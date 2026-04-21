@@ -338,9 +338,14 @@ window.APC.taskbar = (function () {
     });
 
     // Keep Accessories open while mouse is over the sub-submenu.
+    // Also cancel the Programs-level close timer — without this, mousing
+    // from the Accessories item into accSub crosses the Programs submenu
+    // border, firing scheduleSubmenuClose('programs') which closes the
+    // whole stack via the MutationObserver on programsSub.
     accSub.addEventListener('mouseenter', function () {
       clearTimeout(accCloseTimer);
       accCloseTimer = null;
+      cancelSubmenuClose('programs');
     });
 
     accSub.addEventListener('mouseleave', function () {

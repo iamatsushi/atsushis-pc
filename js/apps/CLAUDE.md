@@ -3,7 +3,7 @@
 ## App Launch Delays (Texture Zone)
 
 All mini-apps launch via `desktop.launchApp()`. Delay + optional failure is built in.
-`resume_FINAL_v3.exe` is Protected Path: always 0ms, no failure, ever.
+`resume_FINAL_v3.exe` and `diskcleanup` are Protected Path: always 0ms, no failure, ever.
 
 | App | Min | Max | Failure chance | Failure behavior |
 |---|---|---|---|---|
@@ -13,11 +13,49 @@ All mini-apps launch via `desktop.launchApp()`. Delay + optional failure is buil
 | Minesweeper | 1500ms | 3000ms | 1-in-15 | 80ms white flash flicker |
 | My Computer | 1000ms | 2200ms | none | — |
 | Recycle Bin | 400ms | 800ms | none | — |
+| Disk Cleanup | 0ms | 0ms | none | Protected Path — instant always |
 | resume_FINAL_v3.exe | 0ms | 0ms | none | Protected Path — instant always |
 
 All values from `window.APC.timing.*`. Never hardcode.
 During delay: `cursor: wait` on desktop. Taskbar button appears immediately.
 On complete: `cursor: default` restored, window mounts, brought to front.
+
+---
+
+## Disk Cleanup (js/apps/diskcleanup.js)
+
+**Interface:** `window.APC.apps.diskcleanup = { open() }`
+
+**Protected Path — launch is instant, no delay, no failure.**
+Simulated latency is internal to the app only (scan phase + cleanup phase).
+
+**Two-phase UI:**
+
+Phase 1 — Scan (`DISK_CLEANUP_SCAN_MS`: 3000ms):
+- Progress bar fills 0→60%
+- Status label cycles: "Checking Temporary Internet Files…", "Analyzing Recycle Bin…", "Checking Temporary Files…", "Scanning Downloaded Program Files…", "Analyzing Old Windows Files…"
+- Sparse file ticker fires every `DISK_CLEANUP_TICKER_INTERVAL_MS` (400ms) — aesthetic only, not continuous
+
+Phase 2 — Cleanup (`DISK_CLEANUP_CLEAN_MS`: 2500ms):
+- Progress bar fills 60→100% via setInterval at 50ms steps
+- Status label: "Cleaning up files…"
+- File ticker clears
+
+**Completion state:**
+- Freed space: randomized float, range 8.0–24.0 MB, one decimal precision
+- Distribution: 65% in 10.0–16.0 MB, 20% in 8.0–10.0 MB, 15% in 16.0–24.0 MB
+- Format: "12.4 MB of disk space freed."
+- OK button appears and receives focus
+
+**On OK:** fires `window.dispatchEvent(new CustomEvent('diskcleanup:complete'))`
+Consumed by `widgets.js` — sets `diskCleanupDone = true`, suppresses Low Disk Space balloon for session.
+
+**Singleton:** second `open()` call focuses existing window, never opens a second.
+
+**Timing tokens (win98-timing.js):**
+- `DISK_CLEANUP_SCAN_MS`: 3000
+- `DISK_CLEANUP_CLEAN_MS`: 2500
+- `DISK_CLEANUP_TICKER_INTERVAL_MS`: 400
 
 ---
 
@@ -35,12 +73,10 @@ Boot guard: checks for `desktop--hidden` class before launching — suppresses d
 - Trail: `rgba(0,0,0,0.15)` overdraw per frame — no hard `clearRect`
 
 **Motion:**
-```js
-node.x = node.x0 + node.ampX * Math.sin(t * node.speedX + node.phaseX);
-node.y = node.y0 + node.ampY * Math.cos(t * node.speedY + node.phaseY);
-```
-- Amplitude: 60–120px | Speed: 0.3–0.8 rad/s | Phase: random 0–2π
-- Re-seeds `x0/y0` every 25–35s. Speed, phase, amplitude held constant across reseed.
+- node.x = node.x0 + node.ampX * Math.sin(t * node.speedX + node.phaseX)
+- node.y = node.y0 + node.ampY * Math.cos(t * node.speedY + node.phaseY)
+- Amplitude: 60–120px | Speed: 0.3–0.8 rad/s | Phase: random 0–2pi
+- Re-seeds x0/y0 every 25–35s. Speed, phase, amplitude held constant across reseed.
 
 **Exit:** First `keydown` or `mousedown`. Use `{ once: true }` + explicit `removeEventListener` in `stop()`.
 `onExit` callback fires after teardown — `desktop.js` uses it to restart the idle timer.
@@ -49,7 +85,7 @@ node.y = node.y0 + node.ampY * Math.cos(t * node.speedY + node.phaseY);
 
 ## Recycle Bin (desktop.js)
 
-Window: 380×260px, `background: #C0C0C0`, centered "Recycle Bin is empty."
+Window: 380x260px, `background: #C0C0C0`, centered "Recycle Bin is empty."
 Singleton: double-clicking when open focuses existing window, never opens a second.
 
 Right-click context menu: Open | (separator) | Empty Recycle Bin
@@ -91,13 +127,25 @@ Fire `easteregg_trigger { easter_egg: 'system_properties_pm' }` on OK/Cancel aft
 
 ## Start Menu (taskbar.js)
 
-**Programs structure:** Programs ▶ → Accessories ▶ → Winamp, Calculator, Minesweeper, Notepad.
+**Programs structure:** Programs ▶ → Accessories ▶ → Winamp, Calculator, Minesweeper, Notepad, Disk Cleanup.
 Do not place apps directly under Programs. That flat structure is deprecated.
+
+**FUNDAMENTAL UI REQUIREMENT — Cascade submenu top-edge alignment:**
+All cascade submenus must have their top edge flush with the triggering item top edge.
+Each nesting level accumulates ~4px of vertical drift from parent border + padding.
+This is corrected in win98.css with negative top offsets:
+- `.start-menu__submenu`: `top: -4px` (top-level submenu, compensates for menu container offset)
+- `.start-menu__submenu-item--has-submenu > .start-menu__submenu`: `top: -4px` (cascade level)
+Without these offsets, users cannot navigate horizontally between cascade levels —
+the mouse falls into the gap between menus and triggers premature close.
+DO NOT remove or "fix" these negative offsets. They are load-bearing.
 
 **Accessories cascade hover discipline:**
 Uses local `accOpenTimer`/`accCloseTimer`, NOT the global `openSubmenuEl` tracker.
 Reason: the global `openSubmenu()` would close Programs when Accessories opens.
 A `MutationObserver` on the Programs submenu detects loss of `--open` class and calls `closeAcc()`.
+On `accSub.mouseenter`, BOTH `accCloseTimer` AND `cancelSubmenuClose('programs')` must be called —
+without cancelling the Programs-level close timer, mousing into accSub closes the whole stack.
 Do not refactor this to use the global tracker — the isolation is load-bearing.
 
 **Shut Down modal — exactly three radio options:**
@@ -119,14 +167,15 @@ XP-style balloon tips — intentional anachronism. `border-radius: 6px` on `.tra
 is correct and intentional (XP chrome, not Win98 chrome).
 
 Two types, alternating in strict sequence (never random):
-- Low Disk Space ⚠️
-- Security Risk 🛡️
+- Low Disk Space
+- Security Risk
 
 **Timing tokens (all in win98-timing.js):**
 - `TRAY_POPUP_MIN_MS`: 90000 — min interval between balloons
 - `TRAY_POPUP_MAX_MS`: 300000 — max interval
 - `TRAY_POPUP_DISPLAY_MS`: 10000 — display duration (single token, not a min/max pair)
 - `TRAY_CLICK_MIN/MAX_MS`: 100–200 — click response delay
+- `TRAY_DISK_REAPPEAR_MS`: 120000 — ms before Low Disk Space re-shows after dismiss
 
 Note: `TRAY_POPUP_DISPLAY_MS` is a single token. The old two-token form
 (`TRAY_POPUP_DISPLAY_MIN_MS` / `TRAY_POPUP_DISPLAY_MAX_MS`) is retired.
@@ -137,13 +186,9 @@ suppresses during Protected Path interactions (NetEscape loads, Guestbook, resum
 **Behind-taskbar glitch:** 1-in-20 renders. Z-index set below taskbar (998), self-corrects
 after 400–600ms. Entry/exit animations still play — balloon may animate invisibly then pop up.
 
-**Disk Cleanup branch (Low Disk Space body click):** Currently stubbed. Do not implement
-until Disk Cleanup Feature Spec (document 24c49bfe) is provided to the session.
-The stub comment in widgets.js must remain exactly as written — do not replace with a placeholder modal.
-
-```js
-// TODO: Disk Cleanup click path
-// Spec: Disk Cleanup Feature Spec (document 24c49bfe)
-// On body click: apply TRAY_CLICK_MIN/MAX_MS delay → isBalloonVisible = false → open Disk Cleanup modal
-// Do not implement until spec is provided. Do not stub with a placeholder modal.
-```
+**Low Disk Space balloon behavior (IMPLEMENTED):**
+- Does NOT auto-dismiss like other balloons — persists until resolved
+- X dismiss: schedules reappearance after `TRAY_DISK_REAPPEAR_MS` (2 min) via `scheduleLowDiskReappear()`
+- Body click: `TRAY_CLICK_MIN/MAX_MS` delay → `isBalloonVisible = false` → opens `window.APC.apps.diskcleanup.open()`
+- `diskcleanup:complete` event: sets `diskCleanupDone = true` — suppresses Low Disk Space permanently for session
+- `diskCleanupDone` resets to `false` on `reset()` (new session)
