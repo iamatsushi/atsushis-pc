@@ -59,7 +59,7 @@ window.APC.taskbar = (function () {
     var itemDefs = [
       { key: 'programs',  label: 'Programs',  icon: '\uD83D\uDCC1', submenu: buildProgramsSubmenu  },
       { key: 'documents', label: 'Documents', icon: '\uD83D\uDCC4', submenu: buildDocumentsSubmenu },
-      { key: 'settings',  label: 'Settings',  icon: '\u2699\uFE0F', disabled: true },
+      { key: 'apps',      label: 'Apps',       icon: '\uD83D\uDCC2', submenu: buildAppsSubmenu },
       { key: 'find',      label: 'Find',       icon: '\uD83D\uDD0D', disabled: true },
       { key: 'help',      label: 'Help',       icon: '\u2753',        action: showHelpStub },
       { key: 'run',       label: 'Run\u2026',  icon: '\u25BA',        action: showRunStub },
@@ -451,6 +451,30 @@ window.APC.taskbar = (function () {
     });
   }
 
+  // --- Apps submenu (flat, beginner-friendly) -------------------------
+  // Single-level shortcut to all four mini-apps.
+  // Sits at top-level under Apps ► — no cascade, no Accessories layer.
+  // Programs ► Accessories path is preserved and untouched.
+  // Uses global openSubmenuEl tracker (safe — flat submenu, no nesting conflict).
+  function buildAppsSubmenu() {
+    var sub = document.createElement('div');
+    sub.className = 'start-menu__submenu';
+    sub.setAttribute('role', 'menu');
+    sub.setAttribute('aria-label', 'Apps');
+    [
+      { app: 'winamp',      icon: '\uD83C\uDFB5', label: 'Winamp'      },
+      { app: 'calculator',  icon: '\uD83E\uDDF2', label: 'Calculator'  },
+      { app: 'notepad',     icon: '\uD83D\uDCDD', label: 'Notepad'     },
+      { app: 'minesweeper', icon: '\uD83D\uDCA3', label: 'Minesweeper' }
+    ].forEach(function (def) {
+      sub.appendChild(buildSubmenuItem(def.icon, def.label, function () {
+        if (window.APC.desktop && typeof window.APC.desktop.launchApp === 'function') {
+          window.APC.desktop.launchApp(def.app);
+        }
+      }));
+    });
+    return sub;
+  }
   // --- Submenu item helper --------------------------------------------
 
   // onBack (optional): called on ArrowLeft/Escape instead of the default
