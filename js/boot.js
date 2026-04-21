@@ -1,3 +1,5 @@
+if (!window.APC?.timing) throw new Error('[APC] win98-timing.js must load before boot.js');
+if (!window.APC?.bootScene) throw new Error('[APC] boot-scene.js must load before boot.js');
 // boot.js — Gate screen (Matrix rain + identity lines) and five-screen boot state machine.
 // Sequence: gate → keypress → POST → IBS_SPLASH → DOS_LOG → WINDOORS_LOGO → DESKTOP_ARRIVAL → COMPLETE
 // Namespaced under window.APC per project conventions.

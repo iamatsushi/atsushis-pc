@@ -1,3 +1,4 @@
+if (!window.APC?.timing) throw new Error('[APC] win98-timing.js must load before boot-scene.js');
 // boot-scene.js — Pre-boot desk scene with CRT power-on sequence (#104).
 // Inserts between the Matrix rain gate keypress and the POST boot screen.
 //

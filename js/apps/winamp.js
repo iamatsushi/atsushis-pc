@@ -1,3 +1,4 @@
+if (!window.APC?.timing) throw new Error('[APC] win98-timing.js must load before winamp.js');
 // winamp.js — Winamp 2.x music player simulation
 // Mini-app: animated spectrum analyzer, no-op transport controls.
 // Namespaced under window.APC.apps per project conventions.

@@ -1,3 +1,4 @@
+if (!window.APC?.timing) throw new Error('[APC] win98-timing.js must load before screensaver.js');
 // js/apps/screensaver.js — Signal Drift screensaver
 // Idle-triggered full-viewport canvas animation. Injected into <body> on
 // start, removed cleanly on stop. Exit on first keydown or mousedown.

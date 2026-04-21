@@ -1,3 +1,4 @@
+if (!window.APC?.timing) throw new Error('[APC] win98-timing.js must load before system-properties.js');
 // js/apps/system-properties.js
 // Full System Properties dialog (SYSDM.CPL simulation).
 // Spec: CLAUDE.md § Win98 Behavioral Fidelity — System Properties Dialog (doc 2e3b940e).

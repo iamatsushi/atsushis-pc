@@ -1,3 +1,4 @@
+if (!window.APC?.timing) throw new Error('[APC] win98-timing.js must load before netescape.js');
 // netescape.js — NetEscape 4 window with dial-up simulation
 // Handles: NetEscape chrome, address bar navigation, client-side routing,
 //          dial-up modal (first launch + manual URL entry)

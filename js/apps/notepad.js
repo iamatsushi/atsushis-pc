@@ -1,3 +1,4 @@
+if (!window.APC?.timing) throw new Error('[APC] win98-timing.js must load before notepad.js');
 // notepad.js — Notepad displaying README.txt
 // Explains the site, stack, and guestbook in a personal tone.
 // Namespaced under window.APC.apps per project conventions.

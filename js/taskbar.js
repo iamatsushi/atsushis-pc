@@ -1,3 +1,4 @@
+if (!window.APC?.timing) throw new Error('[APC] win98-timing.js must load before taskbar.js');
 // taskbar.js — WinDoors 98 Start Menu
 // DOM built ONCE in init(), toggled on Start button click.
 // All delay values from window.APC.timing (win98-timing.js).

@@ -1,3 +1,4 @@
+if (!window.APC?.timing) throw new Error('[APC] win98-timing.js must load before desktop.js');
 // desktop.js — Windows 98 desktop environment
 // Handles: clock, desktop icons (double-click), start menu stub,
 //          Win98 window shell (drag/resize/minimize/maximize/close/taskbar)

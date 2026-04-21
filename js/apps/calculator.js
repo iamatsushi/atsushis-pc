@@ -1,3 +1,4 @@
+if (!window.APC?.timing) throw new Error('[APC] win98-timing.js must load before calculator.js');
 // calculator.js — Calculator mini-app
 // Pre-connection (isConnected = false): shows a fully functional Win98-style calculator.
 // Post-connection (isConnected = true): rickrolls the user and shows a troll message.

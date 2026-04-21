@@ -1,3 +1,4 @@
+if (!window.APC?.timing) throw new Error('[APC] win98-timing.js must load before widgets.js');
 // widgets.js — Taskbar weather and RAM widgets
 // Fetches /weather (Caddy proxy → OpenWeatherMap) and /ram (Caddy proxy → Pi RAM server).
 // All fetches use setTimeout-chained scheduling — never setInterval (per project rules).

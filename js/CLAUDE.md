@@ -293,3 +293,13 @@ Start chatter at `volume=0` immediately (autoplay policy). Ramp to 1.0 at 9950ms
 - **Removing 2s delay before chatter fade** — wrong. Intentional breathing room after chime.
 - **`setTimeout(()=>hddChatter.play(),delay)`** — wrong. Start within user gesture.
 - **Removing `playHddAudio` from return object** — wrong.
+
+## Desktop Icon Dragging (shipped)
+
+- **File:** `js/desktop.js` (appended IIFE: `initIconDrag`)
+- **CSS:** `css/win98.css` — `.desktop-icon--dragging`, `.desktop-icon--drag-placeholder`
+- **Timing token:** `ICON_DRAG_THRESHOLD_PX = 5` in `window.APC.timing`
+- **localStorage key:** `desktop_icon_positions` — JSON map of icon ID → `{gridX, gridY}`
+- **Behavior:** mousedown/mousemove/mouseup drag (no HTML5 drag API). 5px threshold before drag starts. Snaps to 80×80 grid on drop. Collision detection scans right then down. Ghost placeholder shown at origin during drag. Positions persist across sessions.
+- **Pitfalls:** Do NOT use `export const` in win98-timing.js — it is not a module. All tokens go inside `window.APC.timing = { ... }`. The drag IIFE calls `hideIconHint()` if it exists — safe no-op if not present.
+- **Analytics:** Umami event `desktop_icon_drag` fires on every completed drag.

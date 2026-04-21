@@ -1,3 +1,4 @@
+if (!window.APC?.timing) throw new Error('[APC] win98-timing.js must load before minesweeper.js');
 // minesweeper.js — Fully playable Minesweeper mini-app
 // 9x9 board, 10 mines. Left-click reveal, right-click flag cycle, chord click.
 // First click is always safe. Win/lose states with LCD timer and mine counter.

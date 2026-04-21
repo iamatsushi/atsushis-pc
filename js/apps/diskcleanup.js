@@ -1,3 +1,4 @@
+if (!window.APC?.timing) throw new Error('[APC] win98-timing.js must load before diskcleanup.js');
 // js/apps/diskcleanup.js
 // Disk Cleanup for (C:) — simulated Win98 maintenance utility
 //
