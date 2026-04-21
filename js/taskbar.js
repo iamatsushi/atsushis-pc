@@ -395,7 +395,8 @@ window.APC.taskbar = (function () {
       { app: 'winamp',      icon: '\uD83C\uDFB5', label: 'Winamp'      },
       { app: 'calculator',  icon: '\uD83E\uDDF2', label: 'Calculator'  },
       { app: 'minesweeper', icon: '\uD83D\uDCA3', label: 'Minesweeper' },
-      { app: 'notepad',     icon: '\uD83D\uDCDD', label: 'Notepad'     }
+      { app: 'notepad',     icon: '\uD83D\uDCDD', label: 'Notepad'     },
+      { app: 'diskcleanup', icon: '\uD83D\uDDA5', label: 'Disk Cleanup' }
     ].forEach(function (def) {
       sub.appendChild(buildSubmenuItem(def.icon, def.label, function () {
         if (window.APC.desktop && typeof window.APC.desktop.launchApp === 'function') {
@@ -465,7 +466,8 @@ window.APC.taskbar = (function () {
       { app: 'winamp',      icon: '\uD83C\uDFB5', label: 'Winamp'      },
       { app: 'calculator',  icon: '\uD83E\uDDF2', label: 'Calculator'  },
       { app: 'notepad',     icon: '\uD83D\uDCDD', label: 'Notepad'     },
-      { app: 'minesweeper', icon: '\uD83D\uDCA3', label: 'Minesweeper' }
+      { app: 'minesweeper', icon: '\uD83D\uDCA3', label: 'Minesweeper' },
+      { app: 'diskcleanup', icon: '\uD83D\uDDA5', label: 'Disk Cleanup' }
     ].forEach(function (def) {
       sub.appendChild(buildSubmenuItem(def.icon, def.label, function () {
         if (window.APC.desktop && typeof window.APC.desktop.launchApp === 'function') {
