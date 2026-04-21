@@ -5,14 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Atsushi's PC</title>
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <!-- ============================================================
+       STYLESHEETS — load order is meaningful, do not reorder
+       See CLAUDE.md > Script Load Order for full dependency map
+       ============================================================ -->
+
+  <!-- [1] Desktop chrome: Win98 window frames, taskbar, icons, menus -->
   <link rel="stylesheet" href="css/win98.css">
+
+  <!-- [2] NetEscape browser: base chrome + 6 page-specific sheets
+       All must load before netescape.js renders any page -->
   <link rel="stylesheet" href="css/netescape-base.css">
   <link rel="stylesheet" href="css/netescape-home.css">
   <link rel="stylesheet" href="css/netescape-about.css">
   <link rel="stylesheet" href="css/netescape-thoughts.css">
   <link rel="stylesheet" href="css/netescape-projects.css">
   <link rel="stylesheet" href="css/netescape-guestbook.css">
+
+  <!-- [3] Boot sequence: gate screen, matrix rain, CRT, POST -->
   <link rel="stylesheet" href="css/boot.css">
+
+  <!-- [4] App-specific styles -->
   <link rel="stylesheet" href="css/winamp.css">
   <link rel="stylesheet" href="css/minesweeper.css">
   <script defer src="https://cloud.umami.is/script.js"
