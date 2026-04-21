@@ -203,6 +203,11 @@ window.APC.desktop = (function () {
         });
       }
 
+      // Dial-Up Networking: tooltip explains the icon's function (P1-2)
+      if (icon.dataset.app === 'dialup') {
+        icon.title = 'Connect to the internet via Dial-Up Networking';
+      }
+
       // Recycle Bin: right-click shows "Empty Recycle Bin" easter egg option
       if (icon.dataset.app === 'recycle-bin') {
         icon.addEventListener('contextmenu', function (e) {

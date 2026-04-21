@@ -1586,6 +1586,20 @@
 }
 
 /* -------------------------------------------------------------------------
+   Window titlebar drag affordance (P1-5)
+   cursor:move signals the titlebar is draggable.
+   Buttons inside the titlebar retain cursor:default via their own rule.
+   ------------------------------------------------------------------------- */
+
+.win98-window__titlebar {
+  cursor: move;
+}
+
+.win98-window__btn {
+  cursor: default;
+}
+
+/* -------------------------------------------------------------------------
    Desktop icon double-click hint (P0-1)
    Appears below icon label after a single click with no follow-up.
    Auto-dismisses. Never interferes with click or selection state.
