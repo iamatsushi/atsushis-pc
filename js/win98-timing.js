@@ -320,6 +320,12 @@
 
     ICON_DRAG_THRESHOLD_PX: 5,  // px of movement before a desktop icon drag begins
 
+    // -------------------------------------------------------------------------
+    // Disk Cleanup balloon persistence  —  TEXTURE ZONE
+    // -------------------------------------------------------------------------
+
+    TRAY_DISK_REAPPEAR_MS: 120000,  // ms before Low Disk Space re-shows after ❌ dismiss
+
   };
 
 }());

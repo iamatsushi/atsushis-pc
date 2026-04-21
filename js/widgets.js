@@ -116,15 +116,37 @@ window.APC.widgets = (function () {
   var trayPopupTimer = null;       // inter-balloon schedule timer
   var autoTimerId = null;          // auto-dismiss timer for live balloon
   var glitchTimerId = null;        // self-correct timer for behind-taskbar glitch
+  var diskReappearTimer = null;    // re-show Low Disk Space after ❌ dismiss
+  var diskCleanupDone = false;     // true after diskcleanup:complete fires — suppresses Low Disk Space
   // Persistent ARIA live region — appended once on init, mutated per balloon.
   var liveRegion = null;
 
-  // Disk Cleanup body click handler — stubbed until spec 24c49bfe arrives
+  // Low Disk Space body click — opens Disk Cleanup modal (spec 24c49bfe)
   function handleLowDiskClick() {
-    // TODO: Disk Cleanup click path
-    // Spec: Disk Cleanup Feature Spec (document 24c49bfe)
-    // On body click: apply TRAY_CLICK_MIN/MAX_MS delay → isBalloonVisible = false → open Disk Cleanup modal
-    // Do not implement until spec is provided. Do not stub with a placeholder modal.
+    clearTimeout(diskReappearTimer);
+    diskReappearTimer = null;
+    if (window.APC.diskCleanup && typeof window.APC.diskCleanup.open === 'function') {
+      window.APC.diskCleanup.open();
+    }
+    if (window.umami) {
+      window.umami.track('tray_balloon_action', { balloon_type: 'low_disk_space' });
+    }
+  }
+
+  // Called when user clicks ❌ on Low Disk Space balloon without cleaning.
+  // Schedules reappearance after TRAY_DISK_REAPPEAR_MS (2 minutes).
+  function scheduleLowDiskReappear() {
+    clearTimeout(diskReappearTimer);
+    var t = window.APC.timing;
+    diskReappearTimer = setTimeout(function () {
+      diskReappearTimer = null;
+      if (!diskCleanupDone && !isBalloonVisible) {
+        var session = window.APC && window.APC.session;
+        if (!(session && session.protectedPathActive)) {
+          showTrayBalloon(BALLOON_TYPES[0]); // always Low Disk Space
+        }
+      }
+    }, t.TRAY_DISK_REAPPEAR_MS);
   }
 
   function handleSecurityRiskClick() {
@@ -242,6 +264,16 @@ window.APC.widgets = (function () {
     liveRegion.style.whiteSpace = 'nowrap';
     document.body.appendChild(liveRegion);
     scheduleTrayPopup();
+
+    // diskcleanup:complete → suppress Low Disk Space for rest of session
+    document.addEventListener('diskcleanup:complete', function () {
+      diskCleanupDone = true;
+      clearTimeout(diskReappearTimer);
+      diskReappearTimer = null;
+      if (window.umami) {
+        window.umami.track('disk_cleanup_success');
+      }
+    });
   }
 
   function scheduleTrayPopup() {
@@ -328,15 +360,21 @@ window.APC.widgets = (function () {
       window.umami.track('tray_balloon_shown', { balloon_type: spec.type });
     }
 
-    // Auto-dismiss after 10s (fixed per XP spec)
-    autoTimerId = setTimeout(function () {
-      dismissBalloon(balloon, 'auto');
-    }, t.TRAY_POPUP_DISPLAY_MS);
+    // Auto-dismiss: Security Risk only (10s). Low Disk Space never auto-dismisses.
+    if (spec.type !== 'low_disk_space') {
+      autoTimerId = setTimeout(function () {
+        dismissBalloon(balloon, 'auto');
+      }, t.TRAY_POPUP_DISPLAY_MS);
+    }
 
     // Close button — delayed response per timing spec (Texture Zone click latency)
     closeBtn.addEventListener('click', function () {
       setTimeout(function () {
         dismissBalloon(balloon, 'close');
+        // Low Disk Space ❌ → schedule reappear in 2 minutes
+        if (spec.type === 'low_disk_space' && !diskCleanupDone) {
+          scheduleLowDiskReappear();
+        }
       }, t.rand(t.TRAY_CLICK_MIN_MS, t.TRAY_CLICK_MAX_MS));
     });
 
@@ -454,6 +492,9 @@ window.APC.widgets = (function () {
     isBalloonVisible = false;
     balloonTypeIndex = 0;
     firstBalloonFired = false;
+    clearTimeout(diskReappearTimer);
+    diskReappearTimer = null;
+    diskCleanupDone = false;
     if (liveRegion) { liveRegion.textContent = ''; }
   }
 
