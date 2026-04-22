@@ -1651,6 +1651,17 @@ window.APC.boot = (function () {
     wormRafId = requestAnimationFrame(wormFrame);
   }
 
-  return { init: init, restart: restart, shutdown: shutdown, startWormhole: startWormhole, playHddAudio: playHddAudio };
+  // --- Controlled audio valve for post-boot system stress events --------
+  //
+  // Called by widgets.js via window.APC.boot.setHddVolume() to simulate
+  // machine strain during the Dial-Up Stress Test sequence. Fades chatter
+  // to targetVol over durationMs without exposing bootAudio directly.
+  // Safe to call if bootAudio is null (no-op guard inside fadeAudioTo).
+  function setHddVolume(targetVol, durationMs) {
+    if (!bootAudio || !bootAudio.hddChatter) { return; }
+    fadeAudioTo(bootAudio.hddChatter, targetVol, durationMs);
+  }
+
+  return { init: init, restart: restart, shutdown: shutdown, startWormhole: startWormhole, playHddAudio: playHddAudio, setHddVolume: setHddVolume };
 
 }());

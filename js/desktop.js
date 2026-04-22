@@ -1362,8 +1362,8 @@ window.APC.desktop = (function () {
 // =============================================
 
 (function initIconDrag() {
-  const GRID_W = 80;
-  const GRID_H = 80;
+  const GRID_W = 75;  // Win98 tighter spacing
+  const GRID_H = 75;
   const STORAGE_KEY = 'desktop_icon_positions';
 
   function getThreshold() {
@@ -1414,8 +1414,9 @@ window.APC.desktop = (function () {
   function applyGridPosition(icon, gridX, gridY) {
     const tbh = getTaskbarHeight();
     icon.style.position = 'absolute';
-    icon.style.left = (gridX * GRID_W) + 'px';
-    icon.style.top = (gridY * GRID_H + tbh) + 'px';
+    // +4px offsets visually center icons within the invisible grid cell
+    icon.style.left = (gridX * GRID_W + 4) + 'px';
+    icon.style.top = (gridY * GRID_H + tbh + 4) + 'px';
     icon.dataset.gridX = gridX;
     icon.dataset.gridY = gridY;
   }
