@@ -179,6 +179,11 @@ if (!window.APC?.timing) throw new Error('[APC] win98-timing.js must load before
     okBtn.style.cssText = 'display:none;min-width:72px;';
     okBtn.textContent = 'OK';
     okBtn.addEventListener('click', function () {
+      // Suppress Low Disk Space balloon for the rest of the session
+      sessionStorage.setItem('disk_cleanup_done', 'true');
+      // Signal system relief — widgets.js will lower RAM and HDD chatter
+      document.dispatchEvent(new CustomEvent('system:high_load_end'));
+      // Existing event — suppresses Low Disk Space balloon in widgets.js
       window.dispatchEvent(new CustomEvent('diskcleanup:complete'));
       close();
     });

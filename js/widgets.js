@@ -483,6 +483,22 @@ window.APC.widgets = (function () {
 
   var highLoadTriggered = false;
 
+  function initHighLoadEndListener() {
+    document.addEventListener('system:high_load_end', function () {
+      // 1. Release the RAM gauge back to live Pi fetching
+      window.APC.isRamSpiking = false;
+
+      // 2. Fade HDD chatter back down to quiet background level over 3 seconds
+      if (window.APC.boot && typeof window.APC.boot.setHddVolume === 'function') {
+        window.APC.boot.setHddVolume(0.2, 3000);
+      }
+
+      if (window.umami) {
+        window.umami.track('system_high_load_end');
+      }
+    });
+  }
+
   function initHighLoadListener() {
     document.addEventListener("system:high_load_start", function () {
       if (highLoadTriggered) { return; }
@@ -533,6 +549,7 @@ window.APC.widgets = (function () {
     initRam();
     initTrayPopups();
     initHighLoadListener();
+    initHighLoadEndListener();
   }
 
   // Called by boot.restart() to cancel all in-flight timers and clear any
