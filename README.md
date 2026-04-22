@@ -15,7 +15,7 @@ The machine being simulated is specific: an IBM Aptiva SE7. Pentium II. The beig
 
 A terminal prompt blinks. Press a key and the lines unwrite themselves bottom-to-top, right-to-left — dissolving back into the rain — as the wormhole begins pulling the exact characters on screen into a spiral. The same rain you were watching becomes the vortex. The desk scene reveals through a green phosphor glow. You click. Windows 98 loads.
 
-**A desktop.** Teal wallpaper. Beveled chrome. A taskbar with a working clock, live Portland weather, and a RAM gauge pulling from the actual Raspberry Pi running the site. Draggable windows. A Start Menu with a cascade bug that took longer to fix than anything else in this project.
+**A desktop.** Teal wallpaper. Beveled chrome. A taskbar with a working clock, live Portland weather, and a RAM gauge pulling from the actual Raspberry Pi running the site. Draggable icons on a period-accurate 75px grid. A Start Menu with a cascade bug that took longer to fix than anything else in this project. Connect to the internet and the machine panics — RAM spikes, the hard drive grinds, an Anti-Virus alert fires. Run Disk Cleanup and it sighs in relief. The machine has feelings.
 
 **NetEscape Navigator.** The in-app browser. Pages stall mid-load. The title bar flickers (Not Responding). A timeout dialog eventually appears. This is the Texture Zone — the felt experience of the Aptiva. The guestbook always works. That's the Protected Path. You don't punish someone for committing to an action.
 
@@ -86,7 +86,7 @@ git pull origin main
 | #39 | Real content for My Thoughts and About Me | Ready |
 | #40 | Accessibility audit — WAVE/axe, zero critical errors | Pre-launch gate |
 
-52 issues closed. The screensaver, Recycle Bin, Start Menu cascade, tray balloons, NetEscape, boot sequence, System Properties, Matrix rain overhaul, cinematic gate transition, wormhole match cut, identity line rewrite, a 28-issue bug sprint, and six usability sprint fixes (double-click discoverability, resume/guestbook conversion path, Start Menu Apps shortcut, clock tooltip, first tray balloon timing, dialup icon affordance, window drag cursor) are all shipped.
+55 issues closed. The screensaver, Recycle Bin, Start Menu cascade, tray balloons, NetEscape, boot sequence, System Properties, Matrix rain overhaul, cinematic gate transition, wormhole match cut, identity line rewrite, a 28-issue bug sprint, and six usability sprint fixes (double-click discoverability, resume/guestbook conversion path, Start Menu Apps shortcut, clock tooltip, first tray balloon timing, dialup icon affordance, window drag cursor) are all shipped.
 
 ---
 
