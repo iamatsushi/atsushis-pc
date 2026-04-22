@@ -96,6 +96,9 @@ window.APC.netescape = (function () {
     showDialup(function () {
       isDialingUp = false;
       window.APC.session.isConnected = true;
+      // Notify other modules that the machine is now under dial-up load.
+      // widgets.js listens for this to trigger the Struggle sequence.
+      document.dispatchEvent(new CustomEvent('system:high_load_start'));
       if (onComplete) { onComplete(); }
     });
   }

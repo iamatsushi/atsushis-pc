@@ -204,7 +204,7 @@ window.APC.widgets = (function () {
         // Render delay: wait RAM_RENDER ms before updating display (Texture Zone)
         var t = window.APC.timing;
         setTimeout(function () {
-          if (ramEl) { ramEl.textContent = lastRamText; }
+          if (ramEl && !window.APC.isRamSpiking) { ramEl.textContent = lastRamText; }
         }, t.rand(t.RAM_RENDER_MIN_MS, t.RAM_RENDER_MAX_MS));
         // Schedule next fetch from success path — explicit, not chained after .catch()
         setTimeout(fetchRam, RAM_INTERVAL_MS);
@@ -471,10 +471,68 @@ window.APC.widgets = (function () {
 
   // --- Public API -----------------------------------------------------
 
+  // --- Dial-Up Struggle Sequence -------------------------------------
+  // Triggered once per session when netescape.js fires system:high_load_start
+  // (i.e. the user successfully completes the dial-up sequence).
+  // Simulates the 1998 machine straining under the weight of the internet:
+  //   - RAM gauge spikes to 99% (overrides real Pi stats temporarily)
+  //   - HDD chatter ramps up 30% via the controlled boot.js valve
+  //   - Anti-Virus balloon fires immediately
+  //   - Low Disk Space balloon fires 8 seconds later (if cleanup not done)
+  // One-fire guard prevents repeat on soft restart within same page session.
+
+  var highLoadTriggered = false;
+
+  function initHighLoadListener() {
+    document.addEventListener("system:high_load_start", function () {
+      if (highLoadTriggered) { return; }
+      highLoadTriggered = true;
+
+      // 1. Spike the RAM gauge visually for 30 seconds
+      window.APC.isRamSpiking = true;
+      if (ramEl) { ramEl.textContent = "RAM: 99%"; }
+      setTimeout(function () {
+        window.APC.isRamSpiking = false;
+      }, 30000);
+
+      // 2. Ramp up HDD chatter volume (~30% above background 0.2 level)
+      if (window.APC.boot && typeof window.APC.boot.setHddVolume === "function") {
+        window.APC.boot.setHddVolume(0.5, 2000);
+      }
+
+      // 3. Anti-Virus balloon fires immediately
+      var session = window.APC && window.APC.session;
+      if (!isBalloonVisible && !(session && session.protectedPathActive)) {
+        showTrayBalloon({
+          type: "security_risk",
+          icon: "\u26A0\uFE0F",
+          title: "Anti-Virus Warning",
+          body: "Virus definitions are out of date. Your computer may be at risk.",
+          onBodyClick: handleSecurityRiskClick
+        });
+      }
+
+      // 4. Low Disk Space balloon fires 8 seconds later
+      setTimeout(function () {
+        if (!diskCleanupDone && !isBalloonVisible) {
+          var sess = window.APC && window.APC.session;
+          if (!(sess && sess.protectedPathActive)) {
+            showTrayBalloon(BALLOON_TYPES[0]);
+          }
+        }
+      }, 8000);
+
+      if (window.umami) {
+        window.umami.track("system_high_load_start");
+      }
+    });
+  }
+
   function init() {
     initWeather();
     initRam();
     initTrayPopups();
+    initHighLoadListener();
   }
 
   // Called by boot.restart() to cancel all in-flight timers and clear any
