@@ -68,8 +68,10 @@ if (!window.APC?.timing) throw new Error('[APC] win98-timing.js must load before
   var scanTimer = null;
   var cleanTimer = null;
   var progressTimer = null;
+  var categoryTimer = null;
 
   function clearAllTimers() {
+    if (categoryTimer) { clearInterval(categoryTimer); categoryTimer = null; }
     if (tickerTimer)   { clearInterval(tickerTimer);  tickerTimer   = null; }
     if (scanTimer)     { clearTimeout(scanTimer);      scanTimer     = null; }
     if (cleanTimer)    { clearTimeout(cleanTimer);     cleanTimer    = null; }
@@ -219,7 +221,7 @@ if (!window.APC?.timing) throw new Error('[APC] win98-timing.js must load before
       }
     }
 
-    var categoryTimer = setInterval(advanceCategory, scanStepMs);
+    categoryTimer = setInterval(advanceCategory, scanStepMs);
 
     // Sparse file ticker — fires independently at TICKER_INTERVAL_MS
     tickerTimer = setInterval(function () {

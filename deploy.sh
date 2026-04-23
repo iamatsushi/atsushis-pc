@@ -23,12 +23,16 @@ files = [
     'css/winamp.css',
     'css/minesweeper.css',
 ]
+import re
 with open('dist/bundle.css', 'w') as out:
     for f in files:
-        out.write('/* === ' + f + ' === */\n')
         with open(f, 'r') as src:
-            out.write(src.read())
-        out.write('\n')
+            css = src.read()
+            # 1. Strip CSS block comments
+            css = re.sub(r'/\*[\s\S]*?\*/', '', css)
+            # 2. Collapse all tabs, newlines, and multi-spaces into a single space
+            css = re.sub(r'\s+', ' ', css)
+            out.write(css)
 print('[deploy] dist/bundle.css written (' + str(len(files)) + ' files)')
 PYEOF
 
