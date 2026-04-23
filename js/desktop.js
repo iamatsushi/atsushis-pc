@@ -175,8 +175,14 @@ window.APC.desktop = (function () {
     document.addEventListener('keydown', onKey);
     xBtn.addEventListener('click', closeOverlay);
     okBtn.addEventListener('click', closeOverlay);
-    overlay.addEventListener('click', function (e) {
-      if (e.target === overlay) { closeOverlay(); }
+    overlay.addEventListener('mousedown', function (e) {
+      if (e.target !== overlay) { return; }
+      // Win98 modal block: play chord ding + triple titlebar flash
+      try { new Audio('assets/audio/chord.mp3').play().catch(function(){}); } catch(ex){}
+      tb.classList.add('win98-window__titlebar--flash');
+      setTimeout(function() { tb.classList.remove('win98-window__titlebar--flash'); }, 75);
+      setTimeout(function() { tb.classList.add('win98-window__titlebar--flash'); }, 150);
+      setTimeout(function() { tb.classList.remove('win98-window__titlebar--flash'); }, 225);
     });
 
     if (window.umami) { window.umami.track('easteregg_trigger', { easter_egg: 'y2k' }); }
@@ -484,6 +490,11 @@ window.APC.desktop = (function () {
 
       if (pct >= 100) {
         clearInterval(progressTimer);
+        // Play recycle crunch sound
+        try { new Audio('assets/audio/recycle.mp3').play().catch(function(){}); } catch(ex) {}
+        // Visually empty the Recycle Bin icon
+        var rbIconImg = document.querySelector('.desktop-icon[data-app="recycle-bin"] .desktop-icon__img');
+        if (rbIconImg) { rbIconImg.textContent = '\uD83D\uDDD1'; }
         // Phase 2: completion dialog after a brief pause
         setTimeout(function () {
           if (overlay.parentNode) { overlay.parentNode.removeChild(overlay); }
@@ -542,7 +553,14 @@ window.APC.desktop = (function () {
     document.addEventListener('keydown', onKey);
     xBtn.addEventListener('click', dismiss);
     okBtn.addEventListener('click', dismiss);
-    overlay.addEventListener('click', function (e) { if (e.target === overlay) { dismiss(); } });
+    overlay.addEventListener('mousedown', function (e) {
+      if (e.target !== overlay) { return; }
+      try { new Audio('assets/audio/chord.mp3').play().catch(function(){}); } catch(ex){}
+      tb.classList.add('win98-window__titlebar--flash');
+      setTimeout(function() { tb.classList.remove('win98-window__titlebar--flash'); }, 75);
+      setTimeout(function() { tb.classList.add('win98-window__titlebar--flash'); }, 150);
+      setTimeout(function() { tb.classList.remove('win98-window__titlebar--flash'); }, 225);
+    });
     okBtn.focus();
   }
 
@@ -986,6 +1004,20 @@ window.APC.desktop = (function () {
         const newTop  = Math.max(0, Math.min(window.innerHeight - TASKBAR_HEIGHT - 18, startTop + dy));
         winEl.style.left = newLeft + 'px';
         winEl.style.top  = newTop  + 'px';
+
+        // RAM spike drag trail — drop a fading clone behind the window
+        if (window.APC && window.APC.isRamSpiking) {
+          var clone = winEl.cloneNode(true);
+          clone.id = '';
+          clone.style.zIndex = String(parseInt(winEl.style.zIndex, 10) - 1);
+          clone.classList.add('win98-window--trail-clone');
+          // Remove clone after animation completes (400ms)
+          var layer = document.getElementById('window-layer');
+          if (layer) {
+            layer.appendChild(clone);
+            setTimeout(function() { if (clone.parentNode) { clone.parentNode.removeChild(clone); } }, 400);
+          }
+        }
       }
 
       function onUp() {
@@ -1090,11 +1122,48 @@ window.APC.desktop = (function () {
   // --- Window actions --------------------------------------------------
 
   function minimizeWindow(state) {
-    state.el.style.display = 'none';
-    state.minimized = true;
-    if (state.taskbarBtn) { state.taskbarBtn.classList.remove('taskbar-btn--active'); state.taskbarBtn.classList.add('taskbar-btn--minimized'); }
-    if (activeWindowId === state.id) { activeWindowId = null; }
-    focusTopWindow();
+    // Win98 wireframe zoom-to-taskbar animation
+    if (state.taskbarBtn) {
+      var winRect = state.el.getBoundingClientRect();
+      var btnRect = state.taskbarBtn.getBoundingClientRect();
+      var wireframe = document.createElement('div');
+      wireframe.style.cssText = [
+        'position:fixed',
+        'z-index:99999',
+        'border:2px dotted #000',
+        'pointer-events:none',
+        'box-sizing:border-box',
+        'transition:top 150ms linear,left 150ms linear,width 150ms linear,height 150ms linear',
+        'top:' + winRect.top + 'px',
+        'left:' + winRect.left + 'px',
+        'width:' + winRect.width + 'px',
+        'height:' + winRect.height + 'px'
+      ].join(';');
+      document.body.appendChild(wireframe);
+      // Force reflow before animating
+      void wireframe.offsetHeight;
+      wireframe.style.top    = btnRect.top + 'px';
+      wireframe.style.left   = btnRect.left + 'px';
+      wireframe.style.width  = btnRect.width + 'px';
+      wireframe.style.height = btnRect.height + 'px';
+      setTimeout(function() {
+        if (wireframe.parentNode) { wireframe.parentNode.removeChild(wireframe); }
+        state.el.style.display = 'none';
+        state.minimized = true;
+        if (state.taskbarBtn) {
+          state.taskbarBtn.classList.remove('taskbar-btn--active');
+          state.taskbarBtn.classList.add('taskbar-btn--minimized');
+        }
+        if (activeWindowId === state.id) { activeWindowId = null; }
+        focusTopWindow();
+      }, 160);
+    } else {
+      // Fallback: no taskbar button, hide immediately
+      state.el.style.display = 'none';
+      state.minimized = true;
+      if (activeWindowId === state.id) { activeWindowId = null; }
+      focusTopWindow();
+    }
   }
 
   function restoreWindow(state) {

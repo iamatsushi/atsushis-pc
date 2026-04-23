@@ -1678,3 +1678,37 @@
     z-index: 9998;
     opacity: 0.5;
 }
+
+/* =============================================
+   Win98 modal titlebar flash — blocks clicks behind modal
+   Three rapid flashes simulate Win98 focus shake.
+   ============================================= */
+
+.win98-window__titlebar--flash {
+  background: #FFFFFF;
+}
+
+/* =============================================
+   Win98 window drag trail — RAM spike visual glitch
+   Clones dropped during drag when isRamSpiking is true.
+   Fade out via CSS animation, cleaned up by system:high_load_end.
+   ============================================= */
+
+.win98-window--trail-clone {
+  pointer-events: none;
+  opacity: 0.35;
+  animation: trail-fade 400ms ease forwards;
+}
+
+@keyframes trail-fade {
+  from { opacity: 0.35; }
+  to   { opacity: 0; }
+}
+
+/* =============================================
+   Wireframe minimize animation
+   Dotted box that animates from window to taskbar button.
+   Created and removed entirely by JS — no persistent class.
+   ============================================= */
+
+/* (no persistent CSS needed — all inline via JS wireframe div) */
