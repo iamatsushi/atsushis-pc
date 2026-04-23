@@ -1,29 +1,18 @@
 if (!window.APC?.timing) throw new Error('[APC] win98-timing.js must load before taskbar.js');
-// taskbar.js — WinDoors 98 Start Menu
-// DOM built ONCE in init(), toggled on Start button click.
-// All delay values from window.APC.timing (win98-timing.js).
-// Submenus: Programs (app launcher), Documents (recent NetEscape history).
-// Keyboard: ArrowUp/Down moves items, Right opens submenu immediately,
-//           Left / Escape closes submenu / menu, Enter / Space activates item.
-// Namespaced under window.APC per project conventions.
+// taskbar.js - WinDoors 98 Start Menu
+// Registry-driven menu system (Phases 1-3).
 
 window.APC = window.APC || {};
 
 window.APC.taskbar = (function () {
   'use strict';
 
-  // --- Module state ----------------------------------------------------
-
   var startBtn = null;
   var menuEl   = null;
-
   var submenuOpenTimers  = {};
   var submenuCloseTimers = {};
-
   var openSubmenuEl  = null;
   var openSubmenuKey = null;
-
-  // --- Menu Registry (Phase 2) ----------------------------------------
 
   var menuConfig = [
     { id: 'windows-update', label: 'Windows Update', icon: '\uD83C\uDF10', type: 'action', action: 'stub' },
@@ -33,11 +22,11 @@ window.APC.taskbar = (function () {
             { id: 'communications', label: 'Communications', icon: '\uD83D\uDCC1', type: 'folder', children: [
                 { id: 'dialup',        label: 'Dial-Up Networking', icon: '\uD83D\uDCDE', type: 'action', action: 'stub' },
                 { id: 'hyperterminal', label: 'HyperTerminal',      icon: '\uD83D\uDCE0', type: 'action', action: 'stub' },
-                { id: 'phonedialer',   label: 'Phone Dialer',        icon: '\u260E\uFE0F', type: 'action', action: 'stub' }
+                { id: 'phonedialer',   label: 'Phone Dialer',       icon: '\u260E',        type: 'action', action: 'stub' }
             ]},
             { id: 'entertainment', label: 'Entertainment', icon: '\uD83D\uDCC1', type: 'folder', children: [
                 { id: 'cdplayer',   label: 'CD Player',          icon: '\uD83D\uDCBF', type: 'action', action: 'stub' },
-                { id: 'soundrec',   label: 'Sound Recorder',     icon: '\uD83C\uDF99\uFE0F', type: 'action', action: 'stub' },
+                { id: 'soundrec',   label: 'Sound Recorder',     icon: '\uD83C\uDF99', type: 'action', action: 'stub' },
                 { id: 'volcontrol', label: 'Volume Control',     icon: '\uD83D\uDD0A', type: 'action', action: 'stub' },
                 { id: 'webtv',      label: 'Web TV for Windows', icon: '\uD83D\uDCFA', type: 'action', action: 'stub' },
                 { id: 'winamp',     label: 'Winamp',             icon: '\uD83C\uDFB5', type: 'action', action: 'launch', app: 'winamp' }
@@ -47,11 +36,11 @@ window.APC.taskbar = (function () {
                 { id: 'clipbrd',     label: 'Clipboard Viewer',   icon: '\uD83D\uDCCB', type: 'action', action: 'stub' },
                 { id: 'defrag',      label: 'Disk Defragmenter',  icon: '\uD83D\uDCBD', type: 'action', action: 'stub' },
                 { id: 'diskcleanup', label: 'Disk Cleanup',       icon: '\uD83D\uDDA5', type: 'action', action: 'launch', app: 'diskcleanup' },
-                { id: 'sysinfo',     label: 'System Information', icon: '\u2139\uFE0F', type: 'action', action: 'stub' }
+                { id: 'sysinfo',     label: 'System Information', icon: '\u2139',        type: 'action', action: 'stub' }
             ]},
             { id: 'addressbook', label: 'Address Book', icon: '\uD83D\uDCC7', type: 'action', action: 'stub' },
             { id: 'calculator',  label: 'Calculator',   icon: '\uD83E\uDDF2', type: 'action', action: 'launch', app: 'calculator' },
-            { id: 'imaging',     label: 'Imaging',      icon: '\uD83D\uDDBC\uFE0F', type: 'action', action: 'stub' },
+            { id: 'imaging',     label: 'Imaging',      icon: '\uD83D\uDDBC', type: 'action', action: 'stub' },
             { id: 'minesweeper', label: 'Minesweeper',  icon: '\uD83D\uDCA3', type: 'action', action: 'launch', app: 'minesweeper' },
             { id: 'notepad',     label: 'Notepad',      icon: '\uD83D\uDCDD', type: 'action', action: 'launch', app: 'notepad' },
             { id: 'paint',       label: 'Paint',        icon: '\uD83C\uDFA8', type: 'action', action: 'stub' },
@@ -66,30 +55,30 @@ window.APC.taskbar = (function () {
         ]},
         { id: 'ie',               label: 'Internet Explorer', icon: '\uD83C\uDF0E', type: 'action', action: 'stub' },
         { id: 'ms-dos',           label: 'MS-DOS Prompt',     icon: '\uD83D\uDCDF', type: 'action', action: 'stub' },
-        { id: 'outlook',          label: 'Outlook Express',   icon: '\u2709\uFE0F', type: 'action', action: 'stub' },
-        { id: 'windows-explorer', label: 'Windows Explorer',  icon: '\uD83D\uDDC2\uFE0F', type: 'action', action: 'stub' }
+        { id: 'outlook',          label: 'Outlook Express',   icon: '\u2709',        type: 'action', action: 'stub' },
+        { id: 'windows-explorer', label: 'Windows Explorer',  icon: '\uD83D\uDDC2', type: 'action', action: 'stub' }
     ]},
     { id: 'favorites', label: 'Favorites', icon: '\u2B50', type: 'folder', children: [
         { id: 'fav-empty', label: '(Empty)', type: 'action', disabled: true }
     ]},
     { id: 'documents', label: 'Documents', icon: '\uD83D\uDCC4', type: 'dynamic', source: 'documents' },
-    { id: 'settings', label: 'Settings', icon: '\u2699\uFE0F', type: 'folder', children: [
-        { id: 'control-panel',    label: 'Control Panel',              icon: '\uD83C\uDF9B\uFE0F', type: 'action', action: 'stub' },
-        { id: 'printers',         label: 'Printers',                   icon: '\uD83D\uDDA8\uFE0F', type: 'action', action: 'stub' },
-        { id: 'taskbar-settings', label: 'Taskbar & Start Menu\u2026', icon: '\uD83D\uDDD4', type: 'action', action: 'stub' },
-        { id: 'folder-opts',      label: 'Folder Options\u2026',       icon: '\uD83D\uDCC1', type: 'action', action: 'stub' },
-        { id: 'active-desk', label: 'Active Desktop', icon: '\uD83D\uDDA5\uFE0F', type: 'folder', children: [
-            { id: 'ad-view', label: 'View as Web Page',           icon: '\u2713', type: 'action', action: 'stub' },
-            { id: 'ad-cust', label: 'Customize my Desktop\u2026', icon: '\uD83C\uDFA8', type: 'action', action: 'stub' }
+    { id: 'settings', label: 'Settings', icon: '\u2699', type: 'folder', children: [
+        { id: 'control-panel',    label: 'Control Panel',          icon: '\uD83C\uDF9B', type: 'action', action: 'stub' },
+        { id: 'printers',         label: 'Printers',               icon: '\uD83D\uDDA8', type: 'action', action: 'stub' },
+        { id: 'taskbar-settings', label: 'Taskbar & Start Menu...', icon: '\uD83D\uDDD4', type: 'action', action: 'stub' },
+        { id: 'folder-opts',      label: 'Folder Options...',       icon: '\uD83D\uDCC1', type: 'action', action: 'stub' },
+        { id: 'active-desk', label: 'Active Desktop', icon: '\uD83D\uDDA5', type: 'folder', children: [
+            { id: 'ad-view', label: 'View as Web Page',         icon: '\u2713',        type: 'action', action: 'stub' },
+            { id: 'ad-cust', label: 'Customize my Desktop...', icon: '\uD83C\uDFA8', type: 'action', action: 'stub' }
         ]}
     ]},
     { id: 'find', label: 'Find', icon: '\uD83D\uDD0D', type: 'folder', children: [
-        { id: 'find-files', label: 'Files or Folders\u2026', icon: '\uD83D\uDCC4', type: 'action', action: 'stub' },
-        { id: 'find-comp',  label: 'Computer\u2026',         icon: '\uD83D\uDCBB', type: 'action', action: 'stub' },
-        { id: 'find-net',   label: 'On the Internet\u2026',  icon: '\uD83C\uDF10', type: 'action', action: 'stub' }
+        { id: 'find-files', label: 'Files or Folders...', icon: '\uD83D\uDCC4', type: 'action', action: 'stub' },
+        { id: 'find-comp',  label: 'Computer...',         icon: '\uD83D\uDCBB', type: 'action', action: 'stub' },
+        { id: 'find-net',   label: 'On the Internet...',  icon: '\uD83C\uDF10', type: 'action', action: 'stub' }
     ]},
-    { id: 'help',     label: 'Help',         icon: '\u2753',        type: 'action', action: 'help'     },
-    { id: 'run',      label: 'Run\u2026',    icon: '\u25BA',        type: 'action', action: 'run'      },
+    { id: 'help',     label: 'Help',      icon: '\u2753', type: 'action', action: 'help'     },
+    { id: 'run',      label: 'Run...',    icon: '\u25BA', type: 'action', action: 'run'      },
     { type: 'separator' },
     { id: 'apps', label: 'Apps', icon: '\uD83D\uDCC2', type: 'folder', children: [
         { id: 'app-winamp', label: 'Winamp',       icon: '\uD83C\uDFB5', type: 'action', action: 'launch', app: 'winamp'      },
@@ -99,16 +88,14 @@ window.APC.taskbar = (function () {
         { id: 'app-disk',   label: 'Disk Cleanup', icon: '\uD83D\uDDA5', type: 'action', action: 'launch', app: 'diskcleanup' }
     ]},
     { type: 'separator' },
-    { id: 'logoff',   label: 'Log Off Guest\u2026', icon: '\uD83D\uDD11', type: 'action', action: 'logoff'   },
-    { id: 'shutdown', label: 'Shut Down\u2026',      icon: '\uD83D\uDD0C', type: 'action', action: 'shutdown' }
+    { id: 'logoff',   label: 'Log Off Guest...', icon: '\uD83D\uDD11', type: 'action', action: 'logoff'   },
+    { id: 'shutdown', label: 'Shut Down...',      icon: '\uD83D\uDD0C', type: 'action', action: 'shutdown' }
   ];
 
-  // --- Context Menu Data (Phase 3) ------------------------------------
-
   var startButtonContextMenu = [
-    { label: 'Open',        action: 'stub' },
-    { label: 'Explore',     action: 'stub' },
-    { label: 'Find\u2026',  action: 'stub' }
+    { label: 'Open',    action: 'stub' },
+    { label: 'Explore', action: 'stub' },
+    { label: 'Find...', action: 'stub' }
   ];
 
   var taskbarContextMenu = [
@@ -123,13 +110,10 @@ window.APC.taskbar = (function () {
     { label: 'Properties', action: 'stub' }
   ];
 
-  // --- Public API ------------------------------------------------------
-
   function init() {
     startBtn = document.getElementById('start-button');
     menuEl   = document.getElementById('start-menu');
     if (!startBtn || !menuEl) { return; }
-
     buildMenu();
     bindStartButton();
     bindOutsideClick();
@@ -137,11 +121,8 @@ window.APC.taskbar = (function () {
     bindBeforeUnload();
   }
 
-  // --- Build menu DOM (Phase 1 registry-driven) -----------------------
-
   function buildMenu() {
     menuEl.innerHTML = '';
-
     var banner = document.createElement('div');
     banner.className = 'start-menu__banner';
     banner.setAttribute('aria-hidden', 'true');
@@ -150,19 +131,14 @@ window.APC.taskbar = (function () {
     bannerText.textContent = 'WinDoors 98';
     banner.appendChild(bannerText);
     menuEl.appendChild(banner);
-
     var itemsEl = document.createElement('div');
     itemsEl.className = 'start-menu__items';
-
     menuConfig.forEach(function (node) {
       itemsEl.appendChild(renderMenuNode(node, true));
     });
-
     menuEl.appendChild(itemsEl);
     setupMenuKeyboard(itemsEl);
   }
-
-  // --- Recursive menu node renderer (Phase 1) -------------------------
 
   function renderMenuNode(node, isTopLevel) {
     if (node.type === 'separator') {
@@ -175,11 +151,9 @@ window.APC.taskbar = (function () {
     var baseClass = isTopLevel ? 'start-menu__item' : 'start-menu__submenu-item';
     var el = document.createElement('div');
     el.className = baseClass + (node.disabled ? ' ' + baseClass + '--disabled' : '');
-
     if (node.type === 'folder' && !isTopLevel) {
       el.className += ' start-menu__submenu-item--has-submenu';
     }
-
     el.setAttribute('role', 'menuitem');
     el.setAttribute('tabindex', node.disabled ? '-1' : '0');
     el.dataset.key = node.id;
@@ -202,7 +176,6 @@ window.APC.taskbar = (function () {
       arrowSpan.setAttribute('aria-hidden', 'true');
       arrowSpan.textContent = '\u25BA';
       el.appendChild(arrowSpan);
-
       el.setAttribute('aria-haspopup', 'menu');
       el.setAttribute('aria-expanded', 'false');
 
@@ -213,7 +186,6 @@ window.APC.taskbar = (function () {
       submenuEl.dataset.parentKey = node.id;
 
       if (node.type === 'dynamic') {
-        // Must equal 'documents' to match openSubmenu() JIT check
         submenuEl.dataset.dynamic = node.source;
       } else if (node.children) {
         node.children.forEach(function (child) {
@@ -222,10 +194,17 @@ window.APC.taskbar = (function () {
       }
 
       el.appendChild(submenuEl);
-      attachSubmenuHover(node.id, el, submenuEl);
+      el.addEventListener('click', function (e) { e.stopPropagation(); });
+
+      if (isTopLevel) {
+        attachSubmenuHover(node.id, el, submenuEl);
+      } else {
+        attachNestedSubmenuHover(node.id, el, submenuEl);
+      }
 
     } else if (!node.disabled) {
-      el.addEventListener('click', function () {
+      el.addEventListener('click', function (e) {
+        e.stopPropagation();
         var t = window.APC.timing;
         setTimeout(function () {
           closeMenu();
@@ -235,47 +214,214 @@ window.APC.taskbar = (function () {
             } else if (window.APC.apps && window.APC.apps[node.app] &&
                        typeof window.APC.apps[node.app].open === 'function') {
               window.APC.apps[node.app].open();
-            } else {
-              console.error('[APC] No launch path for app:', node.app);
             }
-          } else if (node.action === 'stub') {
-            showSimpleDialog(node.label, 'This feature is not available.');
-          } else if (node.action === 'shutdown') {
-            showShutdownModal();
-          } else if (node.action === 'help') {
-            showHelpStub();
-          } else if (node.action === 'run') {
-            showRunStub();
-          } else if (node.action === 'logoff') {
-            doLogOff();
-          }
+          } else if (node.action === 'stub')     { showSimpleDialog(node.label, 'This feature is not available.'); }
+          else if (node.action === 'shutdown')   { showShutdownModal(); }
+          else if (node.action === 'help')       { showHelpStub(); }
+          else if (node.action === 'run')        { showRunStub(); }
+          else if (node.action === 'logoff')     { doLogOff(); }
         }, t.rand(t.MENU_ACTION_MIN_MS, t.MENU_ACTION_MAX_MS));
       });
-
       el.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          el.click();
-        }
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click(); }
       });
-      el.addEventListener('mouseenter', closeAllSubmenus);
+      if (isTopLevel) { el.addEventListener('mouseenter', closeAllSubmenus); }
     } else {
-      el.addEventListener('mouseenter', closeAllSubmenus);
+      if (isTopLevel) { el.addEventListener('mouseenter', closeAllSubmenus); }
     }
 
     return el;
   }
 
-  // --- Phase 3: Taskbar context menus ---------------------------------
+  function attachSubmenuHover(key, itemEl, submenuEl) {
+    itemEl.addEventListener('mouseenter', function () {
+      cancelSubmenuClose(key);
+      scheduleSubmenuOpen(key, itemEl, submenuEl);
+    });
+    itemEl.addEventListener('mouseleave', function () {
+      cancelSubmenuOpen(key);
+      scheduleSubmenuClose(key, itemEl, submenuEl);
+    });
+    submenuEl.addEventListener('mouseenter', function () { cancelSubmenuClose(key); });
+    submenuEl.addEventListener('mouseleave', function () { scheduleSubmenuClose(key, itemEl, submenuEl); });
+  }
+
+  function scheduleSubmenuOpen(key, itemEl, submenuEl) {
+    var t = window.APC.timing;
+    submenuOpenTimers[key] = setTimeout(function () {
+      delete submenuOpenTimers[key];
+      openSubmenu(key, itemEl, submenuEl);
+    }, t.rand(t.MENU_SUBMENU_MIN_MS, t.MENU_SUBMENU_MAX_MS));
+  }
+
+  function cancelSubmenuOpen(key) {
+    if (submenuOpenTimers[key]) { clearTimeout(submenuOpenTimers[key]); delete submenuOpenTimers[key]; }
+  }
+
+  function scheduleSubmenuClose(key, itemEl, submenuEl) {
+    var t = window.APC.timing;
+    submenuCloseTimers[key] = setTimeout(function () {
+      delete submenuCloseTimers[key];
+      closeSubmenu(key, itemEl, submenuEl);
+    }, t.SUBMENU_CLOSE_DELAY_MS);
+  }
+
+  function cancelSubmenuClose(key) {
+    if (submenuCloseTimers[key]) { clearTimeout(submenuCloseTimers[key]); delete submenuCloseTimers[key]; }
+  }
+
+  function openSubmenu(key, itemEl, submenuEl) {
+    if (submenuEl.dataset.dynamic === 'documents') { populateDocumentsSubmenu(submenuEl); }
+    if (openSubmenuEl && openSubmenuEl !== submenuEl) {
+      var prevKey = openSubmenuKey;
+      var prevItem = menuEl.querySelector('[data-key="' + prevKey + '"]');
+      if (prevItem) { closeSubmenu(prevKey, prevItem, openSubmenuEl); }
+    }
+    submenuEl.classList.add('start-menu__submenu--open');
+    itemEl.setAttribute('aria-expanded', 'true');
+    itemEl.classList.add('start-menu__item--open');
+    openSubmenuEl  = submenuEl;
+    openSubmenuKey = key;
+  }
+
+  function closeSubmenu(key, itemEl, submenuEl) {
+    submenuEl.classList.remove('start-menu__submenu--open');
+    if (itemEl) {
+      itemEl.setAttribute('aria-expanded', 'false');
+      itemEl.classList.remove('start-menu__item--open');
+    }
+    if (openSubmenuEl === submenuEl) { openSubmenuEl = null; openSubmenuKey = null; }
+  }
+
+  function closeAllSubmenus() {
+    Object.keys(submenuOpenTimers).forEach(function (k) {
+      clearTimeout(submenuOpenTimers[k]); delete submenuOpenTimers[k];
+    });
+    if (openSubmenuEl && openSubmenuKey) {
+      var itemEl = menuEl.querySelector('[data-key="' + openSubmenuKey + '"]');
+      closeSubmenu(openSubmenuKey, itemEl, openSubmenuEl);
+    }
+  }
+
+  function attachNestedSubmenuHover(key, itemEl, submenuEl) {
+    var openTimer  = null;
+    var closeTimer = null;
+
+    function openNested() {
+      clearTimeout(closeTimer); closeTimer = null;
+      submenuEl.classList.add('start-menu__submenu--open');
+      itemEl.setAttribute('aria-expanded', 'true');
+      itemEl.classList.add('start-menu__submenu-item--open');
+    }
+
+    function closeNested() {
+      clearTimeout(openTimer);  openTimer  = null;
+      clearTimeout(closeTimer); closeTimer = null;
+      submenuEl.classList.remove('start-menu__submenu--open');
+      itemEl.setAttribute('aria-expanded', 'false');
+      itemEl.classList.remove('start-menu__submenu-item--open');
+    }
+
+    itemEl.addEventListener('mouseenter', function () {
+      clearTimeout(closeTimer); closeTimer = null;
+      var t = window.APC.timing;
+      openTimer = setTimeout(function () { openTimer = null; openNested(); },
+        t.rand(t.MENU_SUBMENU_MIN_MS, t.MENU_SUBMENU_MAX_MS));
+    });
+    itemEl.addEventListener('mouseleave', function () {
+      clearTimeout(openTimer); openTimer = null;
+      var t = window.APC.timing;
+      closeTimer = setTimeout(function () { closeTimer = null; closeNested(); }, t.SUBMENU_CLOSE_DELAY_MS);
+    });
+    submenuEl.addEventListener('mouseenter', function () {
+      clearTimeout(closeTimer); closeTimer = null;
+    });
+    submenuEl.addEventListener('mouseleave', function () {
+      var t = window.APC.timing;
+      closeTimer = setTimeout(function () { closeTimer = null; closeNested(); }, t.SUBMENU_CLOSE_DELAY_MS);
+    });
+
+    var parentSub = itemEl.parentNode;
+    if (parentSub) {
+      var mo = new MutationObserver(function () {
+        if (!parentSub.classList.contains('start-menu__submenu--open')) { closeNested(); }
+      });
+      mo.observe(parentSub, { attributes: true, attributeFilter: ['class'] });
+    }
+
+    itemEl.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowRight') {
+        e.preventDefault(); openNested();
+        var first = submenuEl.querySelector('.start-menu__submenu-item:not(.start-menu__submenu-item--disabled)');
+        if (first) { first.focus(); }
+      } else if (e.key === 'ArrowLeft' || e.key === 'Escape') {
+        e.preventDefault(); closeNested(); itemEl.focus();
+      }
+    });
+  }
+
+  function populateDocumentsSubmenu(sub) {
+    sub.innerHTML = '';
+    var hist = [];
+    try { hist = JSON.parse(sessionStorage.getItem('ne_history') || '[]'); } catch (e) {}
+    if (!hist.length) {
+      var empty = document.createElement('div');
+      empty.className = 'start-menu__submenu-item start-menu__submenu-item--empty';
+      empty.setAttribute('role', 'menuitem');
+      empty.setAttribute('aria-disabled', 'true');
+      empty.textContent = '(No recent documents)';
+      sub.appendChild(empty);
+      return;
+    }
+    hist.slice(0, 10).forEach(function (url) {
+      sub.appendChild(buildSubmenuItem('\uD83C\uDF10', url, function () {
+        if (window.APC.netescape && typeof window.APC.netescape.open === 'function') {
+          window.APC.netescape.open(url);
+        }
+      }));
+    });
+  }
+
+  function buildSubmenuItem(icon, label, action, onBack) {
+    var el = document.createElement('div');
+    el.className = 'start-menu__submenu-item';
+    el.setAttribute('role', 'menuitem');
+    el.setAttribute('tabindex', '0');
+    var iconSpan = document.createElement('span');
+    iconSpan.className = 'start-menu__item-icon';
+    iconSpan.setAttribute('aria-hidden', 'true');
+    iconSpan.textContent = icon;
+    el.appendChild(iconSpan);
+    var labelSpan = document.createElement('span');
+    labelSpan.className = 'start-menu__item-label';
+    labelSpan.textContent = label;
+    el.appendChild(labelSpan);
+    el.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var t = window.APC.timing;
+      setTimeout(function () { closeMenu(); action(); }, t.rand(t.MENU_ACTION_MIN_MS, t.MENU_ACTION_MAX_MS));
+    });
+    el.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click(); }
+      if (e.key === 'ArrowLeft' || e.key === 'Escape') {
+        e.preventDefault();
+        if (onBack) { onBack(); }
+        else if (openSubmenuKey) {
+          var parentEl = menuEl.querySelector('[data-key="' + openSubmenuKey + '"]');
+          closeAllSubmenus();
+          if (parentEl) { parentEl.focus(); }
+        }
+      }
+    });
+    return el;
+  }
 
   function bindContextMenus() {
     var taskbarEl = document.getElementById('taskbar');
     if (!taskbarEl) { return; }
-
     taskbarEl.addEventListener('contextmenu', function (e) {
       e.preventDefault();
       closeMenu();
-
       if (e.target.id === 'start-button' || e.target.closest('#start-button')) {
         renderContextMenu(startButtonContextMenu, e.clientX, e.clientY);
       } else if (e.target === taskbarEl || e.target.closest('#taskbar-windows') || e.target.closest('#system-tray')) {
@@ -288,11 +434,9 @@ window.APC.taskbar = (function () {
   function renderContextMenu(items, x, y) {
     var existing = document.getElementById('active-taskbar-context');
     if (existing && existing.parentNode) { existing.parentNode.removeChild(existing); }
-
     var menu = document.createElement('div');
     menu.id = 'active-taskbar-context';
     menu.className = 'desktop-context-menu';
-
     items.forEach(function (item) {
       if (item.sep) {
         var sep = document.createElement('div');
@@ -300,11 +444,9 @@ window.APC.taskbar = (function () {
         menu.appendChild(sep);
         return;
       }
-
       var btn = document.createElement('button');
       btn.className = 'desktop-context-menu__item';
       btn.textContent = item.label;
-
       if (item.hasArrow) {
         var arrowSpan = document.createElement('span');
         arrowSpan.className = 'start-menu__item-arrow';
@@ -313,7 +455,6 @@ window.APC.taskbar = (function () {
         btn.style.position = 'relative';
         btn.appendChild(arrowSpan);
       }
-
       btn.addEventListener('click', function () {
         if (item.action === 'stub') {
           showSimpleDialog(item.label, 'This feature is not available.');
@@ -325,25 +466,17 @@ window.APC.taskbar = (function () {
           }
         }
       });
-
       menu.appendChild(btn);
     });
-
     menu.style.visibility = 'hidden';
     document.body.appendChild(menu);
-
     var rect = menu.getBoundingClientRect();
-    var adjustedX = (x + rect.width  > window.innerWidth)  ? (window.innerWidth  - rect.width  - 2) : x;
-    var adjustedY = (y + rect.height > window.innerHeight)  ? (window.innerHeight - rect.height - 2) : y;
-
-    if (y > window.innerHeight - 35) {
-      adjustedY = window.innerHeight - 28 - rect.height;
-    }
-
-    menu.style.left = adjustedX + 'px';
-    menu.style.top  = adjustedY + 'px';
+    var ax = (x + rect.width  > window.innerWidth)  ? (window.innerWidth  - rect.width  - 2) : x;
+    var ay = (y + rect.height > window.innerHeight)  ? (window.innerHeight - rect.height - 2) : y;
+    if (y > window.innerHeight - 35) { ay = window.innerHeight - 28 - rect.height; }
+    menu.style.left = ax + 'px';
+    menu.style.top  = ay + 'px';
     menu.style.visibility = 'visible';
-
     var onDocClick = function (e) {
       if (menu && !menu.contains(e.target)) {
         if (menu.parentNode) { menu.parentNode.removeChild(menu); }
@@ -355,59 +488,6 @@ window.APC.taskbar = (function () {
       document.addEventListener('click',       onDocClick);
       document.addEventListener('contextmenu', onDocClick);
     }, 0);
-  }
-
-  // --- Submenu item helper --------------------------------------------
-  // --- Submenu item helper --------------------------------------------
-
-  // onBack (optional): called on ArrowLeft/Escape instead of the default
-  // closeAllSubmenus() behaviour. Used by Accessories items to go back one
-  // level instead of collapsing the entire menu stack.
-  function buildSubmenuItem(icon, label, action, onBack) {
-    var el = document.createElement('div');
-    el.className = 'start-menu__submenu-item';
-    el.setAttribute('role', 'menuitem');
-    el.setAttribute('tabindex', '0');
-
-    var iconSpan = document.createElement('span');
-    iconSpan.className = 'start-menu__item-icon';
-    iconSpan.setAttribute('aria-hidden', 'true');
-    iconSpan.textContent = icon;
-    el.appendChild(iconSpan);
-
-    var labelSpan = document.createElement('span');
-    labelSpan.className = 'start-menu__item-label';
-    labelSpan.textContent = label;
-    el.appendChild(labelSpan);
-
-    el.addEventListener('click', function () {
-      var t = window.APC.timing;
-      setTimeout(function () {
-        closeMenu();
-        action();
-      }, t.rand(t.MENU_ACTION_MIN_MS, t.MENU_ACTION_MAX_MS));
-    });
-
-    el.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        el.click();
-      }
-      // Left arrow / Escape: go up one level. onBack overrides the default
-      // so Accessories items return to the Accessories item, not Programs.
-      if (e.key === 'ArrowLeft' || e.key === 'Escape') {
-        e.preventDefault();
-        if (onBack) {
-          onBack();
-        } else if (openSubmenuKey) {
-          var parentEl = menuEl.querySelector('[data-key="' + openSubmenuKey + '"]');
-          closeAllSubmenus();
-          if (parentEl) { parentEl.focus(); }
-        }
-      }
-    });
-
-    return el;
   }
 
   // --- Start button binding -------------------------------------------
