@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+echo "[deploy] ensuring emoji font is installed..."
+sudo apt-get install -y fonts-noto-color-emoji 2>/dev/null | tail -1
+
 echo "[deploy] pulling latest from main..."
 git pull origin main
 
