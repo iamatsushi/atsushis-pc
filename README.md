@@ -85,6 +85,7 @@ git pull origin main
 | #37 | GIF/PNG assets for the resume flow | Blocker |
 | #39 | Real content for My Thoughts and About Me | Ready |
 | #40 | Accessibility audit — WAVE/axe, zero critical errors | Pre-launch gate |
+| #174 | My Computer + Recycle Bin icons render as code point boxes | Under investigation |
 
 59 issues closed. The screensaver, Recycle Bin, Start Menu cascade, tray balloons, NetEscape, boot sequence, System Properties, Matrix rain overhaul, cinematic gate transition, wormhole match cut, identity line rewrite, a 28-issue bug sprint, and six usability sprint fixes (double-click discoverability, resume/guestbook conversion path, Start Menu Apps shortcut, clock tooltip, first tray balloon timing, dialup icon affordance, window drag cursor) are all shipped.
 
