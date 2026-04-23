@@ -48,6 +48,8 @@
   width: 32px;
   height: 32px;
   margin: 0 auto 4px;
+  /* Emoji font stack — required on Linux where system sans-serif lacks color emoji */
+  font-family: 'Noto Color Emoji', 'Segoe UI Emoji', 'Apple Color Emoji', sans-serif;
 }
 
 .desktop-icon__label {
