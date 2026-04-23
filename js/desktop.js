@@ -494,7 +494,7 @@ window.APC.desktop = (function () {
         try { new Audio('assets/audio/recycle.mp3').play().catch(function(){}); } catch(ex) {}
         // Visually empty the Recycle Bin icon
         var rbIconImg = document.querySelector('.desktop-icon[data-app="recycle-bin"] .desktop-icon__img');
-        if (rbIconImg) { rbIconImg.textContent = '\uD83D\uDDD1'; }
+        if (rbIconImg) { rbIconImg.textContent = String.fromCodePoint(0x1F5D1); }
         // Phase 2: completion dialog after a brief pause
         setTimeout(function () {
           if (overlay.parentNode) { overlay.parentNode.removeChild(overlay); }
