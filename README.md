@@ -15,7 +15,7 @@ The machine being simulated is specific: an IBM Aptiva SE7. Pentium II. The beig
 
 A terminal prompt blinks. Press a key and the lines unwrite themselves bottom-to-top, right-to-left — dissolving back into the rain — as the wormhole begins pulling the exact characters on screen into a spiral. The same rain you were watching becomes the vortex. The desk scene reveals through a green phosphor glow. You click. Windows 98 loads.
 
-**A desktop.** Teal wallpaper. Beveled chrome. A taskbar with a working clock, live Portland weather, and a RAM gauge pulling from the actual Raspberry Pi running the site. Draggable icons on a period-accurate 75px grid. A Start Menu with a cascade bug that took longer to fix than anything else in this project. Modals reject clicks with an error ding and a titlebar flash. Windows animate to the taskbar when minimized. Connect to the internet and the machine panics — RAM spikes, the hard drive grinds, an Anti-Virus alert fires, windows leave ghost trails when dragged. Run Disk Cleanup and it sighs in relief. The machine has feelings.
+**A desktop.** Teal wallpaper. Beveled chrome. A taskbar with a working clock, live Portland weather, and a RAM gauge pulling from the actual Raspberry Pi running the site. Draggable icons on a period-accurate 75px grid. A Start Menu with the full authentic Win98 hierarchy — Programs → Accessories → Entertainment, System Tools, Communications, and more. 40+ nodes of period-accurate friction. Modals reject clicks with an error ding and a titlebar flash. Windows animate to the taskbar when minimized. Connect to the internet and the machine panics — RAM spikes, the hard drive grinds, an Anti-Virus alert fires, windows leave ghost trails when dragged. Run Disk Cleanup and it sighs in relief. Right-click the taskbar and the 1998 context menu appears. The machine has feelings.
 
 **NetEscape Navigator.** The in-app browser. Pages stall mid-load. The title bar flickers (Not Responding). A timeout dialog eventually appears. This is the Texture Zone — the felt experience of the Aptiva. The guestbook always works. That's the Protected Path. You don't punish someone for committing to an action.
 
@@ -86,8 +86,9 @@ git pull origin main
 | #39 | Real content for My Thoughts and About Me | Ready |
 | #40 | Accessibility audit — WAVE/axe, zero critical errors | Pre-launch gate |
 | #174 | My Computer + Recycle Bin icons render as code point boxes | Under investigation |
+| Open | Start Menu — nested folder hover collapses entire menu stack | Active bug |
 
-59 issues closed. The screensaver, Recycle Bin, Start Menu cascade, tray balloons, NetEscape, boot sequence, System Properties, Matrix rain overhaul, cinematic gate transition, wormhole match cut, identity line rewrite, a 28-issue bug sprint, and six usability sprint fixes (double-click discoverability, resume/guestbook conversion path, Start Menu Apps shortcut, clock tooltip, first tray balloon timing, dialup icon affordance, window drag cursor) are all shipped.
+65+ issues closed. The Start Menu is now registry-driven — a JSON `menuConfig` array feeds a recursive `renderMenuNode()` engine replacing 300+ lines of imperative DOM builders. Full authentic Win98 hierarchy ships: Programs → Accessories → Entertainment/System Tools/Communications, Online Services, StartUp, Favorites, Settings → Active Desktop, Find, Log Off. Taskbar right-click context menus ship. `desktop.js` exports `minimizeAll()`. The screensaver, Recycle Bin, Start Menu cascade, tray balloons, NetEscape, boot sequence, System Properties, Matrix rain overhaul, cinematic gate transition, wormhole match cut, identity line rewrite, a 28-issue bug sprint, and six usability sprint fixes (double-click discoverability, resume/guestbook conversion path, Start Menu Apps shortcut, clock tooltip, first tray balloon timing, dialup icon affordance, window drag cursor) are all shipped.
 
 ---
 

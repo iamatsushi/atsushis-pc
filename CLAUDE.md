@@ -95,6 +95,34 @@ When a PR changes any spec, timing value, or infrastructure detail, update the r
 
 ---
 
+---
+
+## Start Menu Registry System (Phases 1-3, Apr 2026)
+
+`taskbar.js` is now registry-driven. The old imperative DOM builders (`buildProgramsSubmenu`, `buildAccessoriesCascadeItem`, `buildAccessoriesSubmenu`, `buildAppsSubmenu`) are deleted. Everything flows from `menuConfig`.
+
+**menuConfig** — single source of truth for all Start Menu items. A flat JSON array of node objects with `type`, `id`, `label`, `icon`, `action`, `app`, and `children` fields.
+
+**renderMenuNode(node, isTopLevel)** — recursive renderer. Produces `.start-menu__item` at top level, `.start-menu__submenu-item` at all nested levels. Handles `separator`, `folder`, `dynamic`, and `action` node types.
+
+**Two hover timer systems:**
+- `attachSubmenuHover(key, itemEl, submenuEl)` — top-level folders only. Uses global `openSubmenuEl`/`openSubmenuKey` tracker. Closes sibling submenus on open.
+- `attachNestedSubmenuHover(key, itemEl, submenuEl)` — all nested folders. Isolated `openTimer`/`closeTimer` per node. MutationObserver on parent submenu triggers `closeNested()` when parent closes.
+
+**`closeAllSubmenus()`** — only bound to `mouseenter` on top-level action and disabled items. Never bound to nested items — doing so collapses the entire stack.
+
+**`type: 'dynamic'`** — sets `submenuEl.dataset.dynamic = node.source`. Must equal `'documents'` to trigger `openSubmenu()` JIT population via `populateDocumentsSubmenu()`.
+
+**`action: 'stub'`** — routes to `showSimpleDialog(node.label, 'This feature is not available.')`.
+
+**Protected Path** — `Apps` folder is a top-level `menuConfig` node. Single-level, no Accessories cascade, no Texture Zone friction. This is intentional and permanent.
+
+**Known open bug** — nested folder hover still collapses menu stack in some paths. Tracked as open issue. Root cause: event propagation or MutationObserver firing on intermediate parent. `attachNestedSubmenuHover` isolation is the fix vector.
+
+**`desktop.js` export added** — `minimizeAll()` iterates `windows`, calls `minimizeWindow(state)` on all non-minimized visible windows. Exported as `window.APC.desktop.minimizeAll`. Consumed by taskbar right-click context menu.
+
+---
+
 ## Icon Hint System (P0-1, commit 3c4483d)
 
 Desktop icons show a "double-click to open" tooltip after a single click with no follow-up.
