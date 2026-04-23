@@ -225,11 +225,18 @@ window.APC.desktop = (function () {
       }
     });
 
-    // Click on desktop (outside icons) clears selection
+    // Click on desktop (outside icons) clears selection and unfocuses all windows
     const desktop = document.getElementById('desktop');
     if (desktop) {
-      desktop.addEventListener('click', function () {
+      desktop.addEventListener('click', function (e) {
         clearIconSelection();
+        // If click landed directly on the desktop (not a window or icon), deactivate all windows
+        if (e.target === desktop || e.target.id === 'desktop-icons') {
+          Object.keys(windows).forEach(function (id) {
+            windows[id].el.classList.add('win98-window--inactive');
+          });
+          activeWindowId = null;
+        }
       });
     }
   }

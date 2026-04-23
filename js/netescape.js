@@ -92,9 +92,11 @@ window.APC.netescape = (function () {
   function connect(onComplete) {
     if (isDialingUp || window.APC.session.isConnected) { return; }
     isDialingUp = true;
+    document.body.style.cursor = 'wait'; // system busy during dial-up handshake
     if (window.umami) { window.umami.track('dialup_trigger'); }
     showDialup(function () {
       isDialingUp = false;
+      document.body.style.cursor = ''; // restore on connection complete
       window.APC.session.isConnected = true;
       // Notify other modules that the machine is now under dial-up load.
       // widgets.js listens for this to trigger the Struggle sequence.
