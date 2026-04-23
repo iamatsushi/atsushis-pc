@@ -15,15 +15,113 @@ window.APC.taskbar = (function () {
   // --- Module state ----------------------------------------------------
 
   var startBtn = null;
-  var menuEl = null;
+  var menuEl   = null;
 
-  // Per-key open and close timer IDs for submenu hover behaviour.
   var submenuOpenTimers  = {};
   var submenuCloseTimers = {};
 
-  // Currently visible submenu element (null if none open).
   var openSubmenuEl  = null;
   var openSubmenuKey = null;
+
+  // --- Menu Registry (Phase 2) ----------------------------------------
+
+  var menuConfig = [
+    { id: 'windows-update', label: 'Windows Update', icon: '\uD83C\uDF10', type: 'action', action: 'stub' },
+    { type: 'separator' },
+    { id: 'programs', label: 'Programs', icon: '\uD83D\uDCC1', type: 'folder', children: [
+        { id: 'accessories', label: 'Accessories', icon: '\uD83D\uDCC1', type: 'folder', children: [
+            { id: 'communications', label: 'Communications', icon: '\uD83D\uDCC1', type: 'folder', children: [
+                { id: 'dialup',        label: 'Dial-Up Networking', icon: '\uD83D\uDCDE', type: 'action', action: 'stub' },
+                { id: 'hyperterminal', label: 'HyperTerminal',      icon: '\uD83D\uDCE0', type: 'action', action: 'stub' },
+                { id: 'phonedialer',   label: 'Phone Dialer',        icon: '\u260E\uFE0F', type: 'action', action: 'stub' }
+            ]},
+            { id: 'entertainment', label: 'Entertainment', icon: '\uD83D\uDCC1', type: 'folder', children: [
+                { id: 'cdplayer',   label: 'CD Player',          icon: '\uD83D\uDCBF', type: 'action', action: 'stub' },
+                { id: 'soundrec',   label: 'Sound Recorder',     icon: '\uD83C\uDF99\uFE0F', type: 'action', action: 'stub' },
+                { id: 'volcontrol', label: 'Volume Control',     icon: '\uD83D\uDD0A', type: 'action', action: 'stub' },
+                { id: 'webtv',      label: 'Web TV for Windows', icon: '\uD83D\uDCFA', type: 'action', action: 'stub' },
+                { id: 'winamp',     label: 'Winamp',             icon: '\uD83C\uDFB5', type: 'action', action: 'launch', app: 'winamp' }
+            ]},
+            { id: 'system-tools', label: 'System Tools', icon: '\uD83D\uDCC1', type: 'folder', children: [
+                { id: 'charmap',     label: 'Character Map',      icon: '\uD83D\uDD23', type: 'action', action: 'stub' },
+                { id: 'clipbrd',     label: 'Clipboard Viewer',   icon: '\uD83D\uDCCB', type: 'action', action: 'stub' },
+                { id: 'defrag',      label: 'Disk Defragmenter',  icon: '\uD83D\uDCBD', type: 'action', action: 'stub' },
+                { id: 'diskcleanup', label: 'Disk Cleanup',       icon: '\uD83D\uDDA5', type: 'action', action: 'launch', app: 'diskcleanup' },
+                { id: 'sysinfo',     label: 'System Information', icon: '\u2139\uFE0F', type: 'action', action: 'stub' }
+            ]},
+            { id: 'addressbook', label: 'Address Book', icon: '\uD83D\uDCC7', type: 'action', action: 'stub' },
+            { id: 'calculator',  label: 'Calculator',   icon: '\uD83E\uDDF2', type: 'action', action: 'launch', app: 'calculator' },
+            { id: 'imaging',     label: 'Imaging',      icon: '\uD83D\uDDBC\uFE0F', type: 'action', action: 'stub' },
+            { id: 'minesweeper', label: 'Minesweeper',  icon: '\uD83D\uDCA3', type: 'action', action: 'launch', app: 'minesweeper' },
+            { id: 'notepad',     label: 'Notepad',      icon: '\uD83D\uDCDD', type: 'action', action: 'launch', app: 'notepad' },
+            { id: 'paint',       label: 'Paint',        icon: '\uD83C\uDFA8', type: 'action', action: 'stub' },
+            { id: 'wordpad',     label: 'WordPad',      icon: '\uD83D\uDCD3', type: 'action', action: 'stub' }
+        ]},
+        { id: 'onlineservices', label: 'Online Services', icon: '\uD83D\uDCC1', type: 'folder', children: [
+            { id: 'aol', label: 'AOL Internet Dialer',   icon: '\uD83D\uDD3A', type: 'action', action: 'stub' },
+            { id: 'att', label: 'AT&T WorldNet Service', icon: '\uD83C\uDF10', type: 'action', action: 'stub' }
+        ]},
+        { id: 'startup', label: 'StartUp', icon: '\uD83D\uDCC1', type: 'folder', children: [
+            { id: 'startup-empty', label: '(Empty)', type: 'action', disabled: true }
+        ]},
+        { id: 'ie',               label: 'Internet Explorer', icon: '\uD83C\uDF0E', type: 'action', action: 'stub' },
+        { id: 'ms-dos',           label: 'MS-DOS Prompt',     icon: '\uD83D\uDCDF', type: 'action', action: 'stub' },
+        { id: 'outlook',          label: 'Outlook Express',   icon: '\u2709\uFE0F', type: 'action', action: 'stub' },
+        { id: 'windows-explorer', label: 'Windows Explorer',  icon: '\uD83D\uDDC2\uFE0F', type: 'action', action: 'stub' }
+    ]},
+    { id: 'favorites', label: 'Favorites', icon: '\u2B50', type: 'folder', children: [
+        { id: 'fav-empty', label: '(Empty)', type: 'action', disabled: true }
+    ]},
+    { id: 'documents', label: 'Documents', icon: '\uD83D\uDCC4', type: 'dynamic', source: 'documents' },
+    { id: 'settings', label: 'Settings', icon: '\u2699\uFE0F', type: 'folder', children: [
+        { id: 'control-panel',    label: 'Control Panel',              icon: '\uD83C\uDF9B\uFE0F', type: 'action', action: 'stub' },
+        { id: 'printers',         label: 'Printers',                   icon: '\uD83D\uDDA8\uFE0F', type: 'action', action: 'stub' },
+        { id: 'taskbar-settings', label: 'Taskbar & Start Menu\u2026', icon: '\uD83D\uDDD4', type: 'action', action: 'stub' },
+        { id: 'folder-opts',      label: 'Folder Options\u2026',       icon: '\uD83D\uDCC1', type: 'action', action: 'stub' },
+        { id: 'active-desk', label: 'Active Desktop', icon: '\uD83D\uDDA5\uFE0F', type: 'folder', children: [
+            { id: 'ad-view', label: 'View as Web Page',           icon: '\u2713', type: 'action', action: 'stub' },
+            { id: 'ad-cust', label: 'Customize my Desktop\u2026', icon: '\uD83C\uDFA8', type: 'action', action: 'stub' }
+        ]}
+    ]},
+    { id: 'find', label: 'Find', icon: '\uD83D\uDD0D', type: 'folder', children: [
+        { id: 'find-files', label: 'Files or Folders\u2026', icon: '\uD83D\uDCC4', type: 'action', action: 'stub' },
+        { id: 'find-comp',  label: 'Computer\u2026',         icon: '\uD83D\uDCBB', type: 'action', action: 'stub' },
+        { id: 'find-net',   label: 'On the Internet\u2026',  icon: '\uD83C\uDF10', type: 'action', action: 'stub' }
+    ]},
+    { id: 'help',     label: 'Help',         icon: '\u2753',        type: 'action', action: 'help'     },
+    { id: 'run',      label: 'Run\u2026',    icon: '\u25BA',        type: 'action', action: 'run'      },
+    { type: 'separator' },
+    { id: 'apps', label: 'Apps', icon: '\uD83D\uDCC2', type: 'folder', children: [
+        { id: 'app-winamp', label: 'Winamp',       icon: '\uD83C\uDFB5', type: 'action', action: 'launch', app: 'winamp'      },
+        { id: 'app-calc',   label: 'Calculator',   icon: '\uD83E\uDDF2', type: 'action', action: 'launch', app: 'calculator'  },
+        { id: 'app-notes',  label: 'Notepad',      icon: '\uD83D\uDCDD', type: 'action', action: 'launch', app: 'notepad'     },
+        { id: 'app-mine',   label: 'Minesweeper',  icon: '\uD83D\uDCA3', type: 'action', action: 'launch', app: 'minesweeper' },
+        { id: 'app-disk',   label: 'Disk Cleanup', icon: '\uD83D\uDDA5', type: 'action', action: 'launch', app: 'diskcleanup' }
+    ]},
+    { type: 'separator' },
+    { id: 'logoff',   label: 'Log Off Guest\u2026', icon: '\uD83D\uDD11', type: 'action', action: 'logoff'   },
+    { id: 'shutdown', label: 'Shut Down\u2026',      icon: '\uD83D\uDD0C', type: 'action', action: 'shutdown' }
+  ];
+
+  // --- Context Menu Data (Phase 3) ------------------------------------
+
+  var startButtonContextMenu = [
+    { label: 'Open',        action: 'stub' },
+    { label: 'Explore',     action: 'stub' },
+    { label: 'Find\u2026',  action: 'stub' }
+  ];
+
+  var taskbarContextMenu = [
+    { label: 'Toolbars', action: 'stub', hasArrow: true },
+    { sep: true },
+    { label: 'Cascade Windows',           action: 'stub' },
+    { label: 'Tile Windows Horizontally', action: 'stub' },
+    { label: 'Tile Windows Vertically',   action: 'stub' },
+    { sep: true },
+    { label: 'Minimize All Windows', action: 'desktop_minimize' },
+    { sep: true },
+    { label: 'Properties', action: 'stub' }
+  ];
 
   // --- Public API ------------------------------------------------------
 
@@ -35,15 +133,15 @@ window.APC.taskbar = (function () {
     buildMenu();
     bindStartButton();
     bindOutsideClick();
+    bindContextMenus();
     bindBeforeUnload();
   }
 
-  // --- Build menu DOM (runs exactly once on init) ----------------------
+  // --- Build menu DOM (Phase 1 registry-driven) -----------------------
 
   function buildMenu() {
     menuEl.innerHTML = '';
 
-    // Left gradient banner — "WinDoors 98" vertical text.
     var banner = document.createElement('div');
     banner.className = 'start-menu__banner';
     banner.setAttribute('aria-hidden', 'true');
@@ -53,59 +151,52 @@ window.APC.taskbar = (function () {
     banner.appendChild(bannerText);
     menuEl.appendChild(banner);
 
-    // Items container — sits to the right of the banner.
     var itemsEl = document.createElement('div');
     itemsEl.className = 'start-menu__items';
 
-    var itemDefs = [
-      { key: 'programs',  label: 'Programs',  icon: '\uD83D\uDCC1', submenu: buildProgramsSubmenu  },
-      { key: 'documents', label: 'Documents', icon: '\uD83D\uDCC4', submenu: buildDocumentsSubmenu },
-      { key: 'apps',      label: 'Apps',       icon: '\uD83D\uDCC2', submenu: buildAppsSubmenu },
-      { key: 'find',      label: 'Find',       icon: '\uD83D\uDD0D', disabled: true },
-      { key: 'help',      label: 'Help',       icon: '\u2753',        action: showHelpStub },
-      { key: 'run',       label: 'Run\u2026',  icon: '\u25BA',        action: showRunStub },
-      { sep: true },
-      { key: 'shutdown',  label: 'Shut Down\u2026', icon: '\uD83D\uDD0C', action: showShutdownModal }
-    ];
-
-    itemDefs.forEach(function (def) {
-      if (def.sep) {
-        var sep = document.createElement('div');
-        sep.className = 'start-menu__separator';
-        sep.setAttribute('role', 'separator');
-        itemsEl.appendChild(sep);
-        return;
-      }
-      itemsEl.appendChild(buildMenuItem(def));
+    menuConfig.forEach(function (node) {
+      itemsEl.appendChild(renderMenuNode(node, true));
     });
 
     menuEl.appendChild(itemsEl);
     setupMenuKeyboard(itemsEl);
   }
 
-  // Builds a single top-level menu item element.
-  function buildMenuItem(def) {
+  // --- Recursive menu node renderer (Phase 1) -------------------------
+
+  function renderMenuNode(node, isTopLevel) {
+    if (node.type === 'separator') {
+      var sep = document.createElement('div');
+      sep.className = 'start-menu__separator';
+      sep.setAttribute('role', 'separator');
+      return sep;
+    }
+
+    var baseClass = isTopLevel ? 'start-menu__item' : 'start-menu__submenu-item';
     var el = document.createElement('div');
-    el.className = 'start-menu__item' +
-      (def.disabled ? ' start-menu__item--disabled' : '');
+    el.className = baseClass + (node.disabled ? ' ' + baseClass + '--disabled' : '');
+
+    if (node.type === 'folder' && !isTopLevel) {
+      el.className += ' start-menu__submenu-item--has-submenu';
+    }
+
     el.setAttribute('role', 'menuitem');
-    el.setAttribute('tabindex', def.disabled ? '-1' : '0');
-    el.dataset.key = def.key;
-    if (def.disabled) { el.setAttribute('aria-disabled', 'true'); }
+    el.setAttribute('tabindex', node.disabled ? '-1' : '0');
+    el.dataset.key = node.id;
+    if (node.disabled) { el.setAttribute('aria-disabled', 'true'); }
 
     var iconSpan = document.createElement('span');
     iconSpan.className = 'start-menu__item-icon';
     iconSpan.setAttribute('aria-hidden', 'true');
-    iconSpan.textContent = def.icon || '';
+    iconSpan.textContent = node.icon || '';
     el.appendChild(iconSpan);
 
     var labelSpan = document.createElement('span');
     labelSpan.className = 'start-menu__item-label';
-    labelSpan.textContent = def.label;
+    labelSpan.textContent = node.label;
     el.appendChild(labelSpan);
 
-    if (def.submenu) {
-      // ► arrow indicator
+    if (node.type === 'folder' || node.type === 'dynamic') {
       var arrowSpan = document.createElement('span');
       arrowSpan.className = 'start-menu__item-arrow';
       arrowSpan.setAttribute('aria-hidden', 'true');
@@ -115,18 +206,49 @@ window.APC.taskbar = (function () {
       el.setAttribute('aria-haspopup', 'menu');
       el.setAttribute('aria-expanded', 'false');
 
-      var submenuEl = def.submenu();
-      submenuEl.dataset.parentKey = def.key;
+      var submenuEl = document.createElement('div');
+      submenuEl.className = 'start-menu__submenu';
+      submenuEl.setAttribute('role', 'menu');
+      submenuEl.setAttribute('aria-label', node.label);
+      submenuEl.dataset.parentKey = node.id;
+
+      if (node.type === 'dynamic') {
+        // Must equal 'documents' to match openSubmenu() JIT check
+        submenuEl.dataset.dynamic = node.source;
+      } else if (node.children) {
+        node.children.forEach(function (child) {
+          submenuEl.appendChild(renderMenuNode(child, false));
+        });
+      }
+
       el.appendChild(submenuEl);
+      attachSubmenuHover(node.id, el, submenuEl);
 
-      attachSubmenuHover(def.key, el, submenuEl);
-
-    } else if (!def.disabled && def.action) {
+    } else if (!node.disabled) {
       el.addEventListener('click', function () {
         var t = window.APC.timing;
         setTimeout(function () {
           closeMenu();
-          def.action();
+          if (node.action === 'launch') {
+            if (window.APC.desktop && typeof window.APC.desktop.launchApp === 'function') {
+              window.APC.desktop.launchApp(node.app);
+            } else if (window.APC.apps && window.APC.apps[node.app] &&
+                       typeof window.APC.apps[node.app].open === 'function') {
+              window.APC.apps[node.app].open();
+            } else {
+              console.error('[APC] No launch path for app:', node.app);
+            }
+          } else if (node.action === 'stub') {
+            showSimpleDialog(node.label, 'This feature is not available.');
+          } else if (node.action === 'shutdown') {
+            showShutdownModal();
+          } else if (node.action === 'help') {
+            showHelpStub();
+          } else if (node.action === 'run') {
+            showRunStub();
+          } else if (node.action === 'logoff') {
+            doLogOff();
+          }
         }, t.rand(t.MENU_ACTION_MIN_MS, t.MENU_ACTION_MAX_MS));
       });
 
@@ -136,353 +258,106 @@ window.APC.taskbar = (function () {
           el.click();
         }
       });
-    } else if (def.disabled) {
-      // Hovering over disabled item closes any open submenu
       el.addEventListener('mouseenter', closeAllSubmenus);
-    }
-
-    // All non-submenu items close open submenus on hover
-    if (!def.submenu) {
+    } else {
       el.addEventListener('mouseenter', closeAllSubmenus);
     }
 
     return el;
   }
 
-  // --- Submenu hover timing --------------------------------------------
-  // Mouse hover uses MENU_SUBMENU_MIN/MAX_MS delay to open,
-  // SUBMENU_CLOSE_DELAY_MS delay to close (cancelled on mouse re-entry).
-  // Keyboard Right arrow opens immediately (no delay) — see setupMenuKeyboard.
+  // --- Phase 3: Taskbar context menus ---------------------------------
 
-  function attachSubmenuHover(key, itemEl, submenuEl) {
-    itemEl.addEventListener('mouseenter', function () {
-      cancelSubmenuClose(key);
-      scheduleSubmenuOpen(key, itemEl, submenuEl);
-    });
-    itemEl.addEventListener('mouseleave', function () {
-      cancelSubmenuOpen(key);
-      scheduleSubmenuClose(key, itemEl, submenuEl);
-    });
-    // Keep submenu open while mouse is over it — cancel the close timer.
-    submenuEl.addEventListener('mouseenter', function () {
-      cancelSubmenuClose(key);
-    });
-    submenuEl.addEventListener('mouseleave', function () {
-      scheduleSubmenuClose(key, itemEl, submenuEl);
-    });
-  }
+  function bindContextMenus() {
+    var taskbarEl = document.getElementById('taskbar');
+    if (!taskbarEl) { return; }
 
-  function scheduleSubmenuOpen(key, itemEl, submenuEl) {
-    var t = window.APC.timing;
-    submenuOpenTimers[key] = setTimeout(function () {
-      delete submenuOpenTimers[key];
-      openSubmenu(key, itemEl, submenuEl);
-    }, t.rand(t.MENU_SUBMENU_MIN_MS, t.MENU_SUBMENU_MAX_MS));
-  }
+    taskbarEl.addEventListener('contextmenu', function (e) {
+      e.preventDefault();
+      closeMenu();
 
-  function cancelSubmenuOpen(key) {
-    if (submenuOpenTimers[key]) {
-      clearTimeout(submenuOpenTimers[key]);
-      delete submenuOpenTimers[key];
-    }
-  }
-
-  function scheduleSubmenuClose(key, itemEl, submenuEl) {
-    var t = window.APC.timing;
-    submenuCloseTimers[key] = setTimeout(function () {
-      delete submenuCloseTimers[key];
-      closeSubmenu(key, itemEl, submenuEl);
-    }, t.SUBMENU_CLOSE_DELAY_MS);
-  }
-
-  function cancelSubmenuClose(key) {
-    if (submenuCloseTimers[key]) {
-      clearTimeout(submenuCloseTimers[key]);
-      delete submenuCloseTimers[key];
-    }
-  }
-
-  function openSubmenu(key, itemEl, submenuEl) {
-    // Documents submenu is populated just-in-time from sessionStorage.
-    if (submenuEl.dataset.dynamic === 'documents') {
-      populateDocumentsSubmenu(submenuEl);
-    }
-
-    // Close any other open submenu first.
-    if (openSubmenuEl && openSubmenuEl !== submenuEl) {
-      var prevKey = openSubmenuKey;
-      var prevItem = menuEl.querySelector('[data-key="' + prevKey + '"]');
-      if (prevItem) { closeSubmenu(prevKey, prevItem, openSubmenuEl); }
-    }
-
-    submenuEl.classList.add('start-menu__submenu--open');
-    itemEl.setAttribute('aria-expanded', 'true');
-    itemEl.classList.add('start-menu__item--open');
-    openSubmenuEl  = submenuEl;
-    openSubmenuKey = key;
-  }
-
-  function closeSubmenu(key, itemEl, submenuEl) {
-    submenuEl.classList.remove('start-menu__submenu--open');
-    if (itemEl) {
-      itemEl.setAttribute('aria-expanded', 'false');
-      itemEl.classList.remove('start-menu__item--open');
-    }
-    if (openSubmenuEl === submenuEl) {
-      openSubmenuEl  = null;
-      openSubmenuKey = null;
-    }
-  }
-
-  function closeAllSubmenus() {
-    // Cancel all pending open timers.
-    Object.keys(submenuOpenTimers).forEach(function (k) {
-      clearTimeout(submenuOpenTimers[k]);
-      delete submenuOpenTimers[k];
-    });
-    // Close the currently visible submenu immediately.
-    if (openSubmenuEl && openSubmenuKey) {
-      var itemEl = menuEl.querySelector('[data-key="' + openSubmenuKey + '"]');
-      closeSubmenu(openSubmenuKey, itemEl, openSubmenuEl);
-    }
-  }
-
-  // --- Programs submenu -----------------------------------------------
-  // Programs only contains a single cascade item: Accessories ►
-  // All apps live one level deeper: Programs ► → Accessories ► → apps.
-
-  function buildProgramsSubmenu() {
-    var sub = document.createElement('div');
-    sub.className = 'start-menu__submenu';
-    sub.setAttribute('role', 'menu');
-    sub.setAttribute('aria-label', 'Programs');
-    sub.appendChild(buildAccessoriesCascadeItem(sub));
-    return sub;
-  }
-
-  // Builds the Accessories cascade item, including its own hover timers.
-  // Hover discipline mirrors the top-level submenu pattern exactly:
-  //   MENU_SUBMENU_MIN/MAX_MS delay on enter, SUBMENU_CLOSE_DELAY_MS on leave,
-  //   clearTimeout on re-entry. Managed locally to avoid conflating with the
-  //   global openSubmenuEl tracker (which is single-level).
-  function buildAccessoriesCascadeItem(programsSub) {
-    var accOpenTimer  = null;
-    var accCloseTimer = null;
-
-    var el = document.createElement('div');
-    el.className = 'start-menu__submenu-item start-menu__submenu-item--has-submenu';
-    el.setAttribute('role', 'menuitem');
-    el.setAttribute('tabindex', '0');
-    el.setAttribute('aria-haspopup', 'menu');
-    el.setAttribute('aria-expanded', 'false');
-    el.dataset.key = 'accessories';
-
-    var iconSpan = document.createElement('span');
-    iconSpan.className = 'start-menu__item-icon';
-    iconSpan.setAttribute('aria-hidden', 'true');
-    iconSpan.textContent = '\uD83D\uDCC1';
-    el.appendChild(iconSpan);
-
-    var labelSpan = document.createElement('span');
-    labelSpan.className = 'start-menu__item-label';
-    labelSpan.textContent = 'Accessories';
-    el.appendChild(labelSpan);
-
-    var arrowSpan = document.createElement('span');
-    arrowSpan.className = 'start-menu__item-arrow';
-    arrowSpan.setAttribute('aria-hidden', 'true');
-    arrowSpan.textContent = '\u25BA';
-    el.appendChild(arrowSpan);
-
-    // openAcc/closeAcc are function declarations so they are hoisted and
-    // available when passed to buildAccessoriesSubmenu below.
-    function openAcc() {
-      clearTimeout(accCloseTimer);
-      accCloseTimer = null;
-      accSub.classList.add('start-menu__submenu--open');
-      el.setAttribute('aria-expanded', 'true');
-      el.classList.add('start-menu__submenu-item--open');
-    }
-
-    function closeAcc() {
-      clearTimeout(accOpenTimer);
-      accOpenTimer  = null;
-      clearTimeout(accCloseTimer);
-      accCloseTimer = null;
-      accSub.classList.remove('start-menu__submenu--open');
-      el.setAttribute('aria-expanded', 'false');
-      el.classList.remove('start-menu__submenu-item--open');
-    }
-
-    var accSub = buildAccessoriesSubmenu(closeAcc, el);
-    el.appendChild(accSub);
-
-    // Hover: same OPEN delay as top-level submenus.
-    el.addEventListener('mouseenter', function () {
-      clearTimeout(accCloseTimer);
-      accCloseTimer = null;
-      var t = window.APC.timing;
-      accOpenTimer = setTimeout(function () {
-        accOpenTimer = null;
-        openAcc();
-      }, t.rand(t.MENU_SUBMENU_MIN_MS, t.MENU_SUBMENU_MAX_MS));
-    });
-
-    el.addEventListener('mouseleave', function () {
-      clearTimeout(accOpenTimer);
-      accOpenTimer = null;
-      var t = window.APC.timing;
-      accCloseTimer = setTimeout(function () {
-        accCloseTimer = null;
-        closeAcc();
-      }, t.SUBMENU_CLOSE_DELAY_MS);
-    });
-
-    // Keep Accessories open while mouse is over the sub-submenu.
-    // Also cancel the Programs-level close timer — without this, mousing
-    // from the Accessories item into accSub crosses the Programs submenu
-    // border, firing scheduleSubmenuClose('programs') which closes the
-    // whole stack via the MutationObserver on programsSub.
-    accSub.addEventListener('mouseenter', function () {
-      clearTimeout(accCloseTimer);
-      accCloseTimer = null;
-      cancelSubmenuClose('programs');
-    });
-
-    accSub.addEventListener('mouseleave', function () {
-      var t = window.APC.timing;
-      accCloseTimer = setTimeout(function () {
-        accCloseTimer = null;
-        closeAcc();
-      }, t.SUBMENU_CLOSE_DELAY_MS);
-    });
-
-    // Keyboard: ArrowRight opens immediately (no delay), ArrowLeft/Escape closes
-    // and returns focus to the Programs top-level item.
-    el.addEventListener('keydown', function (e) {
-      if (e.key === 'ArrowRight') {
-        e.preventDefault();
-        openAcc();
-        var first = accSub.querySelector(
-          '.start-menu__submenu-item:not(.start-menu__submenu-item--has-submenu)' +
-          ':not(.start-menu__submenu-item--empty)'
-        );
-        if (first) { first.focus(); }
-      } else if (e.key === 'ArrowLeft' || e.key === 'Escape') {
-        e.preventDefault();
-        closeAcc();
-        var programsEl = menuEl.querySelector('[data-key="programs"]');
-        if (programsEl) { programsEl.focus(); }
+      if (e.target.id === 'start-button' || e.target.closest('#start-button')) {
+        renderContextMenu(startButtonContextMenu, e.clientX, e.clientY);
+      } else if (e.target === taskbarEl || e.target.closest('#taskbar-windows') || e.target.closest('#system-tray')) {
+        if (e.target.closest('.taskbar-btn')) { return; }
+        renderContextMenu(taskbarContextMenu, e.clientX, e.clientY);
       }
     });
+  }
 
-    // Reset Accessories state when Programs submenu closes, so it does not
-    // re-appear as stale-open on the next Programs hover.
-    var mo = new MutationObserver(function () {
-      if (!programsSub.classList.contains('start-menu__submenu--open')) {
-        closeAcc();
+  function renderContextMenu(items, x, y) {
+    var existing = document.getElementById('active-taskbar-context');
+    if (existing && existing.parentNode) { existing.parentNode.removeChild(existing); }
+
+    var menu = document.createElement('div');
+    menu.id = 'active-taskbar-context';
+    menu.className = 'desktop-context-menu';
+
+    items.forEach(function (item) {
+      if (item.sep) {
+        var sep = document.createElement('div');
+        sep.className = 'desktop-context-menu__sep';
+        menu.appendChild(sep);
+        return;
       }
-    });
-    mo.observe(programsSub, { attributes: true, attributeFilter: ['class'] });
 
-    return el;
-  }
+      var btn = document.createElement('button');
+      btn.className = 'desktop-context-menu__item';
+      btn.textContent = item.label;
 
-  // Builds the Accessories sub-submenu containing the four app items.
-  // closeAcc / accEl are passed in so ArrowLeft on an app item can close
-  // Accessories and return focus to the Accessories cascade item.
-  function buildAccessoriesSubmenu(closeAcc, accEl) {
-    var sub = document.createElement('div');
-    sub.className = 'start-menu__submenu';
-    sub.setAttribute('role', 'menu');
-    sub.setAttribute('aria-label', 'Accessories');
+      if (item.hasArrow) {
+        var arrowSpan = document.createElement('span');
+        arrowSpan.className = 'start-menu__item-arrow';
+        arrowSpan.setAttribute('aria-hidden', 'true');
+        arrowSpan.textContent = '\u25BA';
+        btn.style.position = 'relative';
+        btn.appendChild(arrowSpan);
+      }
 
-    [
-      { app: 'winamp',      icon: '\uD83C\uDFB5', label: 'Winamp'      },
-      { app: 'calculator',  icon: '\uD83E\uDDF2', label: 'Calculator'  },
-      { app: 'minesweeper', icon: '\uD83D\uDCA3', label: 'Minesweeper' },
-      { app: 'notepad',     icon: '\uD83D\uDCDD', label: 'Notepad'     },
-      { app: 'diskcleanup', icon: '\uD83D\uDDA5', label: 'Disk Cleanup' }
-    ].forEach(function (def) {
-      sub.appendChild(buildSubmenuItem(def.icon, def.label, function () {
-        if (window.APC.desktop && typeof window.APC.desktop.launchApp === 'function') {
-          window.APC.desktop.launchApp(def.app);
+      btn.addEventListener('click', function () {
+        if (item.action === 'stub') {
+          showSimpleDialog(item.label, 'This feature is not available.');
+        } else if (item.action === 'desktop_minimize') {
+          if (window.APC.desktop && typeof window.APC.desktop.minimizeAll === 'function') {
+            window.APC.desktop.minimizeAll();
+          } else {
+            showSimpleDialog('Minimize All Windows', 'This feature is not available.');
+          }
         }
-      }, function () {
-        // ArrowLeft/Escape from an Accessories app item: close Accessories
-        // and return focus to the Accessories cascade item (not Programs).
-        closeAcc();
-        accEl.focus();
-      }));
+      });
+
+      menu.appendChild(btn);
     });
 
-    return sub;
-  }
+    menu.style.visibility = 'hidden';
+    document.body.appendChild(menu);
 
-  // --- Documents submenu (populated just-in-time) ---------------------
+    var rect = menu.getBoundingClientRect();
+    var adjustedX = (x + rect.width  > window.innerWidth)  ? (window.innerWidth  - rect.width  - 2) : x;
+    var adjustedY = (y + rect.height > window.innerHeight)  ? (window.innerHeight - rect.height - 2) : y;
 
-  function buildDocumentsSubmenu() {
-    var sub = document.createElement('div');
-    sub.className = 'start-menu__submenu';
-    sub.setAttribute('role', 'menu');
-    sub.setAttribute('aria-label', 'Documents');
-    sub.dataset.dynamic = 'documents'; // signals openSubmenu() to repopulate
-    return sub;
-  }
-
-  function populateDocumentsSubmenu(sub) {
-    sub.innerHTML = '';
-
-    var hist = [];
-    try {
-      hist = JSON.parse(sessionStorage.getItem('ne_history') || '[]');
-    } catch (e) {}
-
-    if (!hist.length) {
-      var empty = document.createElement('div');
-      empty.className = 'start-menu__submenu-item start-menu__submenu-item--empty';
-      empty.setAttribute('role', 'menuitem');
-      empty.setAttribute('aria-disabled', 'true');
-      empty.textContent = '(No recent documents)';
-      sub.appendChild(empty);
-      return;
+    if (y > window.innerHeight - 35) {
+      adjustedY = window.innerHeight - 28 - rect.height;
     }
 
-    hist.slice(0, 10).forEach(function (url) {
-      sub.appendChild(buildSubmenuItem('\uD83C\uDF10', url, function () {
-        // Null-check: netescape.open() handles creating the window if not open.
-        if (window.APC.netescape && typeof window.APC.netescape.open === 'function') {
-          window.APC.netescape.open(url);
-        }
-      }));
-    });
+    menu.style.left = adjustedX + 'px';
+    menu.style.top  = adjustedY + 'px';
+    menu.style.visibility = 'visible';
+
+    var onDocClick = function (e) {
+      if (menu && !menu.contains(e.target)) {
+        if (menu.parentNode) { menu.parentNode.removeChild(menu); }
+        document.removeEventListener('click',       onDocClick);
+        document.removeEventListener('contextmenu', onDocClick);
+      }
+    };
+    setTimeout(function () {
+      document.addEventListener('click',       onDocClick);
+      document.addEventListener('contextmenu', onDocClick);
+    }, 0);
   }
 
-  // --- Apps submenu (flat, beginner-friendly) -------------------------
-  // Single-level shortcut to all four mini-apps.
-  // Sits at top-level under Apps ► — no cascade, no Accessories layer.
-  // Programs ► Accessories path is preserved and untouched.
-  // Uses global openSubmenuEl tracker (safe — flat submenu, no nesting conflict).
-  function buildAppsSubmenu() {
-    var sub = document.createElement('div');
-    sub.className = 'start-menu__submenu';
-    sub.setAttribute('role', 'menu');
-    sub.setAttribute('aria-label', 'Apps');
-    [
-      { app: 'winamp',      icon: '\uD83C\uDFB5', label: 'Winamp'      },
-      { app: 'calculator',  icon: '\uD83E\uDDF2', label: 'Calculator'  },
-      { app: 'notepad',     icon: '\uD83D\uDCDD', label: 'Notepad'     },
-      { app: 'minesweeper', icon: '\uD83D\uDCA3', label: 'Minesweeper' },
-      { app: 'diskcleanup', icon: '\uD83D\uDDA5', label: 'Disk Cleanup' }
-    ].forEach(function (def) {
-      sub.appendChild(buildSubmenuItem(def.icon, def.label, function () {
-        if (window.APC.desktop && typeof window.APC.desktop.launchApp === 'function') {
-          window.APC.desktop.launchApp(def.app);
-        }
-      }));
-    });
-    return sub;
-  }
+  // --- Submenu item helper --------------------------------------------
   // --- Submenu item helper --------------------------------------------
 
   // onBack (optional): called on ArrowLeft/Escape instead of the default

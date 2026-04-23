@@ -1381,6 +1381,20 @@ window.APC.desktop = (function () {
     state.show();
   }
 
+  // --- Minimize all windows (Context Menu hook) ----------------------
+  // Called by the Taskbar right-click context menu "Minimize All Windows".
+  // Only minimizes windows that are currently visible (not already minimized).
+
+  function minimizeAll() {
+    var ids = Object.keys(windows);
+    ids.forEach(function (id) {
+      var state = windows[id];
+      if (state && !state.minimized && state.el.style.display !== 'none') {
+        minimizeWindow(state);
+      }
+    });
+  }
+
   // --- Close all windows -----------------------------------------------
 
   function closeAll() {
@@ -1426,6 +1440,7 @@ window.APC.desktop = (function () {
     createWindow: createWindow,
     launchApp:    launchApp,
     closeAll:     closeAll,
+    minimizeAll:  minimizeAll,
     reset:        reset
   };
 
