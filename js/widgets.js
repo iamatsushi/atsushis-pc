@@ -101,7 +101,7 @@ window.APC.widgets = (function () {
       })
       .then(function () {
         // Always schedule the next fetch, success or failure
-        setTimeout(fetchWeather, WEATHER_INTERVAL_MS);
+        weatherFetchTimer = setTimeout(fetchWeather, WEATHER_INTERVAL_MS);
       });
   }
 
@@ -121,6 +121,8 @@ window.APC.widgets = (function () {
   var diskCleanupDone = false;     // true after diskcleanup:complete fires — suppresses Low Disk Space
   // Persistent ARIA live region — appended once on init, mutated per balloon.
   var liveRegion = null;
+  var ramFetchTimer = null;     // tracks setTimeout for fetchRam — cancelled on reset()
+  var weatherFetchTimer = null; // tracks setTimeout for fetchWeather — cancelled on reset()
 
   // Low Disk Space body click — opens Disk Cleanup modal (spec 24c49bfe)
   function handleLowDiskClick() {
@@ -207,12 +209,12 @@ window.APC.widgets = (function () {
           if (ramEl && !window.APC.isRamSpiking) { ramEl.textContent = lastRamText; }
         }, t.rand(t.RAM_RENDER_MIN_MS, t.RAM_RENDER_MAX_MS));
         // Schedule next fetch from success path — explicit, not chained after .catch()
-        setTimeout(fetchRam, RAM_INTERVAL_MS);
+        ramFetchTimer = setTimeout(fetchRam, RAM_INTERVAL_MS);
       })
       .catch(function () {
         // Silent fail — display keeps last known value (initialized to '--')
         // Schedule next fetch from failure path so polling always continues
-        setTimeout(fetchRam, RAM_INTERVAL_MS);
+        ramFetchTimer = setTimeout(fetchRam, RAM_INTERVAL_MS);
       });
   }
 
@@ -572,6 +574,11 @@ window.APC.widgets = (function () {
     diskReappearTimer = null;
     diskCleanupDone = false;
     if (liveRegion) { liveRegion.textContent = ''; }
+    // Cancel fetch polling loops — prevents parallel chains accumulating on soft restart
+    clearTimeout(ramFetchTimer);
+    ramFetchTimer = null;
+    clearTimeout(weatherFetchTimer);
+    weatherFetchTimer = null;
   }
 
   return { init: init, reset: reset };

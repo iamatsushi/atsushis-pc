@@ -1278,6 +1278,11 @@ window.APC.boot = (function () {
     rainStartTime = null;
     if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null; }
 
+    // Destroy boot scene if active during restart — cancels orphaned rAF, listeners, CRT callbacks.
+    if (window.APC.bootScene && typeof window.APC.bootScene.destroy === 'function') {
+      window.APC.bootScene.destroy();
+    }
+
     // Invalidate any in-flight boot screen callbacks.
     bootGen++;
 

@@ -64,8 +64,9 @@ var POWER_X1  = 875, POWER_Y1  = 715, POWER_X2  = 930, POWER_Y2  = 775;
   // CRT state machine.
   // 'idle' → 'btn_flash' → 'flash' → 'dim' → 'scanlines' → 'glow' → 'rain_on' → 'done'
   var crtState    = 'idle';
-  var powerOn     = false; // power indicator color
+  var powerOn      = false; // power indicator color
   var powerClicked = false;
+  var isDestroyed  = false; // set by destroy() — gates CRT sequence callbacks on soft restart
 
   // Pending timeouts — all tracked so destroy() can cancel them.
   var pendingTimeouts = [];
@@ -350,22 +351,22 @@ var POWER_X1  = 875, POWER_Y1  = 715, POWER_X2  = 930, POWER_Y2  = 775;
     crtState = 'btn_flash';
 
     // Step 1: CRT white flash starts after button flash.
-    setTimeout(function () { console.log('[CRT] flash');     crtState = 'flash';     }, t.POWER_BTN_FLASH_MS);
+    setTimeout(function () { if (isDestroyed) { return; } console.log('[CRT] flash');     crtState = 'flash';     }, t.POWER_BTN_FLASH_MS);
 
     // Step 2: dim.
-    setTimeout(function () { console.log('[CRT] dim');       crtState = 'dim';       },
+    setTimeout(function () { if (isDestroyed) { return; } console.log('[CRT] dim');       crtState = 'dim';       },
       t.POWER_BTN_FLASH_MS + t.CRT_FLASH_MS);
 
     // Step 3: scanlines.
-    setTimeout(function () { console.log('[CRT] scanlines'); crtState = 'scanlines'; },
+    setTimeout(function () { if (isDestroyed) { return; } console.log('[CRT] scanlines'); crtState = 'scanlines'; },
       t.POWER_BTN_FLASH_MS + t.CRT_FLASH_MS + t.CRT_DIM_MS);
 
     // Step 4: phosphor glow.
-    setTimeout(function () { console.log('[CRT] glow');      crtState = 'glow';      },
+    setTimeout(function () { if (isDestroyed) { return; } console.log('[CRT] glow');      crtState = 'glow';      },
       t.POWER_BTN_FLASH_MS + t.CRT_FLASH_MS + t.CRT_DIM_MS + t.CRT_SCANLINE_MS);
 
     // Step 5: rain visible.
-    setTimeout(function () { console.log('[CRT] rain_on');   crtState = 'rain_on';   },
+    setTimeout(function () { if (isDestroyed) { return; } console.log('[CRT] rain_on');   crtState = 'rain_on';   },
       t.POWER_BTN_FLASH_MS + t.CRT_FLASH_MS + t.CRT_DIM_MS +
       t.CRT_SCANLINE_MS + t.CRT_GLOW_MS);
 
@@ -373,7 +374,7 @@ var POWER_X1  = 875, POWER_Y1  = 715, POWER_X2  = 930, POWER_Y2  = 775;
     var totalCRTDuration = t.POWER_BTN_FLASH_MS + t.CRT_FLASH_MS + t.CRT_DIM_MS +
                            t.CRT_SCANLINE_MS + t.CRT_GLOW_MS + t.CRT_CONTENT_FADE_MS;
     setTimeout(function () {
-      console.log('[CRT] done — fadeOutAndComplete');
+      if (isDestroyed) { return; } console.log('[CRT] done — fadeOutAndComplete');
       crtState = 'done';
       fadeOutAndComplete();
     }, totalCRTDuration);
@@ -509,6 +510,7 @@ var POWER_X1  = 875, POWER_Y1  = 715, POWER_X2  = 930, POWER_Y2  = 775;
   }
 
   function destroy() {
+    isDestroyed = true; // abort any in-flight CRT sequence timeouts immediately
     // 1. Cancel rAF loop.
     if (sceneRaf) {
       cancelAnimationFrame(sceneRaf);
@@ -546,9 +548,10 @@ var POWER_X1  = 875, POWER_Y1  = 715, POWER_X2  = 930, POWER_Y2  = 775;
     matrixCanvas  = null;
     onComplete    = null;
     flickerActive = false;
-    powerOn       = false;
-    powerClicked  = false;
-    crtState      = 'idle';
+    powerOn      = false;
+    powerClicked = false;
+    isDestroyed  = false; // reset for potential soft restart reinit
+    crtState     = 'idle';
   }
 
   return { init: init, destroy: destroy };

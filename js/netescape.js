@@ -1043,7 +1043,10 @@ window.APC.netescape = (function () {
     resumeCheckbox.id = 'gb-resume';
     resumeCheckbox.name = 'resume_requested';
     resumeCheckbox.className = 'netescape-guestbook__checkbox';
-    if (currentParams.resume === '1') { resumeCheckbox.checked = true; }
+    if (currentParams.resume === '1') {
+      resumeCheckbox.checked  = true;
+      resumeCheckbox.disabled = true; // Lock — conversion must happen via this flow
+    }
 
     const resumeLabel = document.createElement('label');
     resumeLabel.className = 'netescape-guestbook__label netescape-guestbook__label--checkbox';
