@@ -28,6 +28,7 @@ class RateLimiter:
         self._lock = threading.Lock()
 
     def is_allowed(self, ip):
+        self.cleanup()
         now = time.time()
         with self._lock:
             if ip not in self._buckets:
