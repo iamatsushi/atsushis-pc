@@ -21,7 +21,6 @@ import hashlib
 import secrets
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
-
 import time
 import threading
 
@@ -59,7 +58,17 @@ class RateLimiter:
             for ip in stale:
                 del self._buckets[ip]
 
+
 _limiter = RateLimiter(max_calls=10, period_seconds=30)
+
+# Daemon thread: evict stale IP buckets every 60s to prevent unbounded memory growth.
+def _cleanup_loop():
+    while True:
+        time.sleep(60)
+        _limiter.cleanup()
+
+_t = threading.Thread(target=_cleanup_loop, daemon=True)
+_t.start()
 
 MAX_NUMBER = 10000  # client brute-forces up to this value; ~1-2s at typical hardware
 

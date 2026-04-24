@@ -39,7 +39,17 @@ class RateLimiter:
             for ip in stale:
                 del self._buckets[ip]
 
+
 _limiter = RateLimiter(max_calls=10, period_seconds=10)
+
+# Daemon thread: evict stale IP buckets every 60s to prevent unbounded memory growth.
+def _cleanup_loop():
+    while True:
+        time.sleep(60)
+        _limiter.cleanup()
+
+_t = threading.Thread(target=_cleanup_loop, daemon=True)
+_t.start()
 
 class RAMHandler(BaseHTTPRequestHandler):
     def do_GET(self):

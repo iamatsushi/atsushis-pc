@@ -16,7 +16,6 @@ from urllib.parse import urlparse, parse_qs
 from urllib.request import urlopen
 from urllib.error import URLError
 
-
 import time
 import threading
 
@@ -54,7 +53,17 @@ class RateLimiter:
             for ip in stale:
                 del self._buckets[ip]
 
+
 _limiter = RateLimiter(max_calls=6, period_seconds=60)
+
+# Daemon thread: evict stale IP buckets every 60s to prevent unbounded memory growth.
+def _cleanup_loop():
+    while True:
+        time.sleep(60)
+        _limiter.cleanup()
+
+_t = threading.Thread(target=_cleanup_loop, daemon=True)
+_t.start()
 
 DEFAULT_LAT = 45.5051   # Portland, OR
 DEFAULT_LON = -122.6750
