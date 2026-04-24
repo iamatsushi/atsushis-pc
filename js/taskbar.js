@@ -20,7 +20,7 @@ window.APC.taskbar = (function () {
     { id: 'programs', label: 'Programs', icon: '\uD83D\uDCC1', type: 'folder', children: [
         { id: 'accessories', label: 'Accessories', icon: '\uD83D\uDCC1', type: 'folder', children: [
             { id: 'communications', label: 'Communications', icon: '\uD83D\uDCC1', type: 'folder', children: [
-                { id: 'dialup',        label: 'Dial-Up Networking', icon: '\uD83D\uDCDE', type: 'action', action: 'stub' },
+                { id: 'dialup',        label: 'Dial-Up Networking', icon: '\uD83D\uDCDE', type: 'action', action: 'dialup' },
                 { id: 'hyperterminal', label: 'HyperTerminal',      icon: '\uD83D\uDCE0', type: 'action', action: 'stub' },
                 { id: 'phonedialer',   label: 'Phone Dialer',       icon: '\u260E',        type: 'action', action: 'stub' }
             ]},
@@ -220,6 +220,7 @@ window.APC.taskbar = (function () {
           else if (node.action === 'help')       { showHelpStub(); }
           else if (node.action === 'run')        { showRunStub(); }
           else if (node.action === 'logoff')     { doLogOff(); }
+          else if (node.action === 'dialup')     { if (window.APC.netescape && typeof window.APC.netescape.connect === 'function') { window.APC.netescape.connect(); } }
         }, t.rand(t.MENU_ACTION_MIN_MS, t.MENU_ACTION_MAX_MS));
       });
       el.addEventListener('keydown', function (e) {
