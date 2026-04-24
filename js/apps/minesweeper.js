@@ -15,6 +15,12 @@ window.APC.apps.minesweeper = (function () {
   const MINES = 10;
 
   let winState = null;
+  let timerInterval = null; // hoisted for teardown access from close()
+
+  function close() {
+    if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+    winState = null;
+  }
 
   function open() {
     if (winState) {
@@ -56,7 +62,6 @@ window.APC.apps.minesweeper = (function () {
     var gameState = 'idle'; // 'idle' | 'playing' | 'won' | 'lost'
     var minesLeft = MINES;
     var timerVal = 0;
-    var timerInterval = null;
     var firstClick = true;
 
     // DOM refs set during build
@@ -495,6 +500,6 @@ window.APC.apps.minesweeper = (function () {
     renderAll();
   }
 
-  return { open: open };
+  return { open: open, close: close };
 
 }());

@@ -5,6 +5,7 @@ echo "[deploy] ensuring emoji font is installed..."
 sudo apt-get install -y fonts-noto-color-emoji 2>/dev/null | tail -1
 
 echo "[deploy] pulling latest from main..."
+git checkout -- index.html
 git pull origin main
 
 echo "[deploy] building css bundle..."
@@ -49,7 +50,8 @@ start = content.find(marker_start)
 end = content.find(marker_end)
 
 if start == -1 or end == -1:
-    print('[deploy] WARNING: CSS markers not found — index.html unchanged')
+    print('[deploy] ERROR: CSS markers not found in index.html — patch failed')
+    import sys; sys.exit(1)
 else:
     end_pos = end + len(marker_end)
     patched = content[:start] + bundle_link + content[end_pos:]

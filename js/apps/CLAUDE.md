@@ -22,6 +22,50 @@ On complete: `cursor: default` restored, window mounts, brought to front.
 
 ---
 
+## Standard App Interface Contract
+
+Every mini-app MUST return an object with the following hooks. Missing any hook is a bug.
+
+| Hook | Required | Responsibility |
+|---|---|---|
+| `open()` | Yes | Launch or focus existing singleton window |
+| `close()` | Yes | Clear ALL timers/intervals/rAF loops, null singleton refs, remove any self-managed DOM |
+| `pause()` | If rAF loop present | Cancel the rAF loop without destroying state — called when window is minimized |
+| `resume()` | If `pause()` exists | Restart the rAF loop — called on restore |
+
+**`close()` is the contract with `desktop.reset()`.** `reset()` iterates `window.APC.apps` and calls `.close()` on any app that exposes it. If your app owns timers but doesn't expose `close()`, those timers will outlive a soft restart.
+
+**Apps that manage their own DOM** (i.e. append directly to `document.body` instead of going through `desktop.createWindow`) MUST remove that DOM in `close()`. `windowLayer.innerHTML = ''` will not reach it.
+
+**Singleton flags** (`isOpen`, `winState`, etc.) MUST be reset inside `close()`. Failing to do so leaves the module believing the window is still open after restart.
+
+```js
+// Minimum viable app scaffold
+window.APC.apps.myApp = (function () {
+  'use strict';
+  var winState = null;
+  var tickTimer = null;
+
+  function close() {
+    if (tickTimer) { clearInterval(tickTimer); tickTimer = null; }
+    winState = null;
+    // If self-managed DOM: var el = document.getElementById('myapp-window'); if (el) el.remove();
+  }
+
+  function open() {
+    if (winState) { /* focus existing */ return; }
+    winState = window.APC.desktop.createWindow({ ... });
+    winState.el.querySelector('[data-action="close"]').addEventListener('click', close);
+    tickTimer = setInterval(tick, 1000);
+    winState.show();
+  }
+
+  return { open: open, close: close };
+}());
+```
+
+---
+
 ## Disk Cleanup (js/apps/diskcleanup.js)
 
 **Interface:** `window.APC.apps.diskcleanup = { open() }`

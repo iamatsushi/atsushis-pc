@@ -13,6 +13,19 @@ These rules are absolute. Breaking them breaks the simulation.
 - **No modern layout** (flexbox/grid) for Win98 chrome. Use tables, `position: absolute`, floats.
   Exception: NetEscape page content may use modern CSS inside the browser content area.
 - **Tight spacing.** 2–4px gaps. No modern whitespace.
+- **No hardcoded z-indexes in JS.** Layering is owned by CSS. New z-index values belong in `win98.css` as named classes, not inline `style.zIndex = 9999` in scripts.
+  The established hierarchy (do not insert between layers without explicit review):
+
+  | Layer | Value | Owner |
+  |---|---|---|
+  | Desktop icons | 1 | CSS default |
+  | Windows (dynamic) | 100–∞ | `desktop.js` `zCounter` |
+  | Disk Cleanup window | 3000 | `diskcleanup.js` (exception: self-managed) |
+  | Tray balloon (behind glitch) | 998 | `widgets.js` |
+  | Taskbar | 1000 | CSS |
+  | Start menu | 2000 | CSS |
+  | Wireframe drag animation | 99999 | `desktop.js` (transient) |
+  | Modal overlays | 10000 | CSS `.win98-msgbox-overlay` |
 
 ---
 
