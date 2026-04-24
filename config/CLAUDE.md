@@ -113,6 +113,30 @@ Git remotes on Pi:
 
 ---
 
+## Python Service Rules
+
+**Every in-process memory structure that grows over time MUST have an active cleanup mechanism.**
+
+This means rate limiters, token buckets, request counters, and any per-IP or per-key tracker MUST:
+1. Implement a `cleanup()` method that evicts stale entries (e.g. entries not touched in N seconds).
+2. Call `cleanup()` on a recurring daemon thread or within the request handler before writing new entries.
+3. Never rely on process restart as the GC strategy — services are long-running.
+
+The `RateLimiter` class in all three proxy servers (`ram-server.py`, `weather-server.py`, `altcha-server.py`) already implements this pattern. New services must replicate it. Existing services must not remove it.
+
+```python
+# Required pattern for any in-memory per-key tracker
+def cleanup(self):
+    cutoff = time.time() - self.window_seconds * 2
+    stale = [k for k, v in self._store.items() if v['last_seen'] < cutoff]
+    for k in stale:
+        del self._store[k]
+```
+
+**No unbounded dict growth.** If a dict is keyed by user input (IP, URL, token), it MUST have a cleanup path. A dict that only grows is a DoS vector and a memory leak.
+
+---
+
 ## Cloudflare RUM — Intentionally Disabled
 
 Cloudflare automatically injects a Real User Monitoring (RUM) beacon script

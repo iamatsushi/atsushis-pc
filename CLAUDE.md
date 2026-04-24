@@ -11,6 +11,10 @@ Browser-based Win98 desktop simulation and personal PM portfolio hosted on Raspb
 3. Never install packages, dependencies, or build tooling. Zero exceptions.
 4. Never deviate from any rule without explicitly asking first.
 5. After every task, summarize changes and flag anything needing manual QA.
+6. **Pre-Flight Architecture Check** — Before writing any code that introduces new state, timers, loops, or DOM elements, explicitly answer:
+   - How will this feature be destroyed? (Detail the exact cleanup path.)
+   - What happens if the user restarts mid-execution?
+   - Does this introduce a new z-index, and if so, where does it sit in the global hierarchy?
 
 ---
 
@@ -23,6 +27,29 @@ Browser-based Win98 desktop simulation and personal PM portfolio hosted on Raspb
 - **No external CDN calls** in production. Umami and the Altcha widget are the only exceptions.
 - **Never commit `.env`.** Only `.env.example` is versioned.
 - **Never modify** `assets/CREDITS.md`, `.env.example`, or `config/Caddyfile` without being explicitly asked.
+
+---
+
+## Memory & Lifecycle Integrity
+
+These rules are as non-negotiable as the no-framework rule. Violations cause memory leaks and silent timer ghosts that survive across soft restarts.
+
+**No orphaned timers.** Every `setInterval` and `setTimeout` return value MUST be assigned to a named variable. Inline-fire-and-forget timers are forbidden.
+
+**Mandatory teardown.** Every module, mini-app, or window MUST expose a `close()`, `stop()`, or `reset()` method. That method MUST explicitly `clearInterval` / `clearTimeout` / `cancelAnimationFrame` every timer or loop the module owns. No exceptions, even for "simple" apps.
+
+**DOM presence guard on recursive loops.** Any `requestAnimationFrame` or chained `setTimeout` loop MUST check that its target element is still in the document before executing the next tick:
+```js
+// WRONG
+function tick() { el.textContent = '...'; requestAnimationFrame(tick); }
+
+// RIGHT
+function tick() { if (!el.parentNode) { return; } el.textContent = '...'; requestAnimationFrame(tick); }
+```
+
+**Singleton state must be nulled on close.** If a module tracks a singleton (e.g. `winState`, `isOpen`), `close()` MUST reset that flag. Otherwise a restart leaves the module believing the window is still open.
+
+**`desktop.reset()` is the canonical teardown caller.** It calls `closeAll()` then iterates `window.APC.apps` and calls `.close()` on any app that exposes it. Any new app that owns timers MUST expose `close()` so `reset()` can reach it.
 
 ---
 

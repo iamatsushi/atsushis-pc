@@ -1419,7 +1419,15 @@ window.APC.desktop = (function () {
   // --- Module reset (called by boot.restart()) -------------------------
 
   function reset() {
-    Object.keys(windows).forEach(function (id) { delete windows[id]; });
+    closeAll();
+    // Tear down any app that exposes a close() method (e.g. diskcleanup, minesweeper).
+    // This cancels in-flight timers and resets singleton flags before the DOM is wiped.
+    if (window.APC.apps) {
+      Object.keys(window.APC.apps).forEach(function (appName) {
+        var app = window.APC.apps[appName];
+        if (app && typeof app.close === 'function') { app.close(); }
+      });
+    }
     Object.keys(iconLastClick).forEach(function (k) { delete iconLastClick[k]; });
     Object.keys(appLaunching).forEach(function (k) { clearTimeout(appLaunching[k]); delete appLaunching[k]; });
     // Cancel all pending icon hint timers before clearing state.

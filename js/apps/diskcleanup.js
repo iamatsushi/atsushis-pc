@@ -285,7 +285,8 @@ if (!window.APC?.timing) throw new Error('[APC] win98-timing.js must load before
       }
       isOpen = true;
       buildWindow();
-    }
+    },
+    close: close
   };
 
 }());
