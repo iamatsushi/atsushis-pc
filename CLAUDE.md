@@ -144,8 +144,6 @@ When a PR changes any spec, timing value, or infrastructure detail, update the r
 
 **Protected Path** — `Apps` folder is a top-level `menuConfig` node. Single-level, no Accessories cascade, no Texture Zone friction. This is intentional and permanent.
 
-**Known open bug** — nested folder hover still collapses menu stack in some paths. Tracked as open issue. Root cause: event propagation or MutationObserver firing on intermediate parent. `attachNestedSubmenuHover` isolation is the fix vector.
-
 **`desktop.js` export added** — `minimizeAll()` iterates `windows`, calls `minimizeWindow(state)` on all non-minimized visible windows. Exported as `window.APC.desktop.minimizeAll`. Consumed by taskbar right-click context menu.
 
 ---
