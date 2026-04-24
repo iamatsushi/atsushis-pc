@@ -117,14 +117,12 @@ window.APC.boot = (function () {
   // --- Mobile detection ------------------------------------------------
   //
   // All three conditions must be true to show the mobile interstitial:
-  // 1. Genuine touch hardware (maxTouchPoints > 1)
-  // 2. Physically small screen (screen.width < 1024)
-  // 3. No fine pointer (no mouse/trackpad)
+  // Blocked if: touch hardware (maxTouchPoints > 1) AND (small screen OR no fine pointer)
+  // OR-grouping means a 12.9" iPad Pro (width > 1024 but no mouse) is still blocked.
 
   function isMobileOrTouch() {
     return navigator.maxTouchPoints > 1 &&
-           screen.width < 1024 &&
-           !window.matchMedia('(pointer: fine)').matches;
+           (screen.width < 1024 || !window.matchMedia('(pointer: fine)').matches);
   }
 
   function showMobileInterstitial() {
