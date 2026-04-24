@@ -39,25 +39,38 @@ PYEOF
 
 echo "[deploy] patching index.html for production..."
 python3 << 'PYEOF'
+import re, sys
+
 with open('index.html', 'r') as f:
     content = f.read()
 
-marker_start = '  <!-- ============================================================\n       STYLESHEETS'
-marker_end = '  <link rel="stylesheet" href="css/minesweeper.css">'
 bundle_link = '  <!-- PRODUCTION: bundled CSS (built by deploy.sh, not in git) -->\n  <link rel="stylesheet" href="dist/bundle.css">'
 
-start = content.find(marker_start)
-end = content.find(marker_end)
+# Match either the original CSS comment block (first deploy) or the already-deployed
+# production comment (re-deploy). Makes the patch idempotent regardless of file state.
+match_start = re.search(
+    r'  <!-- ={10,}[\s\S]*?STYLESHEETS|  <!-- PRODUCTION: bundled CSS',
+    content
+)
 
-if start == -1 or end == -1:
+# Match either the original last CSS link (first deploy) or the already-deployed
+# bundle link (re-deploy).
+match_end = re.search(
+    r'  <link rel="stylesheet" href="css/minesweeper\.css">|  <link rel="stylesheet" href="dist/bundle\.css">',
+    content
+)
+
+if not match_start or not match_end:
     print('[deploy] ERROR: CSS markers not found in index.html — patch failed')
-    import sys; sys.exit(1)
-else:
-    end_pos = end + len(marker_end)
-    patched = content[:start] + bundle_link + content[end_pos:]
-    with open('index.html', 'w') as f:
-        f.write(patched)
-    print('[deploy] index.html patched — serving dist/bundle.css')
+    sys.exit(1)
+
+start   = match_start.start()
+end_pos = match_end.end()
+patched = content[:start] + bundle_link + content[end_pos:]
+
+with open('index.html', 'w') as f:
+    f.write(patched)
+print('[deploy] index.html patched — serving dist/bundle.css')
 PYEOF
 
 echo "[deploy] reloading caddy..."
