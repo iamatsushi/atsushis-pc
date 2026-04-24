@@ -342,14 +342,6 @@ window.APC.taskbar = (function () {
       closeTimer = setTimeout(function () { closeTimer = null; closeNested(); }, t.SUBMENU_CLOSE_DELAY_MS);
     });
 
-    var parentSub = itemEl.parentNode;
-    if (parentSub) {
-      var mo = new MutationObserver(function () {
-        if (!parentSub.classList.contains('start-menu__submenu--open')) { closeNested(); }
-      });
-      mo.observe(parentSub, { attributes: true, attributeFilter: ['class'] });
-    }
-
     itemEl.addEventListener('keydown', function (e) {
       if (e.key === 'ArrowRight') {
         e.preventDefault(); openNested();
