@@ -4,69 +4,69 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Atsushi's PC</title>
-  <link rel="icon" type="image/x-icon" href="/favicon.ico">
-  <!-- PRODUCTION: bundled CSS (built by deploy.sh, not in git) -->
-  <link rel="stylesheet" href="dist/bundle.css">
-  <script defer src="https://cloud.umami.is/script.js"
-    data-website-id="d26f2f30-ead0-4092-b7c5-99afac8eda72"></script>
+
+  <!-- ============================================================
+       STYLESHEETS
+       win98.css first — defines base Win98 shell variables + resets.
+       App-specific sheets follow in load order.
+  ============================================================ -->
+  <link rel="stylesheet" href="css/win98.css">
+  <link rel="stylesheet" href="css/netescape-base.css">
+  <link rel="stylesheet" href="css/netescape-home.css">
+  <link rel="stylesheet" href="css/netescape-about.css">
+  <link rel="stylesheet" href="css/netescape-thoughts.css">
+  <link rel="stylesheet" href="css/netescape-projects.css">
+  <link rel="stylesheet" href="css/netescape-guestbook.css">
+  <link rel="stylesheet" href="css/netescape-resume.css">
+  <link rel="stylesheet" href="css/boot.css">
+  <link rel="stylesheet" href="css/winamp.css">
+  <link rel="stylesheet" href="css/minesweeper.css">
+
+  <!-- Umami analytics — production only, no tracking in dev -->
+  <script defer src="https://cloud.umami.is/script.js" data-website-id="3a3a0d9e-3a74-44f6-819e-e30db61a8d1a"></script>
 </head>
 <body>
 
   <!-- Gate screen: Matrix rain + Click to Start prompt -->
   <div id="gate-screen" aria-label="System startup screen">
     <canvas id="matrix-canvas" aria-hidden="true"></canvas>
-    <div id="gate-prompt"
-         role="button"
-         tabindex="0"
-         aria-label="Click or press any key to start Atsushi's PC">
+    <div id="gate-prompt" role="button" tabindex="0" aria-label="Click or press any key to start Atsushi's PC">
       <p id="gate-label">Click to Start</p>
-      <p id="gate-terminal">C:\&gt; press any key to continue<span
-        id="gate-cursor"
-        aria-hidden="true">█</span></p>
+      <p id="gate-terminal">C:\&gt; press any key to continue<span id="gate-cursor" aria-hidden="true">█</span></p>
     </div>
   </div>
 
   <!-- Win98 boot screen: navy background, logo text, progress bar -->
-  <div id="boot-screen" class="boot-screen--hidden"
-       role="status" aria-label="Loading Windows 98" aria-live="polite">
+  <div id="boot-screen" class="boot-screen--hidden" role="status" aria-label="Loading Windows 98" aria-live="polite">
     <p id="boot-logo-text" aria-hidden="true">Windows 98</p>
-    <div id="boot-progress-track"
-         role="progressbar"
-         aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"
-         aria-label="Windows 98 loading progress"></div>
+    <div id="boot-progress-track" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="Windows 98 loading progress"></div>
   </div>
 
   <!-- Five-screen boot sequence — POST, IBS Splash, DOS Log, WinDoors Logo, Desktop Arrival -->
-  <div id="boot-sequence" class="boot-sequence--hidden"
-       role="status" aria-live="polite" aria-label="System boot sequence"></div>
+  <div id="boot-sequence" class="boot-sequence--hidden" role="status" aria-live="polite" aria-label="System boot sequence"></div>
 
   <!-- Desktop shell — shown after boot sequence completes -->
   <div id="desktop" class="desktop--hidden">
 
     <!-- Desktop icons -->
     <div id="desktop-icons" aria-label="Desktop">
-      <div class="desktop-icon" data-app="my-computer"
-           tabindex="0" role="button" aria-label="My Computer">
+      <div class="desktop-icon" data-app="my-computer" tabindex="0" role="button" aria-label="My Computer">
         <span class="desktop-icon__img" aria-hidden="true">🖥</span>
         <span class="desktop-icon__label">My Computer</span>
       </div>
-      <div class="desktop-icon" data-app="netescape"
-           tabindex="0" role="button" aria-label="NetEscape">
+      <div class="desktop-icon" data-app="netescape" tabindex="0" role="button" aria-label="NetEscape">
         <span class="desktop-icon__img" aria-hidden="true">🌐</span>
         <span class="desktop-icon__label">NetEscape</span>
       </div>
-      <div class="desktop-icon" data-app="dialup"
-           tabindex="0" role="button" aria-label="Dial-Up Networking">
+      <div class="desktop-icon" data-app="dialup" tabindex="0" role="button" aria-label="Dial-Up Networking">
         <span class="desktop-icon__img" aria-hidden="true">📞</span>
         <span class="desktop-icon__label">Dial-Up Networking</span>
       </div>
-      <div class="desktop-icon" data-app="resume-exe"
-           tabindex="0" role="button" aria-label="resume_FINAL_v3.exe">
+      <div class="desktop-icon" data-app="resume-exe" tabindex="0" role="button" aria-label="resume_FINAL_v3.exe">
         <span class="desktop-icon__img" aria-hidden="true">💾</span>
         <span class="desktop-icon__label">resume_FINAL_v3.exe</span>
       </div>
-      <div class="desktop-icon" data-app="recycle-bin"
-           tabindex="0" role="button" aria-label="Recycle Bin">
+      <div class="desktop-icon" data-app="recycle-bin" tabindex="0" role="button" aria-label="Recycle Bin">
         <span class="desktop-icon__img" aria-hidden="true">🗑</span>
         <span class="desktop-icon__label">Recycle Bin</span>
       </div>
@@ -87,34 +87,30 @@
       <div id="system-tray" aria-label="System tray">
         <span id="taskbar-clock" aria-live="polite" aria-label="System clock"></span>
       </div>
-      <div id="taskbar-ram"
-           aria-label="RAM usage"
-           aria-live="polite">--</div>
-      <div id="taskbar-weather"
-           aria-label="Current weather"
-           aria-live="polite">--</div>
+      <div id="taskbar-ram" aria-label="RAM usage" aria-live="polite">--</div>
+      <div id="taskbar-weather" aria-label="Current weather" aria-live="polite">--</div>
       <div id="taskbar-windows" role="group" aria-label="Open windows"></div>
     </div>
 
   </div>
 
+  <!-- Scripts — load order is strict. See CLAUDE.md. -->
+  <!-- win98-timing.js MUST be first. -->
   <script src="js/win98-timing.js"></script>
-  <script src="js/taskbar.js"></script>
-  <script src="js/desktop.js"></script>
-  <script src="js/netescape.js"></script>
-  <script src="js/apps/winamp.js"></script>
-  <script src="js/apps/calculator.js"></script>
-  <script src="js/apps/notepad.js"></script>
-  <script src="js/apps/minesweeper.js"></script>
-  <script src="js/apps/system-properties.js"></script>
-  <script src="js/apps/screensaver.js"></script>
-  <script src="js/apps/diskcleanup.js"></script>
-  <script src="js/widgets.js"></script>
   <script src="js/boot-scene.js"></script>
   <script src="js/boot.js"></script>
-  <script>
-    window.APC.boot.init();
-  </script>
+  <script src="js/desktop.js"></script>
+  <script src="js/taskbar.js"></script>
+  <script src="js/netescape.js"></script>
+  <script src="js/widgets.js"></script>
+  <script src="js/winamp.js"></script>
+  <script src="js/notepad.js"></script>
+  <script src="js/minesweeper.js"></script>
+  <script src="js/diskcleanup.js"></script>
+  <script src="js/screensaver.js"></script>
+  <script src="js/system-properties.js"></script>
+  <script src="js/phonedialer.js"></script>
+  <script src="js/main.js"></script>
 
 </body>
 </html>
