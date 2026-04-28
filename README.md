@@ -9,11 +9,18 @@ The machine being simulated is specific: an IBM Aptiva SE7. Pentium II. The beig
 
 ## What's in here
 
-**A boot sequence.** Matrix rain in `#00FF41` — full-width katakana, ASCII, and the occasional emoji column. After one second, six identity lines type out:
+**A boot sequence.** Matrix rain in `#00FF41` — full-width katakana, ASCII, and the occasional emoji column. After one second, the rain asks one question:
 
-> *it is 1998. before the cloud. before the stream. before the feed. dial-up internet had just arrived. nobody knew what it was yet. explore it on an IBM Aptiva — Pentium II, 128MB RAM. $3,299 in 1998. that's $6,683 today. dial-up did not respond in milliseconds. it responded in heartbeats. take your time. sound on.*
+```
+> WHO ARE YOU?
 
-A terminal prompt blinks. Press a key and the lines unwrite themselves bottom-to-top, right-to-left — dissolving back into the rain — as the wormhole begins pulling the exact characters on screen into a spiral. The same rain you were watching becomes the vortex. The desk scene reveals through a green phosphor glow. You click. Windows 98 loads.
+  [1] I HAVE 30 SECONDS
+  [2] I HAVE TIME
+```
+
+pressing `1` skips the ritual entirely — startup.mp3 plays, NetEscape opens full-screen, and you're reading portfolio content in under five seconds. pressing `2` runs the full sequence. on mobile, there's no question — the device already answered it. NetEscape loads directly. the fork isn't a concession to short attention spans. it's the right experience for the right person.
+
+for those who press `2`: six identity lines type out over the rain. a terminal prompt blinks. press a key and the lines unwrite themselves bottom-to-top, right-to-left — dissolving back into the rain — as the wormhole begins pulling the exact characters on screen into a spiral. the same rain you were watching becomes the vortex. the desk scene reveals through a green phosphor glow. you click. Windows 98 loads.
 
 **A desktop.** Teal wallpaper. Beveled chrome. A taskbar with a working clock, live Portland weather, and a RAM gauge pulling from the actual Raspberry Pi running the site. Draggable icons on a period-accurate 75px grid. A Start Menu with the full authentic Win98 hierarchy — Programs → Accessories → Entertainment, System Tools, Communications, and more. 40+ nodes of period-accurate friction. Modals reject clicks with an error ding and a titlebar flash. Windows animate to the taskbar when minimized. Connect to the internet and the machine panics — RAM spikes, the hard drive grinds, an Anti-Virus alert fires, windows leave ghost trails when dragged. Run Disk Cleanup and it sighs in relief. Right-click the taskbar and the 1998 context menu appears. The machine has feelings.
 
@@ -89,6 +96,14 @@ git pull origin main
 | Open | Start Menu — nested folder hover collapses entire menu stack | Active bug |
 
 65+ issues closed. The Start Menu is now registry-driven — a JSON `menuConfig` array feeds a recursive `renderMenuNode()` engine replacing 300+ lines of imperative DOM builders. Full authentic Win98 hierarchy ships: Programs → Accessories → Entertainment/System Tools/Communications, Online Services, StartUp, Favorites, Settings → Active Desktop, Find, Log Off. Taskbar right-click context menus ship. `desktop.js` exports `minimizeAll()`. The screensaver, Recycle Bin, Start Menu cascade, tray balloons, NetEscape, boot sequence, System Properties, Matrix rain overhaul, cinematic gate transition, wormhole match cut, identity line rewrite, a 28-issue bug sprint, and six usability sprint fixes (double-click discoverability, resume/guestbook conversion path, Start Menu Apps shortcut, clock tooltip, first tray balloon timing, dialup icon affordance, window drag cursor) are all shipped.
+
+---
+
+## Why this exists
+
+we live in a scrollable world. WordPress, Shopify, every templated site generator — they produce something functional and entirely without personality. the interfaces of 1998 were not worse. they were different. the machine had a relationship with you. it took time, made sounds, pushed back. the waiting was part of it. this site is a preservation of that feeling — and an argument that UX doesn't have to be frictionless to be good. i have opinions about what computing used to feel like and i built something to prove them.
+
+i'm a PM by trade, which means i've spent years writing specs and watching engineers ship them. i built this to change that. i wanted to understand how a server actually works, what a Raspberry Pi does, how to write Python, how to push code from a terminal instead of filing a ticket. i also wanted to understand how to use Claude Code as a creative collaborator — not to generate boilerplate, but to pair-program something genuinely weird with an AI that could read the codebase, hold context, and debug at 11pm. this site is proof of work on all of it.
 
 ---
 
