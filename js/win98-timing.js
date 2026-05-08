@@ -2,7 +2,7 @@
 // Centralised timing token system for the WinDoors 98 behavioral fidelity simulation.
 //
 // Every delay value in this project lives here. Never hardcode ms values elsewhere —
-// always reference window.APC.timing.<TOKEN>.
+// always reference window.APC.timing.<token>.
 //
 // Grounded in IBM Aptiva SE7 hardware (1998) on a V.90 56K modem at ~30 kbps actual
 // throughput. When validating a delay, ask: "Would this be noticeable on an IBM Aptiva
@@ -102,6 +102,18 @@
     NE_MANUAL_URL_MIN_MS:    1000,  // manual URL entry (dial-up simulation delay)
     NE_MANUAL_URL_MAX_MS:    4000,
     NE_FREEZE_DELAY_MS:      2500,  // unknown URL: stub renders then freezes before dialog
+
+    // -------------------------------------------------------------------------
+    // NetEscape Destinations  —  PROTECTED PATH
+    // Canvas scan-reveal of 2001-era Wayback Machine screenshots.
+    // All destination navigations are Protected Path — no failures, no crashes.
+    // -------------------------------------------------------------------------
+
+    DESTINATIONS_REVEAL_STRIP_MIN_PX:   4,  // min height (px) of each reveal band per tick
+    DESTINATIONS_REVEAL_STRIP_MAX_PX:  16,  // max height (px) of each reveal band per tick
+    DESTINATIONS_REVEAL_INTERVAL_MS:   16,  // setInterval tick rate for scan-reveal (≈60fps)
+    DESTINATIONS_STATUS_CONNECTING_MS: 800, // status bar "Connecting..." delay before reveal starts
+    DESTINATIONS_NAPSTER_PAUSE_MS:    1200, // extra pause after connecting before Napster notice renders
 
     // -------------------------------------------------------------------------
     ICON_HINT_DELAY_MS:   1200,  // wait after single click before hint appears
