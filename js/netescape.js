@@ -65,9 +65,9 @@ window.APC.netescape = (function () {
   const dialupAudio = new Audio('assets/audio/dialup.mp3');
   dialupAudio.preload = 'auto';
   dialupAudio.addEventListener('error', function () {});
-  let pageEl = null;          // .ie-chrome__page element (scroll container)
+  let pageEl = null;          // .netescape-chrome__page element (scroll container)
   let addressInput = null;    // address bar <input>
-  let statusEl = null;        // .ie-chrome__status-text span
+  let statusEl = null;        // .netescape-chrome__status-text span
 
   // Navigation history stack
   let navHistory = [];        // array of normalized URL strings in visit order
@@ -148,6 +148,8 @@ window.APC.netescape = (function () {
         fwdBtn = null;
         navHistory = [];
         navIndex = -1;
+        // Clean up any in-flight destination render.
+        if (window.APC.neDestinations) { window.APC.neDestinations.cleanup(); }
       });
     }
 
@@ -199,12 +201,17 @@ window.APC.netescape = (function () {
     menubar.setAttribute('role', 'menubar');
     menubar.setAttribute('aria-label', 'Menu bar');
 
-    // Stub menu items — no dropdowns in MVP.
+    // Stub menu items — Favorites click renders the Favorites page.
     ['File', 'Edit', 'View', 'Go', 'Favorites', 'Help'].forEach(function (label) {
       const btn = document.createElement('button');
       btn.className = 'netescape-chrome__menu-item';
       btn.textContent = label;
       btn.setAttribute('role', 'menuitem');
+      if (label === 'Favorites') {
+        btn.addEventListener('click', function () {
+          renderFavorites();
+        });
+      }
       menubar.appendChild(btn);
     });
 
@@ -398,18 +405,34 @@ window.APC.netescape = (function () {
     // Cancel any in-flight partial-load freeze (user navigated away before dialog showed).
     if (freezeTimer) { clearTimeout(freezeTimer); freezeTimer = null; }
 
+    // Cancel any in-flight destination render.
+    if (window.APC.neDestinations) { window.APC.neDestinations.cleanup(); }
+
     // Resolve to page key; undefined = unknown / external URL.
     const pageKey = PAGE_ROUTES[normalized];
 
     // Track manual URL bar entries for analytics.
     if (fromUserInput && window.umami) {
-      window.umami.track('dialup_url_entry');
+      const isDestination = window.APC.neDestinations &&
+        window.APC.neDestinations.isDestination(normalized);
+      window.umami.track('dialup_url_entry', {
+        domain: normalized,
+        type: isDestination ? 'destination' : (pageKey ? 'internal' : 'unknown')
+      });
     }
 
     // Connection check: show no-connection page until the user dials up.
     // Once isConnected is true for the session, all navigations go direct.
     if (!window.APC.session.isConnected) {
       renderNoConnection();
+      return;
+    }
+
+    // Destination intercept: check before renderPartialLoad().
+    // If this URL is a recognized curated destination, hand off to the destinations
+    // module and return. No other changes to navigate() are needed.
+    if (window.APC.neDestinations && window.APC.neDestinations.isDestination(normalized)) {
+      window.APC.neDestinations.render(normalized);
       return;
     }
 
@@ -498,6 +521,116 @@ window.APC.netescape = (function () {
       if (hist.length > 10) { hist = hist.slice(0, 10); }
       sessionStorage.setItem('ne_history', JSON.stringify(hist));
     } catch (e) {}
+  }
+
+  // --- Favorites page --------------------------------------------------
+
+  // renderFavorites — renders all curated destinations grouped by folder in pageEl.
+  // Fired when the Favorites menubar button is clicked.
+  // Pattern: replaces pageEl content (same as renderHome, renderAbout, etc.).
+
+  function renderFavorites() {
+    if (!pageEl) { return; }
+    if (!window.APC.neDestinations) { return; }
+
+    // Clean up any in-flight destination render.
+    window.APC.neDestinations.cleanup();
+    pageEl.innerHTML = '';
+    if (statusEl) { statusEl.textContent = 'Done'; }
+
+    if (window.umami) { window.umami.track('favorites_open'); }
+
+    var DESTINATIONS = window.APC.neDestinations.getDestinations
+      ? window.APC.neDestinations.getDestinations()
+      : null;
+
+    // If getDestinations() not available (pre-Phase 2 scaffold), show placeholder.
+    if (!DESTINATIONS) {
+      var ph = document.createElement('p');
+      ph.textContent = 'Favorites not available.';
+      pageEl.appendChild(ph);
+      return;
+    }
+
+    var page = document.createElement('div');
+    page.className = 'netescape-favorites';
+
+    var title = document.createElement('p');
+    title.className = 'netescape-favorites__title';
+    title.textContent = '[ FAVORITES ]';
+    page.appendChild(title);
+
+    // Group destinations by folder.
+    var folders = [
+      { key: 'games',      label: '[ GAMES ]'      },
+      { key: 'cartoons',   label: '[ CARTOONS ]'   },
+      { key: 'sports',     label: '[ SPORTS ]'     },
+      { key: 'cool-stuff', label: '[ COOL STUFF ]' }
+    ];
+
+    folders.forEach(function (folder) {
+      var items = Object.keys(DESTINATIONS).filter(function (url) {
+        return DESTINATIONS[url].folder === folder.key;
+      });
+      if (items.length === 0) { return; }
+
+      var section = document.createElement('div');
+      section.className = 'netescape-favorites__section';
+
+      var heading = document.createElement('p');
+      heading.className = 'netescape-favorites__folder';
+      heading.textContent = folder.label;
+      section.appendChild(heading);
+
+      items.forEach(function (url) {
+        var dest = DESTINATIONS[url];
+        var link = document.createElement('a');
+        link.className = 'netescape-favorites__link';
+        link.href = '#';
+        link.textContent = '» ' + dest.label;
+        link.addEventListener('click', function (e) {
+          e.preventDefault();
+          navigate(url, false);
+        });
+        section.appendChild(link);
+        section.appendChild(document.createElement('br'));
+      });
+
+      page.appendChild(section);
+    });
+
+    // Separator before root-level bookmarks.
+    var sep = document.createElement('hr');
+    sep.className = 'netescape-favorites__sep';
+    sep.setAttribute('aria-hidden', 'true');
+    page.appendChild(sep);
+
+    // Root-level bookmarks (folder === null), Napster last.
+    var rootItems = Object.keys(DESTINATIONS).filter(function (url) {
+      return DESTINATIONS[url].folder === null && url !== 'napster.com';
+    });
+    var napsterItems = Object.keys(DESTINATIONS).filter(function (url) {
+      return url === 'napster.com';
+    });
+
+    rootItems.concat(napsterItems).forEach(function (url) {
+      var dest = DESTINATIONS[url];
+      var link = document.createElement('a');
+      link.className = 'netescape-favorites__link';
+      if (url === 'napster.com') {
+        link.className += ' netescape-favorites__link--napster';
+      }
+      link.href = '#';
+      link.textContent = '» ' + dest.label;
+      link.addEventListener('click', function (e) {
+        e.preventDefault();
+        navigate(url, false);
+      });
+      page.appendChild(link);
+      page.appendChild(document.createElement('br'));
+    });
+
+    pageEl.appendChild(page);
   }
 
   function renderHome() {
@@ -637,7 +770,7 @@ window.APC.netescape = (function () {
 
     const underConst = document.createElement('p');
     underConst.className = 'netescape-about__under-construction';
-    underConst.textContent = '🚧 UNDER CONSTRUCTION 🚧';
+    underConst.textContent = '\ud83d\udea7 UNDER CONSTRUCTION \ud83d\udea7';
 
     topHeader.appendChild(h1);
     topHeader.appendChild(underConst);
@@ -1541,7 +1674,7 @@ window.APC.netescape = (function () {
     const icon = document.createElement('div');
     icon.className = 'dialup-modal__icon';
     icon.setAttribute('aria-hidden', 'true');
-    icon.textContent = '📞';
+    icon.textContent = '\ud83d\udcde';
 
     const phoneNum = document.createElement('p');
     phoneNum.className = 'dialup-modal__phone';
@@ -1651,6 +1784,7 @@ window.APC.netescape = (function () {
     if (freezeTimer)    { clearTimeout(freezeTimer);    freezeTimer = null;    }
     if (pageLoadTimer)  { clearTimeout(pageLoadTimer);  pageLoadTimer = null;  }
     if (pageLoadMidTimer) { clearTimeout(pageLoadMidTimer); pageLoadMidTimer = null; }
+    if (window.APC.neDestinations) { window.APC.neDestinations.cleanup(); }
   }
 
   // --- Public exports --------------------------------------------------
