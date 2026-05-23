@@ -423,7 +423,7 @@ window.APC.boot = (function () {
     var now = Date.now();
 
     if (rainStartTime === null) { rainStartTime = now; }
-    if (!hasStarted && rainStartTime !== null && (now - rainStartTime) >= rainDuration && identityPhase === 'waiting') {
+    if (!hasStarted && rainStartTime !== null && (now - rainStartTime) >= rainDuration && identityPhase === 'waiting' && !forkPromptEl) {
       revealPrompt();
     }
 
@@ -487,7 +487,7 @@ window.APC.boot = (function () {
 
           if (tr === 0) {
             ctx.globalAlpha = 1;
-            ctx.fillStyle   = '#CCFFCC';
+            ctx.fillStyle   = '#00FF41';
           } else {
             var fade = Math.pow(1 - (tr / tLen), 2.2);
             ctx.globalAlpha = Math.max(0.03, fade);
@@ -514,7 +514,7 @@ window.APC.boot = (function () {
 
     if (identityPhase === 'dissolving' && dissolveActive) {
       // Dissolution: lines unwrite right-to-left, bottom line first, 80ms stagger.
-      ctx.font = '20px "Courier New", monospace';
+      ctx.font = 'bold 20px "Courier New", monospace';
       var startY     = canvas.height * t.MATRIX_IDENTITY_START_Y_PCT;
       var lineHeight = 20 * 1.8;
       var dElapsed   = Date.now() - dissolveStart;
@@ -542,15 +542,15 @@ window.APC.boot = (function () {
 
         // Fade out as line dissolves
         ctx.globalAlpha = Math.max(0.1, charsVisible / fullLen);
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
         ctx.fillRect(lineX - 8, lineY - 17, measured + 16, 26);
-        ctx.fillStyle = '#CCFFCC';
+        ctx.fillStyle = '#00FF41';
         ctx.fillText(visibleText, lineX, lineY);
       }
       ctx.globalAlpha = 1;
 
     } else if (identityPhase !== 'waiting' && identityTypedLines.length > 0) {
-      ctx.font = '20px "Courier New", monospace';
+      ctx.font = 'bold 20px "Courier New", monospace';
       var startY     = canvas.height * t.MATRIX_IDENTITY_START_Y_PCT;
       var lineHeight = 20 * 1.8;
       for (var li = 0; li < identityTypedLines.length; li++) {
@@ -558,9 +558,9 @@ window.APC.boot = (function () {
         var lineY    = startY + li * lineHeight;
         var measured = ctx.measureText(identityTypedLines[li]).width;
         var lineX    = (canvas.width / 2) - (measured / 2);
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.55)';
         ctx.fillRect(lineX - 8, lineY - 17, measured + 16, 26);
-        ctx.fillStyle = '#CCFFCC';
+        ctx.fillStyle = '#00FF41';
         ctx.fillText(identityTypedLines[li], lineX, lineY);
       }
     }
@@ -595,6 +595,8 @@ window.APC.boot = (function () {
   function renderForkPrompt() {
     if (hasStarted || forkChosen) { return; }
 
+    identityPhase = 'fork';
+
     var gatePrompt = document.getElementById('gate-prompt');
     if (gatePrompt) {
       gatePrompt.classList.remove('gate-prompt--visible');
@@ -610,40 +612,125 @@ window.APC.boot = (function () {
     prompt.setAttribute('aria-label', 'Choose your entry path');
     prompt.style.cssText = [
       'position:absolute',
-      'left:40px',
+      'left:50%',
       'top:30%',
+      'transform:translateX(-50%)',
       'z-index:120',
-      'background:rgba(0,0,0,0.82)',
+      'background:rgba(0,0,0,0.55)',
       'color:#00FF41',
       'font-family:"Courier New",Courier,monospace',
       'font-size:20px',
-      'line-height:1.65',
-      'padding:18px 22px',
+      'font-weight:bold',
+      'line-height:1.8',
+      'padding:0 8px',
       'white-space:pre',
+      'width:34ch',
+      'min-height:10.8em',
       'text-align:left',
-      '-webkit-font-smoothing:none',
-      'text-shadow:0 0 6px rgba(0,255,65,0.55)'
+      '-webkit-font-smoothing:none'
     ].join(';');
-
-    prompt.innerHTML =
-      'AHISAKA.COM\n\n' +
-      '&gt; WHO ARE YOU?\n\n' +
-      '<button type="button" data-fork-choice="fast" style="' +
-      'display:block;background:transparent;border:0;color:#00FF41;' +
-      'font:inherit;text-align:left;padding:0;margin:0;cursor:pointer;' +
-      'text-shadow:0 0 6px rgba(0,255,65,0.55);' +
-      '">[1] I HAVE 30 SECONDS</button>' +
-      '<button type="button" data-fork-choice="full" style="' +
-      'display:block;background:transparent;border:0;color:#00FF41;' +
-      'font:inherit;text-align:left;padding:0;margin:0;cursor:pointer;' +
-      'text-shadow:0 0 6px rgba(0,255,65,0.55);' +
-      '">[2] I HAVE TIME</button>';
 
     gate.appendChild(prompt);
     forkPromptEl = prompt;
 
-    var first = prompt.querySelector('button[data-fork-choice="fast"]');
-    if (first) { first.focus(); }
+    typeForkPrompt(prompt);
+  }
+
+  function typeForkPrompt(prompt) {
+    var t = window.APC.timing;
+    var lines = [
+      'AHISAKA.COM',
+      '',
+      '> WHO ARE YOU?',
+      '',
+      '[1] I HAVE 30 SECONDS',
+      '[2] I HAVE TIME'
+    ];
+
+    var lineIdx = 0;
+    var charIdx = 0;
+    var typedLines = [lines[0]];
+    lineIdx = 1;
+
+    function renderTyped(active) {
+      prompt.innerHTML = '';
+
+      typedLines.forEach(function (line, idx) {
+        if (idx === 4 && !active) {
+          var fastText = document.createElement('span');
+          fastText.textContent = line;
+          prompt.appendChild(fastText);
+        } else if (idx === 5 && !active) {
+          var fullText = document.createElement('span');
+          fullText.textContent = line;
+          prompt.appendChild(fullText);
+        } else if (idx === 4 && active) {
+          prompt.appendChild(makeForkButton('fast', line));
+        } else if (idx === 5 && active) {
+          prompt.appendChild(makeForkButton('full', line));
+        } else {
+          var span = document.createElement('span');
+          span.textContent = line;
+          prompt.appendChild(span);
+        }
+
+        if (idx < typedLines.length - 1) {
+          prompt.appendChild(document.createTextNode('\n'));
+        }
+      });
+    }
+
+    function makeForkButton(choice, label) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.dataset.forkChoice = choice;
+      btn.textContent = label;
+      btn.style.cssText = [
+        'display:inline',
+        'background:transparent',
+        'border:0',
+        'color:#00FF41',
+        'font:inherit',
+        'text-align:left',
+        'padding:0',
+        'margin:0',
+        'cursor:pointer',
+        'outline:none'
+      ].join(';');
+      return btn;
+    }
+
+    function typeNextChar() {
+      if (!forkPromptEl || forkPromptEl !== prompt || forkChosen) { return; }
+
+      if (lineIdx >= lines.length) {
+        renderTyped(true);
+        return;
+      }
+
+      var target = lines[lineIdx];
+
+      if (typedLines.length <= lineIdx) {
+        typedLines[lineIdx] = '';
+      }
+
+      if (charIdx < target.length) {
+        typedLines[lineIdx] = target.slice(0, charIdx + 1);
+        charIdx++;
+        renderTyped(false);
+        setTimeout(typeNextChar, t.rand(t.MATRIX_IDENTITY_CHAR_DELAY_MIN_MS, t.MATRIX_IDENTITY_CHAR_DELAY_MAX_MS));
+        return;
+      }
+
+      lineIdx++;
+      charIdx = 0;
+      typedLines[lineIdx] = '';
+      renderTyped(false);
+      setTimeout(typeNextChar, t.rand(t.MATRIX_IDENTITY_CHAR_DELAY_MIN_MS, t.MATRIX_IDENTITY_CHAR_DELAY_MAX_MS));
+    }
+
+    renderTyped(false);
+    setTimeout(typeNextChar, t.rand(t.MATRIX_IDENTITY_CHAR_DELAY_MIN_MS, t.MATRIX_IDENTITY_CHAR_DELAY_MAX_MS));
   }
 
   function onForkClick(e) {
