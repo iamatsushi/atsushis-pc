@@ -52,7 +52,7 @@ window.APC.apps.phonedialer = (function () {
  title: 'Phone Dialer',
  app: 'phonedialer',
  width: 240,
- height: 320,
+ height: 300,
  x: 200,
  y: 120
  });
@@ -101,7 +101,7 @@ window.APC.apps.phonedialer = (function () {
  'padding:8px',
  'display:flex',
  'flex-direction:column',
- 'gap:6px',
+ 'gap:8px',
  'box-sizing:border-box',
  'height:100%'
  ].join(';');
@@ -131,7 +131,7 @@ window.APC.apps.phonedialer = (function () {
  'display:grid',
  'grid-template-columns:repeat(3,1fr)',
  'gap:4px',
- 'flex:1'
+ 'grid-auto-rows:36px'
  ].join(';');
  grid.setAttribute('role', 'group');
  grid.setAttribute('aria-label', 'Phone keypad');
@@ -150,7 +150,7 @@ window.APC.apps.phonedialer = (function () {
  contentEl.appendChild(grid);
 
  var actions = document.createElement('div');
- actions.style.cssText = 'display:flex;gap:4px';
+ actions.style.cssText = 'display:flex;gap:6px;margin-top:4px;flex-shrink:0';
 
  var dialBtn = makeButton('Dial', false);
  dialBtn.style.flex = '1';
@@ -184,7 +184,7 @@ window.APC.apps.phonedialer = (function () {
  'border-left:2px solid #fff',
  'border-right:2px solid #404040',
  'border-bottom:2px solid #404040',
- 'box-shadow:1px 1px 0 #000'
+ 'min-height:' + (isKeypad ? '36px' : '24px')
  ].join(';');
 
  btn.addEventListener('mousedown', function () { pressButton(btn); });
