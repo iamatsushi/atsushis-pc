@@ -55,6 +55,9 @@ Required events:
 | Event | Trigger | Params |
 |---|---|---|
 | `click_to_start` | Gate screen interact | — |
+| `fork_fast` | Desktop user selects `[1] I HAVE 30 SECONDS` | — |
+| `fork_full` | Desktop user selects `[2] I HAVE TIME` | — |
+| `fork_mobile` | Mobile user bypasses fork into fast path | — |
 | `boot_complete` | Boot sequence finishes | — |
 | `netescape_homepage_load` | NetEscape homepage first renders | — |
 | `app_open` | Any mini-app opens | `app_name` |
@@ -90,13 +93,45 @@ Never call `sessionStorage.clear()`. Use targeted `removeItem()` only.
 
 ## Gate Screen Experience (boot.js)
 
-The gate screen is the full cinematic opening sequence. Three phases before the wormhole.
+The gate screen is now a forked entry experience. Desktop users choose fast path or full ritual before the original identity-line sequence. Mobile users bypass the fork and go straight to NetEscape.
+
+### Phase 0 — Entry Fork
+- Rain starts immediately on page load via `_startRain()` — no font gate, no delay.
+- After `FORK_PROMPT_APPEAR_DELAY_MS`, `renderForkPrompt()` shows a left-aligned DOS-style prompt:
+  - `AHISAKA.COM`
+  - `> WHO ARE YOU?`
+  - `[1] I HAVE 30 SECONDS`
+  - `[2] I HAVE TIME`
+- Initial fork prompt is DOM, not canvas. It sits over the Matrix canvas and must not depend on canvas coordinates.
+- The legacy `C:\> press any key to continue` prompt must be hidden during this initial fork. Only `1`, `2`, or clicking the explicit options should act.
+- Path 1 calls `launchFastPath('desktop')`, tracks `fork_fast`, plays `startup.mp3`, sets `window.APC.session.isConnected = true`, and mounts NetEscape full viewport.
+- Path 2 tracks `fork_full`, cleans up fork DOM/listeners, then starts the original identity-line sequence. After identity lines finish, the legacy `C:\> press any key to continue` prompt appears and waits for a second explicit key/click before dissolution.
+- Mobile calls `launchFastPath('mobile')`, tracks `fork_mobile`, and never shows the mobile hard-block dialog.
+
+State and lifecycle:
+- `forkChosen` prevents double-select.
+- `forkPromptEl` owns the fork DOM node.
+- `forkPromptTimer` must be cleared by `cleanupForkPrompt()`.
+- `fastPathContainer` owns full-viewport NetEscape DOM and must be removed on restart.
+- `boot.restart()` must reset fork state, call `cleanupForkPrompt()`, and remove `fastPathContainer`.
+
+Fast path:
+- `netescape.open()` must not be used for Path 1 because it calls `desktop.createWindow()` and creates a window-shell NetEscape instance.
+- Use `window.APC.netescape.mountFullViewport(containerEl)` instead.
+- `mountFullViewport(containerEl)` calls `buildIEChrome(containerEl)` directly, then navigates to `DEFAULT_URL`.
+- `mountFullViewport(containerEl)` must set `window.APC.session.isConnected = true` before navigation or NetEscape will render the no-connection page.
+
+Timing tokens:
+- `FORK_PROMPT_APPEAR_DELAY_MS` — desktop entry fork appears after rain establishes.
+- `FORK_STARTUP_AUDIO_DELAY_MS` — fast path startup chime delay.
+
+The original full ritual still has three phases before the wormhole.
 
 ### Phase 1 — Rain
 - Rain starts immediately on page load via `_startRain()` — no font gate, no delay.
 - Runs for `MATRIX_DURATION_MIN_MS`–`MATRIX_DURATION_MAX_MS` (3–12s).
-- Identity lines begin after `MATRIX_GATE_START_DELAY_MS` (1000ms) — rain runs for 1s first.
-- After rain duration expires, `revealPrompt()` is called — rain keeps running.
+- Identity lines begin only after desktop Path 2 is selected. Do not start identity lines automatically before the fork.
+- Rain-duration fallback may reveal the legacy prompt only while `identityPhase === 'waiting'`. Do not reveal it during identity-line typing.
 
 ### Phase 2 — Identity Lines
 - 6 lines type out at 20–30ms/char. Line 1 appears instantly.
@@ -285,6 +320,9 @@ Start chatter at `volume=0` immediately (autoplay policy). Ramp to 1.0 at 9950ms
 - **Removing phosphor glow from wormFrame Phase 4** — wrong. Intentional.
 - **Random wormhole snapshot** — wrong. Use actual trail positions/chars/opacity/mirroring.
 - **`(col.headRow+ri)%gridRows` in snapshot** — wrong. Use `col.headRow-tr`.
+- **Showing `C:\\> press any key to continue` on the initial fork** — wrong. Initial fork only accepts `1`, `2`, or explicit option clicks.
+- **Skipping identity lines on Path 2** — wrong. `[2] I HAVE TIME` must run the full 1998 thesis before wormhole.
+- **Using `netescape.open()` for fast path** — wrong. Use `mountFullViewport(containerEl)` so no desktop/window shell is created.
 - **Altering identity line copy** — wrong. Verbatim only. Copy written by Don Draper and the Wachowskis.
 - **Reverting CRT/zoom timings to original** — wrong. Current values are 50% faster by design.
 - **`fadeAudioOut(hddChatter)`** — wrong. `fadeAudioTo()` only.
