@@ -68,6 +68,7 @@ window.APC.netescape = (function () {
   let pageEl = null;          // .ie-chrome__page element (scroll container)
   let addressInput = null;    // address bar <input>
   let statusEl = null;        // .ie-chrome__status-text span
+  let fullViewportEl = null; // full-viewport container used by entry fast path
 
   // Navigation history stack
   let navHistory = [];        // array of normalized URL strings in visit order
@@ -164,6 +165,44 @@ window.APC.netescape = (function () {
   }
 
   // --- IE Chrome builder -----------------------------------------------
+
+  function mountFullViewport(containerEl) {
+    if (!containerEl) { return; }
+
+    // Full-viewport mode is the fast/mobile entry path. It bypasses
+    // desktop.createWindow() entirely and mounts NetEscape chrome directly.
+    if (freezeTimer) { clearTimeout(freezeTimer); freezeTimer = null; }
+    cancelPageLoad();
+
+    if (fullViewportEl && fullViewportEl.parentNode) {
+      fullViewportEl.parentNode.removeChild(fullViewportEl);
+    }
+
+    fullViewportEl = containerEl;
+    containerEl.innerHTML = '';
+
+    ieWindowState = null;
+    pageEl = null;
+    addressInput = null;
+    statusEl = null;
+    backBtn = null;
+    fwdBtn = null;
+    navHistory = [];
+    navIndex = -1;
+    currentUrl = DEFAULT_URL;
+    currentParams = {};
+
+    // Fast path is conceptually already connected. Without this, navigate()
+    // renders the no-connection page instead of the homepage.
+    window.APC.session.isConnected = true;
+
+    buildIEChrome(containerEl);
+    navigate(DEFAULT_URL, false);
+
+    if (window.umami) {
+      window.umami.track('app_open', { app_name: 'netescape_fullviewport' });
+    }
+  }
 
   function buildIEChrome(contentEl) {
     const chrome = document.createElement('div');
@@ -1637,6 +1676,11 @@ window.APC.netescape = (function () {
   // references to closed/removed DOM elements.
 
   function reset() {
+    if (fullViewportEl && fullViewportEl.parentNode) {
+      fullViewportEl.parentNode.removeChild(fullViewportEl);
+    }
+    fullViewportEl = null;
+
     isDialingUp = false;
     ieWindowState = null;
     currentUrl = DEFAULT_URL;
@@ -1655,6 +1699,6 @@ window.APC.netescape = (function () {
 
   // --- Public exports --------------------------------------------------
 
-  return { open: open, connect: connect, reset: reset };
+  return { open: open, connect: connect, reset: reset, mountFullViewport: mountFullViewport };
 
 }());
