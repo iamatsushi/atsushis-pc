@@ -150,3 +150,14 @@ and should not be updated to include it.
 **Do not** add `static.cloudflareinsights.com` to `script-src` in the Caddyfile.
 If you see a CSP console error for this domain, re-disable RUM in the Cloudflare dashboard
 (it may have been re-enabled by a Cloudflare setting change) — do not fix it via CSP.
+
+## Umami CSP Requirement
+
+Umami Cloud loads its script from `https://cloud.umami.is`, but event collection posts to `https://api-gateway.umami.dev/api/send`.
+
+The Caddy Content-Security-Policy must allow both:
+- `script-src https://cloud.umami.is`
+- `connect-src https://api-gateway.umami.dev`
+
+If `connect-src` is missing, `window.umami` may exist but events will not reach Umami.
+
