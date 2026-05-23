@@ -226,7 +226,17 @@
     RECYCLEBIN_PROGRESS_STEP_MS:     50, // setInterval tick for progress bar update
 
     // -------------------------------------------------------------------------
-    // HDD Audio — boot sequence ambient sound
+    // -------------------------------------------------------------------------
+ // Phone Dialer — TEXTURE ZONE
+ // -------------------------------------------------------------------------
+
+ PHONE_DIALER_DTMF_MS: 160, // duration of each keypad DTMF tone
+ PHONE_DIALER_DIAL_MIN_MS: 800, // fake dialing delay before inevitable busy signal
+ PHONE_DIALER_DIAL_MAX_MS: 2200,
+ PHONE_DIALER_BUSY_ON_MS: 500, // busy signal tone-on duration
+ PHONE_DIALER_BUSY_OFF_MS: 1000, // busy signal silence duration
+
+ // HDD Audio — boot sequence ambient sound
     //
     // hdd-poweron.mp3: plays once on power button click (10s, no loop)
     //   Contains: power button click sound + HDD spin-up whirr

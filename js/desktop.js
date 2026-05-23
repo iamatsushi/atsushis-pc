@@ -1180,7 +1180,20 @@ window.APC.desktop = (function () {
     bringToFront(state.el);
   }
 
-  function maximizeWindow(state) {
+  function focusWindow(state) {
+ if (!state || !state.el) { return; }
+ if (state.minimized || state.el.style.display === 'none') {
+ restoreWindow(state);
+ return;
+ }
+ bringToFront(state.el);
+ if (state.taskbarBtn) {
+ state.taskbarBtn.classList.remove('taskbar-btn--minimized');
+ state.taskbarBtn.classList.add('taskbar-btn--active');
+ }
+ }
+
+ function maximizeWindow(state) {
     if (state.maximized) {
       if (state.savedGeom) {
         state.el.style.left   = state.savedGeom.left;
@@ -1446,6 +1459,7 @@ window.APC.desktop = (function () {
   return {
     init:         init,
     createWindow: createWindow,
+ focusWindow: focusWindow,
     launchApp:    launchApp,
     closeAll:     closeAll,
     minimizeAll:  minimizeAll,
