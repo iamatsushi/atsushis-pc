@@ -112,6 +112,12 @@ window.APC.boot = (function () {
   // No visual change. Foundation for dissolution and wormhole overlap timing.
   let rainAware = false;
 
+  // Entry fork state — desktop users choose fast path or full ritual.
+  let forkChosen = false;
+  let forkPromptEl = null;
+  let forkPromptTimer = null;
+  let fastPathContainer = null;
+
   // --- Public API ------------------------------------------------------
 
   // --- Mobile detection ------------------------------------------------
@@ -248,9 +254,9 @@ window.APC.boot = (function () {
   function init(options) {
     const force = options && options.force === true;
 
-    // Hard gate: WinDoors 98 does not run on mobile or touch devices.
+    // Mobile is the fast path. The device is the signal.
     if (isMobileOrTouch()) {
-      showMobileInterstitial();
+      launchFastPath('mobile');
       return;
     }
 
@@ -282,15 +288,15 @@ window.APC.boot = (function () {
     resizeCanvas();
     animFrame = requestAnimationFrame(drawFrame);
 
-    // Schedule identity lines to begin after rain has established itself.
-    setTimeout(startIdentityLines, window.APC.timing.MATRIX_GATE_START_DELAY_MS);
+    // Schedule the entry fork after rain has established itself.
+    forkPromptTimer = setTimeout(renderForkPrompt, window.APC.timing.FORK_PROMPT_APPEAR_DELAY_MS);
 
-    // Gate screen catches all clicks anywhere on screen.
+    // Gate screen only catches clicks on explicit fork choices.
     const gate = document.getElementById('gate-screen');
-    gate.addEventListener('click', onGateInteract);
+    gate.addEventListener('click', onForkClick);
 
-    // Any keydown (except modifier-only) triggers start.
-    document.addEventListener('keydown', onDocKeyDown);
+    // Desktop fork: 1 = fast path, 2 = full ritual.
+    document.addEventListener('keydown', onForkKeyDown);
 
     // Resize canvas on window resize to keep rain full-bleed.
     window.addEventListener('resize', resizeCanvas);
@@ -356,6 +362,9 @@ window.APC.boot = (function () {
       prompt.style.top = Math.floor(
         canvas.height * window.APC.timing.MATRIX_PROMPT_CANVAS_Y_PCT
       ) + 'px';
+      // Clear any fork-time inline hiding before showing the legacy prompt.
+      prompt.style.opacity = '';
+
       // Opacity transition is defined in CSS — adding the class triggers it.
       prompt.classList.add('gate-prompt--visible');
     }
@@ -414,7 +423,7 @@ window.APC.boot = (function () {
     var now = Date.now();
 
     if (rainStartTime === null) { rainStartTime = now; }
-    if (!hasStarted && rainStartTime !== null && (now - rainStartTime) >= rainDuration && identityPhase !== 'done') {
+    if (!hasStarted && rainStartTime !== null && (now - rainStartTime) >= rainDuration && identityPhase === 'waiting') {
       revealPrompt();
     }
 
@@ -555,6 +564,190 @@ window.APC.boot = (function () {
         ctx.fillText(identityTypedLines[li], lineX, lineY);
       }
     }
+  }
+
+  // --- Entry fork prompt --------------------------------------------------
+  //
+  // Desktop users self-select:
+  // 1 = fast path: startup chime + full-viewport NetEscape
+  // 2 = full ritual: existing Matrix → wormhole → desk → boot → desktop
+  // Mobile bypass is wired separately in init().
+
+  function cleanupForkPrompt() {
+    if (forkPromptTimer) {
+      clearTimeout(forkPromptTimer);
+      forkPromptTimer = null;
+    }
+
+    document.removeEventListener('keydown', onForkKeyDown);
+
+    var gate = document.getElementById('gate-screen');
+    if (gate) {
+      gate.removeEventListener('click', onForkClick);
+    }
+
+    if (forkPromptEl && forkPromptEl.parentNode) {
+      forkPromptEl.parentNode.removeChild(forkPromptEl);
+    }
+    forkPromptEl = null;
+  }
+
+  function renderForkPrompt() {
+    if (hasStarted || forkChosen) { return; }
+
+    var gatePrompt = document.getElementById('gate-prompt');
+    if (gatePrompt) {
+      gatePrompt.classList.remove('gate-prompt--visible');
+      gatePrompt.style.opacity = '0';
+    }
+
+    var gate = document.getElementById('gate-screen');
+    if (!gate) { return; }
+
+    var prompt = document.createElement('div');
+    prompt.id = 'fork-prompt';
+    prompt.setAttribute('role', 'dialog');
+    prompt.setAttribute('aria-label', 'Choose your entry path');
+    prompt.style.cssText = [
+      'position:absolute',
+      'left:40px',
+      'top:30%',
+      'z-index:120',
+      'background:rgba(0,0,0,0.82)',
+      'color:#00FF41',
+      'font-family:"Courier New",Courier,monospace',
+      'font-size:20px',
+      'line-height:1.65',
+      'padding:18px 22px',
+      'white-space:pre',
+      'text-align:left',
+      '-webkit-font-smoothing:none',
+      'text-shadow:0 0 6px rgba(0,255,65,0.55)'
+    ].join(';');
+
+    prompt.innerHTML =
+      'AHISAKA.COM\n\n' +
+      '&gt; WHO ARE YOU?\n\n' +
+      '<button type="button" data-fork-choice="fast" style="' +
+      'display:block;background:transparent;border:0;color:#00FF41;' +
+      'font:inherit;text-align:left;padding:0;margin:0;cursor:pointer;' +
+      'text-shadow:0 0 6px rgba(0,255,65,0.55);' +
+      '">[1] I HAVE 30 SECONDS</button>' +
+      '<button type="button" data-fork-choice="full" style="' +
+      'display:block;background:transparent;border:0;color:#00FF41;' +
+      'font:inherit;text-align:left;padding:0;margin:0;cursor:pointer;' +
+      'text-shadow:0 0 6px rgba(0,255,65,0.55);' +
+      '">[2] I HAVE TIME</button>';
+
+    gate.appendChild(prompt);
+    forkPromptEl = prompt;
+
+    var first = prompt.querySelector('button[data-fork-choice="fast"]');
+    if (first) { first.focus(); }
+  }
+
+  function onForkClick(e) {
+    var choiceEl = e.target && e.target.closest ? e.target.closest('[data-fork-choice]') : null;
+    if (!choiceEl) { return; }
+    e.preventDefault();
+    chooseForkPath(choiceEl.dataset.forkChoice);
+  }
+
+  function onForkKeyDown(e) {
+    if (['Shift', 'Control', 'Alt', 'Meta', 'Tab'].includes(e.key)) { return; }
+    if (e.key === '1') {
+      chooseForkPath('fast');
+      return;
+    }
+    if (e.key === '2') {
+      chooseForkPath('full');
+      return;
+    }
+  }
+
+  function chooseForkPath(choice) {
+    if (forkChosen) { return; }
+    forkChosen = true;
+
+    if (choice === 'fast') {
+      if (window.umami) { window.umami.track('fork_fast'); }
+      launchFastPath('desktop');
+      return;
+    }
+
+    if (choice === 'full') {
+      if (window.umami) { window.umami.track('fork_full'); }
+      cleanupForkPrompt();
+
+      // Full path preserves the original 1998 identity-line thesis.
+      // User already chose the long path; after the lines type out, the
+      // existing gate prompt waits for a second explicit key/click.
+      identityPhase = 'waiting';
+      identityTypedLines = [];
+      currentLineIdx = 0;
+      impatient = false;
+
+      var gate = document.getElementById('gate-screen');
+      if (gate) { gate.addEventListener('click', onGateInteract); }
+      document.addEventListener('keydown', onDocKeyDown);
+
+      startIdentityLines();
+    }
+  }
+
+  function launchFastPath(source) {
+    cleanupForkPrompt();
+    hasStarted = true;
+
+    if (animFrame) {
+      cancelAnimationFrame(animFrame);
+      animFrame = null;
+    }
+
+    window.removeEventListener('resize', resizeCanvas);
+    document.removeEventListener('keydown', onDocKeyDown);
+
+    if (source === 'mobile' && window.umami) {
+      window.umami.track('fork_mobile');
+    }
+
+    setTimeout(function () {
+      var chime = new Audio('assets/audio/startup.mp3');
+      chime.preload = 'auto';
+      chime.addEventListener('error', function () {});
+      try { chime.play().catch(function () {}); } catch (e) {}
+    }, window.APC.timing.FORK_STARTUP_AUDIO_DELAY_MS);
+
+    window.APC.session = window.APC.session || {};
+    window.APC.session.isConnected = true;
+
+    if (fastPathContainer && fastPathContainer.parentNode) {
+      fastPathContainer.parentNode.removeChild(fastPathContainer);
+    }
+
+    fastPathContainer = document.createElement('div');
+    fastPathContainer.id = 'netescape-fast-path';
+    fastPathContainer.style.cssText = [
+      'position:fixed',
+      'inset:0',
+      'z-index:10000',
+      'background:#c0c0c0',
+      'width:100vw',
+      'height:100vh',
+      'overflow:hidden'
+    ].join(';');
+
+    document.body.appendChild(fastPathContainer);
+
+    if (window.APC.netescape && typeof window.APC.netescape.reset === 'function') {
+      window.APC.netescape.reset();
+    }
+
+    if (window.APC.netescape && typeof window.APC.netescape.mountFullViewport === 'function') {
+      window.APC.netescape.mountFullViewport(fastPathContainer);
+    }
+
+    hideGate();
   }
 
   // --- Interaction handlers --------------------------------------------
@@ -1274,6 +1467,12 @@ window.APC.boot = (function () {
     dissolveActive = false;
     rainDuration = 0;
     rainStartTime = null;
+    forkChosen = false;
+    cleanupForkPrompt();
+    if (fastPathContainer && fastPathContainer.parentNode) {
+      fastPathContainer.parentNode.removeChild(fastPathContainer);
+    }
+    fastPathContainer = null;
     if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null; }
 
     // Destroy boot scene if active during restart — cancels orphaned rAF, listeners, CRT callbacks.

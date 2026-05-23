@@ -44,6 +44,8 @@
     // -------------------------------------------------------------------------
 
     MATRIX_GATE_START_DELAY_MS:      1000,  // rain runs before any text appears
+    FORK_PROMPT_APPEAR_DELAY_MS: 1000,  // desktop entry fork appears after rain establishes
+    FORK_STARTUP_AUDIO_DELAY_MS: 0,     // fast path startup chime plays immediately on selection
     MATRIX_IDENTITY_CHAR_DELAY_MIN_MS: 20, // min ms per character (lines 2–8)
     MATRIX_IDENTITY_CHAR_DELAY_MAX_MS: 30, // max ms per character (lines 2–8)
     MATRIX_LINE1_HOLD_MS:             600,  // hold after line 1 before lines 2–8 begin
