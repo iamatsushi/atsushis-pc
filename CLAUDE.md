@@ -124,6 +124,41 @@ When a PR changes any spec, timing value, or infrastructure detail, update the r
 
 ---
 
+## Entry Fork System (WHO ARE YOU?, May 2026)
+
+The site now starts with a desktop-only entry fork over Matrix rain before the legacy identity-line gate.
+
+Desktop flow:
+- Matrix rain starts immediately.
+- After `FORK_PROMPT_APPEAR_DELAY_MS`, a DOS-style prompt appears:
+  - `[1] I HAVE 30 SECONDS`
+  - `[2] I HAVE TIME`
+- Path 1 is the fast path: plays `startup.mp3`, mounts NetEscape full viewport, and loads `ahisaka.com` without desktop, taskbar, icons, Start Menu, desk scene, or WinDoors boot.
+- Path 2 is the full ritual: hides the fork prompt, then runs the original identity-line thesis (`> it is 1998...`) and waits for the legacy `C:\> press any key to continue` prompt before dissolving into wormhole → desk → boot → desktop.
+- Mobile does not show the fork. Mobile is automatically routed to the fast NetEscape path. The device is the signal.
+
+Implementation notes:
+- `boot.js` owns fork state: `forkChosen`, `forkPromptEl`, `forkPromptTimer`, and `fastPathContainer`.
+- `cleanupForkPrompt()` is the canonical teardown for fork DOM/listeners/timer.
+- `boot.restart()` must reset `forkChosen`, call `cleanupForkPrompt()`, and remove `fastPathContainer`.
+- `netescape.js` exposes `mountFullViewport(containerEl)` for the fast path. Do not call `netescape.open()` for Path 1 because `open()` depends on `desktop.createWindow()` and creates a taskbar/window-shell NetEscape instance.
+- `mountFullViewport(containerEl)` sets `window.APC.session.isConnected = true` before navigation so the homepage renders instead of the no-connection page.
+
+Timing tokens:
+- `FORK_PROMPT_APPEAR_DELAY_MS` — delay before the `WHO ARE YOU?` fork appears after rain starts.
+- `FORK_STARTUP_AUDIO_DELAY_MS` — delay before fast-path `startup.mp3` plays.
+
+Analytics:
+- `fork_fast` — desktop user chooses `[1] I HAVE 30 SECONDS`.
+- `fork_full` — desktop user chooses `[2] I HAVE TIME`.
+- `fork_mobile` — mobile user bypasses fork and enters fast path.
+
+Critical pitfall:
+- Do not show `C:\> press any key to continue` on the initial `WHO ARE YOU?` screen. It is only valid after Path 2 identity lines finish.
+- Do not skip identity lines on Path 2. `[2] I HAVE TIME` means the user opted into the full story.
+
+---
+
 ## Start Menu Registry System (Phases 1-3, Apr 2026)
 
 `taskbar.js` is now registry-driven. The old imperative DOM builders (`buildProgramsSubmenu`, `buildAccessoriesCascadeItem`, `buildAccessoriesSubmenu`, `buildAppsSubmenu`) are deleted. Everything flows from `menuConfig`.
