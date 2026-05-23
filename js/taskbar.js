@@ -22,7 +22,7 @@ window.APC.taskbar = (function () {
             { id: 'communications', label: 'Communications', icon: '\uD83D\uDCC1', type: 'folder', children: [
                 { id: 'dialup',        label: 'Dial-Up Networking', icon: '\uD83D\uDCDE', type: 'action', action: 'dialup' },
                 { id: 'hyperterminal', label: 'HyperTerminal',      icon: '\uD83D\uDCE0', type: 'action', action: 'stub' },
-                { id: 'phonedialer',   label: 'Phone Dialer',       icon: '\u260E',        type: 'action', action: 'launch', app: 'phonedialer' }
+                { id: 'phonedialer',   label: 'Phone Dialer',       icon: '\u260E',        type: 'action', action: 'stub' }
             ]},
             { id: 'entertainment', label: 'Entertainment', icon: '\uD83D\uDCC1', type: 'folder', children: [
                 { id: 'cdplayer',   label: 'CD Player',          icon: '\uD83D\uDCBF', type: 'action', action: 'stub' },
