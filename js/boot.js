@@ -487,7 +487,7 @@ window.APC.boot = (function () {
 
           if (tr === 0) {
             ctx.globalAlpha = 1;
-            ctx.fillStyle   = '#00FF41';
+            ctx.fillStyle   = '#CCFFCC';
           } else {
             var fade = Math.pow(1 - (tr / tLen), 2.2);
             ctx.globalAlpha = Math.max(0.03, fade);
